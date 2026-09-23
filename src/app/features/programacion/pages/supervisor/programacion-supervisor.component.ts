@@ -1329,50 +1329,10 @@ export class ProgramacionSupervisorComponent
     this.cdr.detectChanges();
   }
 
-  cerrarGenerador(): void {
-    if (this.generador.procesando) {
-      return;
-    }
 
-    this.generador.cerrar();
-    this.cdr.detectChanges();
-  }
 
-  agregarDiaEspecial(): void {
-    this.generador.agregarDiaEspecial(
-      this.fecha(1)
-    );
-    this.cdr.detectChanges();
-  }
 
-  quitarDiaEspecial(index: number): void {
-    this.generador.quitarDiaEspecial(index);
-    this.cdr.detectChanges();
-  }
 
-  agregarNovedadGenerador(): void {
-    const agente =
-      this.agentesProgramadosLista[0] ??
-      this.agentes[0];
-
-    const error =
-      this.generador.agregarNovedad(
-        agente,
-        this.fecha(1)
-      );
-
-    if (error) {
-      this.error = error;
-      return;
-    }
-
-    this.cdr.detectChanges();
-  }
-
-  quitarNovedadGenerador(index: number): void {
-    this.generador.quitarNovedad(index);
-    this.cdr.detectChanges();
-  }
 
   generarPropuesta(): void {
     if (!this.plazaId || this.generador.procesando) {
@@ -1572,13 +1532,6 @@ export class ProgramacionSupervisorComponent
 
 
 
-  excepcionDeAgente(
-    agenteId: number
-  ): AgenteProgramacionExcepcion | null {
-    return this.excepciones.excepcion(
-      agenteId
-    );
-  }
 
   tieneExcepcion(
     agenteId: number
@@ -1604,28 +1557,13 @@ export class ProgramacionSupervisorComponent
     );
   }
 
-  colorPreviewSuave(): string {
-    return this.excepciones.colorPreviewSuave();
-  }
 
-  agentesParaExcepcion(): TrabajadorResumen[] {
-    return this.excepciones.filtrarAgentes(
-      this.agentes
-    );
-  }
 
   abrirModalExcepcion(): void {
     this.excepciones.abrirNueva();
     this.cdr.detectChanges();
   }
 
-  seleccionarAgenteExcepcion(
-    agente: TrabajadorResumen
-  ): void {
-    this.abrirExcepcion(
-      agente
-    );
-  }
 
   turnosRecomendados(
     agenteId: number
@@ -1654,21 +1592,7 @@ export class ProgramacionSupervisorComponent
     this.cdr.detectChanges();
   }
 
-  seleccionarColorExcepcion(
-    color: string
-  ): void {
-    this.excepciones.seleccionarColor(
-      color
-    );
-  }
 
-  cerrarExcepcion(): void {
-    if (
-      this.excepciones.cerrar()
-    ) {
-      this.cdr.detectChanges();
-    }
-  }
 
   guardarExcepcion(): void {
     if (

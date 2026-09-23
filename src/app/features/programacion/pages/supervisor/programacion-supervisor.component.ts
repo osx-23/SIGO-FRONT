@@ -40,6 +40,10 @@ import {
   ProgramacionSecuenciaState
 } from '../../state/programacion-secuencia.state';
 
+import {
+  ProgramacionGeneradorState
+} from '../../state/programacion-generador.state';
+
 
 @Component({
   selector: 'app-programacion-supervisor',
@@ -57,7 +61,12 @@ import {
     './programacion-supervisor.component.css',
 
   changeDetection:
-    ChangeDetectionStrategy.OnPush
+    ChangeDetectionStrategy.OnPush,
+
+  providers: [
+    ProgramacionSecuenciaState,
+    ProgramacionGeneradorState
+  ]
 })
 export class ProgramacionSupervisorComponent
   implements OnInit {
@@ -73,6 +82,9 @@ export class ProgramacionSupervisorComponent
 
   private readonly secuenciaState =
     inject(ProgramacionSecuenciaState);
+
+  private readonly generadorState =
+    inject(ProgramacionGeneradorState);
 
   private readonly cdr =
     inject(ChangeDetectorRef);
@@ -141,18 +153,69 @@ export class ProgramacionSupervisorComponent
    * ============================================================
    */
 
-  modalGeneradorAbierto = false;
-  generandoPropuesta = false;
+  get modalGeneradorAbierto(): boolean {
+    return this.generadorState.modalAbierto;
+  }
 
-  coberturaNormal = { a: 7, b: 7, c: 3 };
-  coberturaDomingo = { a: 6, b: 7, c: 3 };
+  set modalGeneradorAbierto(value: boolean) {
+    this.generadorState.modalAbierto = value;
+  }
 
-  diasEspeciales: DiaEspecialProgramacionRequest[] = [];
-  novedadesGenerador: NovedadProgramacionRequest[] = [];
+  get generandoPropuesta(): boolean {
+    return this.generadorState.procesando;
+  }
 
-  propuestaCobertura: CoberturaDiaPropuesta[] = [];
-  propuestaConflictos: ConflictoProgramacionPropuesta[] = [];
-  ultimaPropuesta: ProgramacionPropuestaResponse | null = null;
+  set generandoPropuesta(value: boolean) {
+    this.generadorState.procesando = value;
+  }
+
+  get coberturaNormal() {
+    return this.generadorState.coberturaNormal;
+  }
+
+  get coberturaDomingo() {
+    return this.generadorState.coberturaDomingo;
+  }
+
+  get diasEspeciales(): DiaEspecialProgramacionRequest[] {
+    return this.generadorState.diasEspeciales;
+  }
+
+  set diasEspeciales(value: DiaEspecialProgramacionRequest[]) {
+    this.generadorState.diasEspeciales = value;
+  }
+
+  get novedadesGenerador(): NovedadProgramacionRequest[] {
+    return this.generadorState.novedades;
+  }
+
+  set novedadesGenerador(value: NovedadProgramacionRequest[]) {
+    this.generadorState.novedades = value;
+  }
+
+  get propuestaCobertura(): CoberturaDiaPropuesta[] {
+    return this.generadorState.coberturaPropuesta;
+  }
+
+  set propuestaCobertura(value: CoberturaDiaPropuesta[]) {
+    this.generadorState.coberturaPropuesta = value;
+  }
+
+  get propuestaConflictos(): ConflictoProgramacionPropuesta[] {
+    return this.generadorState.conflictosPropuesta;
+  }
+
+  set propuestaConflictos(value: ConflictoProgramacionPropuesta[]) {
+    this.generadorState.conflictosPropuesta = value;
+  }
+
+  get ultimaPropuesta(): ProgramacionPropuestaResponse | null {
+    return this.generadorState.ultimaPropuesta;
+  }
+
+  set ultimaPropuesta(value: ProgramacionPropuestaResponse | null) {
+    this.generadorState.ultimaPropuesta = value;
+  }
 
 
   /*
@@ -531,9 +594,7 @@ export class ProgramacionSupervisorComponent
     this.mensaje =
       '';
 
-    this.ultimaPropuesta = null;
-    this.propuestaCobertura = [];
-    this.propuestaConflictos = [];
+    this.generadorState.limpiarResultado();
 
 
     this.diaSeleccionado = null;
@@ -1525,7 +1586,7 @@ export class ProgramacionSupervisorComponent
 
     this.error = '';
     this.mensaje = '';
-    this.modalGeneradorAbierto = true;
+    this.generadorState.abrir();
     this.cdr.detectChanges();
   }
 
@@ -1534,56 +1595,43 @@ export class ProgramacionSupervisorComponent
       return;
     }
 
-    this.modalGeneradorAbierto = false;
+    this.generadorState.cerrar();
     this.cdr.detectChanges();
   }
 
   agregarDiaEspecial(): void {
-    const fechaBase = this.fecha(1);
-
-    this.diasEspeciales = [
-      ...this.diasEspeciales,
-      {
-        fecha: fechaBase,
-        descripcion: '',
-        a: this.coberturaDomingo.a,
-        b: this.coberturaDomingo.b,
-        c: this.coberturaDomingo.c
-      }
-    ];
-
+    this.generadorState.agregarDiaEspecial(
+      this.fecha(1)
+    );
     this.cdr.detectChanges();
   }
 
   quitarDiaEspecial(index: number): void {
-    this.diasEspeciales = this.diasEspeciales.filter((_, i) => i !== index);
+    this.generadorState.quitarDiaEspecial(index);
     this.cdr.detectChanges();
   }
 
   agregarNovedadGenerador(): void {
-    const agente = this.agentesProgramadosLista[0] ?? this.agentes[0];
+    const agente =
+      this.agentesProgramadosLista[0] ??
+      this.agentes[0];
 
-    if (!agente) {
-      this.error = 'No hay agentes disponibles para registrar una novedad.';
+    const error =
+      this.generadorState.agregarNovedad(
+        agente,
+        this.fecha(1)
+      );
+
+    if (error) {
+      this.error = error;
       return;
     }
-
-    this.novedadesGenerador = [
-      ...this.novedadesGenerador,
-      {
-        trabajadorId: agente.id,
-        desde: this.fecha(1),
-        hasta: this.fecha(1),
-        estado: 'V',
-        observacion: ''
-      }
-    ];
 
     this.cdr.detectChanges();
   }
 
   quitarNovedadGenerador(index: number): void {
-    this.novedadesGenerador = this.novedadesGenerador.filter((_, i) => i !== index);
+    this.generadorState.quitarNovedad(index);
     this.cdr.detectChanges();
   }
 
@@ -1592,7 +1640,11 @@ export class ProgramacionSupervisorComponent
       return;
     }
 
-    const errorValidacion = this.validarConfiguracionGenerador();
+    const errorValidacion =
+      this.generadorState.validar(
+        this.anio,
+        this.mes
+      );
     if (errorValidacion) {
       this.error = errorValidacion;
       this.cdr.detectChanges();
@@ -1603,21 +1655,13 @@ export class ProgramacionSupervisorComponent
     this.error = '';
     this.mensaje = '';
 
-    this.facade.generarPropuesta({
-      plazaId: this.plazaId,
-      anio: this.anio,
-      mes: this.mes,
-      coberturaNormal: { ...this.coberturaNormal },
-      coberturaDomingo: { ...this.coberturaDomingo },
-      diasEspeciales: this.diasEspeciales.map(dia => ({
-        ...dia,
-        descripcion: dia.descripcion?.trim() || null
-      })),
-      novedades: this.novedadesGenerador.map(novedad => ({
-        ...novedad,
-        observacion: novedad.observacion?.trim() || null
-      }))
-    })
+    this.facade.generarPropuesta(
+      this.generadorState.construirRequest(
+        this.plazaId,
+        this.anio,
+        this.mes
+      )
+    )
       .pipe(
         finalize(() => {
           this.generandoPropuesta = false;
@@ -1642,19 +1686,35 @@ export class ProgramacionSupervisorComponent
       });
   }
 
-  private aplicarPropuesta(propuesta: ProgramacionPropuestaResponse): void {
-    this.ultimaPropuesta = propuesta;
-    this.propuestaCobertura = [...propuesta.cobertura];
-    this.propuestaConflictos = [...propuesta.conflictos];
+  private aplicarPropuesta(
+    propuesta: ProgramacionPropuestaResponse
+  ): void {
+    const celdas =
+      this.generadorState.aplicarPropuesta(
+        propuesta
+      );
 
-    for (const agente of propuesta.agentes) {
-      for (const diaPropuesta of agente.dias) {
-        const dia = this.diaDeFecha(diaPropuesta.fecha);
-        const key = this.key(agente.trabajadorId, dia);
+    for (const celda of celdas) {
+      const dia =
+        this.diaDeFecha(
+          celda.fecha
+        );
 
-        this.matrix.set(key, diaPropuesta.estado);
-        this.cambios.set(key, diaPropuesta.estado);
-      }
+      const key =
+        this.key(
+          celda.trabajadorId,
+          dia
+        );
+
+      this.matrix.set(
+        key,
+        celda.estado
+      );
+
+      this.cambios.set(
+        key,
+        celda.estado
+      );
     }
 
     if (this.diaSeleccionado) {
@@ -1662,40 +1722,16 @@ export class ProgramacionSupervisorComponent
     }
   }
 
-  private validarConfiguracionGenerador(): string | null {
-    const coberturas = [this.coberturaNormal, this.coberturaDomingo];
-
-    if (coberturas.some(c => [c.a, c.b, c.c].some(valor => valor < 0 || !Number.isInteger(valor)))) {
-      return 'Las coberturas A, B y C deben ser números enteros mayores o iguales a 0.';
-    }
-
-    const prefijoMes = `${this.anio}-${String(this.mes).padStart(2, '0')}-`;
-
-    if (this.diasEspeciales.some(d => !d.fecha?.startsWith(prefijoMes))) {
-      return 'Todos los días especiales deben pertenecer al mes seleccionado.';
-    }
-
-    if (this.novedadesGenerador.some(n => !n.trabajadorId || !n.desde || !n.hasta || n.hasta < n.desde)) {
-      return 'Revisa las novedades: agente y rango de fechas son obligatorios.';
-    }
-
-    return null;
-  }
-
   diasPropuestaConDeficit(): number {
-    return this.propuestaCobertura.filter(
-      dia => dia.deficitA > 0 || dia.deficitB > 0 || dia.deficitC > 0
-    ).length;
+    return this.generadorState.diasConDeficit();
   }
 
   diasPropuestaConExceso(): number {
-    return this.propuestaCobertura.filter(
-      dia => dia.excesoA > 0 || dia.excesoB > 0 || dia.excesoC > 0
-    ).length;
+    return this.generadorState.diasConExceso();
   }
 
   conflictosVisibles(): ConflictoProgramacionPropuesta[] {
-    return this.propuestaConflictos.slice(0, 8);
+    return this.generadorState.conflictosVisibles();
   }
 
 

@@ -44,6 +44,10 @@ import {
   ProgramacionGeneradorState
 } from '../../state/programacion-generador.state';
 
+import {
+  ProgramacionExcepcionState
+} from '../../state/programacion-excepcion.state';
+
 
 @Component({
   selector: 'app-programacion-supervisor',
@@ -65,7 +69,8 @@ import {
 
   providers: [
     ProgramacionSecuenciaState,
-    ProgramacionGeneradorState
+    ProgramacionGeneradorState,
+    ProgramacionExcepcionState
   ]
 })
 export class ProgramacionSupervisorComponent
@@ -85,6 +90,9 @@ export class ProgramacionSupervisorComponent
 
   private readonly generadorState =
     inject(ProgramacionGeneradorState);
+
+  private readonly excepcionState =
+    inject(ProgramacionExcepcionState);
 
   private readonly cdr =
     inject(ChangeDetectorRef);
@@ -264,20 +272,90 @@ export class ProgramacionSupervisorComponent
   private readonly liderPorAgente =
     new Map<number, TrabajadorResumen>();
 
-  readonly excepcionPorAgente =
-    new Map<number, AgenteProgramacionExcepcion>();
+  get excepcionPorAgente():
+    Map<number, AgenteProgramacionExcepcion> {
+    return this.excepcionState.porAgente;
+  }
 
-  modalExcepcionAbierto = false;
-  agenteExcepcion: TrabajadorResumen | null = null;
-  excepcionPermiteA = true;
-  excepcionPermiteB = true;
-  excepcionPermiteC = true;
-  excepcionMotivo = '';
-  excepcionColor = '#FFF3B0';
-  guardandoExcepcion = false;
-  busquedaAgenteExcepcion = '';
-  coloresExcepcionRecientes: string[] = [];
-  private readonly claveColoresExcepcion = 'sigo_programacion_colores_excepcion_recientes';
+  get modalExcepcionAbierto(): boolean {
+    return this.excepcionState.modalAbierto;
+  }
+
+  set modalExcepcionAbierto(value: boolean) {
+    this.excepcionState.modalAbierto = value;
+  }
+
+  get agenteExcepcion(): TrabajadorResumen | null {
+    return this.excepcionState.agente;
+  }
+
+  set agenteExcepcion(value: TrabajadorResumen | null) {
+    this.excepcionState.agente = value;
+  }
+
+  get excepcionPermiteA(): boolean {
+    return this.excepcionState.permiteA;
+  }
+
+  set excepcionPermiteA(value: boolean) {
+    this.excepcionState.permiteA = value;
+  }
+
+  get excepcionPermiteB(): boolean {
+    return this.excepcionState.permiteB;
+  }
+
+  set excepcionPermiteB(value: boolean) {
+    this.excepcionState.permiteB = value;
+  }
+
+  get excepcionPermiteC(): boolean {
+    return this.excepcionState.permiteC;
+  }
+
+  set excepcionPermiteC(value: boolean) {
+    this.excepcionState.permiteC = value;
+  }
+
+  get excepcionMotivo(): string {
+    return this.excepcionState.motivo;
+  }
+
+  set excepcionMotivo(value: string) {
+    this.excepcionState.motivo = value;
+  }
+
+  get excepcionColor(): string {
+    return this.excepcionState.color;
+  }
+
+  set excepcionColor(value: string) {
+    this.excepcionState.color = value;
+  }
+
+  get guardandoExcepcion(): boolean {
+    return this.excepcionState.guardando;
+  }
+
+  set guardandoExcepcion(value: boolean) {
+    this.excepcionState.guardando = value;
+  }
+
+  get busquedaAgenteExcepcion(): string {
+    return this.excepcionState.busqueda;
+  }
+
+  set busquedaAgenteExcepcion(value: string) {
+    this.excepcionState.busqueda = value;
+  }
+
+  get coloresExcepcionRecientes(): string[] {
+    return this.excepcionState.coloresRecientes;
+  }
+
+  set coloresExcepcionRecientes(value: string[]) {
+    this.excepcionState.coloresRecientes = value;
+  }
 
   modalConfirmarGuardadoAbierto = false;
   modalConfirmacionAccionAbierto = false;
@@ -689,12 +767,9 @@ export class ProgramacionSupervisorComponent
               ...resultado.secuencias
             ];
 
-          this.excepcionPorAgente.clear();
-          for (const excepcion of resultado.excepciones) {
-            if (excepcion.activo) {
-              this.excepcionPorAgente.set(excepcion.trabajadorId, excepcion);
-            }
-          }
+          this.excepcionState.reemplazar(
+            resultado.excepciones
+          );
 
           this.reconstruirCacheSecuencias();
 
@@ -1857,190 +1932,226 @@ export class ProgramacionSupervisorComponent
   }
 
 
-  excepcionDeAgente(agenteId: number): AgenteProgramacionExcepcion | null {
-    return this.excepcionPorAgente.get(agenteId) ?? null;
+  excepcionDeAgente(
+    agenteId: number
+  ): AgenteProgramacionExcepcion | null {
+    return this.excepcionState.excepcion(
+      agenteId
+    );
   }
 
-  tieneExcepcion(agenteId: number): boolean {
-    return this.excepcionPorAgente.has(agenteId);
+  tieneExcepcion(
+    agenteId: number
+  ): boolean {
+    return this.excepcionState.tiene(
+      agenteId
+    );
   }
 
-  colorExcepcion(agenteId: number): string {
-    return this.excepcionPorAgente.get(agenteId)?.color ?? 'transparent';
+  colorExcepcion(
+    agenteId: number
+  ): string {
+    return this.excepcionState.colorDe(
+      agenteId
+    );
   }
 
-  colorExcepcionSuave(agenteId: number): string {
-    const color = this.excepcionPorAgente.get(agenteId)?.color;
-    return color ? this.hexARgba(color, 0.18) : 'transparent';
+  colorExcepcionSuave(
+    agenteId: number
+  ): string {
+    return this.excepcionState.colorSuaveDe(
+      agenteId
+    );
   }
 
   colorPreviewSuave(): string {
-    return this.hexARgba(this.excepcionColor, 0.18);
-  }
-
-  private hexARgba(hex: string, alpha: number): string {
-    const limpio = hex.replace('#', '');
-    if (!/^[0-9a-fA-F]{6}$/.test(limpio)) return 'transparent';
-    const r = parseInt(limpio.slice(0, 2), 16);
-    const g = parseInt(limpio.slice(2, 4), 16);
-    const b = parseInt(limpio.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    return this.excepcionState.colorPreviewSuave();
   }
 
   agentesParaExcepcion(): TrabajadorResumen[] {
-    const q = this.busquedaAgenteExcepcion.trim().toLowerCase();
-    if (!q) return this.agentes;
-    return this.agentes.filter(a =>
-      String(a.codigo).toLowerCase().includes(q) ||
-      a.nombreCompleto.toLowerCase().includes(q)
+    return this.excepcionState.filtrarAgentes(
+      this.agentes
     );
   }
 
   abrirModalExcepcion(): void {
-    this.cargarColoresExcepcionRecientes();
-    this.busquedaAgenteExcepcion = '';
-    this.agenteExcepcion = null;
-    this.excepcionPermiteA = true;
-    this.excepcionPermiteB = true;
-    this.excepcionPermiteC = true;
-    this.excepcionMotivo = '';
-    this.excepcionColor = '#FFF3B0';
-    this.modalExcepcionAbierto = true;
+    this.excepcionState.abrirNueva();
+    this.cdr.detectChanges();
   }
 
-  seleccionarAgenteExcepcion(agente: TrabajadorResumen): void {
-    this.abrirExcepcion(agente);
+  seleccionarAgenteExcepcion(
+    agente: TrabajadorResumen
+  ): void {
+    this.abrirExcepcion(
+      agente
+    );
   }
 
-  turnosRecomendados(agenteId: number): string {
-    const e = this.excepcionPorAgente.get(agenteId);
-    if (!e) return 'A, B y C';
-    return [e.permiteA ? 'A' : '', e.permiteB ? 'B' : '', e.permiteC ? 'C' : '']
-      .filter(Boolean)
-      .join(', ');
+  turnosRecomendados(
+    agenteId: number
+  ): string {
+    return this.excepcionState.turnosRecomendados(
+      agenteId
+    );
   }
 
-  turnoRecomendado(agenteId: number, estado: 'A' | 'B' | 'C'): boolean {
-    const e = this.excepcionPorAgente.get(agenteId);
-    if (!e) return true;
-    if (estado === 'A') return e.permiteA;
-    if (estado === 'B') return e.permiteB;
-    return e.permiteC;
+  turnoRecomendado(
+    agenteId: number,
+    estado: 'A' | 'B' | 'C'
+  ): boolean {
+    return this.excepcionState.turnoRecomendado(
+      agenteId,
+      estado
+    );
   }
 
-  abrirExcepcion(agente: TrabajadorResumen): void {
-    this.cargarColoresExcepcionRecientes();
-    const actual = this.excepcionPorAgente.get(agente.id);
-    this.agenteExcepcion = agente;
-    this.excepcionPermiteA = actual?.permiteA ?? true;
-    this.excepcionPermiteB = actual?.permiteB ?? true;
-    this.excepcionPermiteC = actual?.permiteC ?? true;
-    this.excepcionMotivo = actual?.motivo ?? '';
-    this.excepcionColor = actual?.color ?? '#FFF3B0';
-    this.modalExcepcionAbierto = true;
+  abrirExcepcion(
+    agente: TrabajadorResumen
+  ): void {
+    this.excepcionState.abrir(
+      agente
+    );
+    this.cdr.detectChanges();
   }
 
-  seleccionarColorExcepcion(color: string): void {
-    this.excepcionColor = color;
-  }
-
-  private cargarColoresExcepcionRecientes(): void {
-    try {
-      const guardados = JSON.parse(localStorage.getItem(this.claveColoresExcepcion) ?? '[]');
-      this.coloresExcepcionRecientes = Array.isArray(guardados)
-        ? guardados.filter((color): color is string => typeof color === 'string' && /^#[0-9a-fA-F]{6}$/.test(color)).slice(0, 8)
-        : [];
-    } catch {
-      this.coloresExcepcionRecientes = [];
-    }
-  }
-
-  private registrarColorExcepcionReciente(color: string): void {
-    if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
-    const normalizado = color.toUpperCase();
-    const nuevos = [
-      normalizado,
-      ...this.coloresExcepcionRecientes.filter(c => c.toUpperCase() !== normalizado)
-    ].slice(0, 8);
-
-    this.coloresExcepcionRecientes = nuevos;
-    try {
-      localStorage.setItem(this.claveColoresExcepcion, JSON.stringify(nuevos));
-    } catch {
-      // Si el navegador bloquea localStorage, la selección sigue funcionando en esta sesión.
-    }
+  seleccionarColorExcepcion(
+    color: string
+  ): void {
+    this.excepcionState.seleccionarColor(
+      color
+    );
   }
 
   cerrarExcepcion(): void {
-    if (this.guardandoExcepcion) return;
-    this.modalExcepcionAbierto = false;
-    this.agenteExcepcion = null;
+    if (
+      this.excepcionState.cerrar()
+    ) {
+      this.cdr.detectChanges();
+    }
   }
 
   guardarExcepcion(): void {
-    if (!this.plazaId || !this.agenteExcepcion || this.guardandoExcepcion) return;
-    if (!this.excepcionPermiteA && !this.excepcionPermiteB && !this.excepcionPermiteC) {
-      this.error = 'Selecciona al menos un turno recomendado: A, B o C.';
+    if (
+      !this.plazaId ||
+      !this.agenteExcepcion ||
+      this.guardandoExcepcion
+    ) {
+      return;
+    }
+
+    const errorValidacion =
+      this.excepcionState.validar();
+
+    if (errorValidacion) {
+      this.error = errorValidacion;
+      return;
+    }
+
+    const request =
+      this.excepcionState.construirRequest(
+        this.plazaId
+      );
+
+    if (!request) {
       return;
     }
 
     this.guardandoExcepcion = true;
     this.error = '';
-    this.facade.guardarExcepcion({
-      trabajadorId: this.agenteExcepcion.id,
-      plazaId: this.plazaId,
-      permiteA: this.excepcionPermiteA,
-      permiteB: this.excepcionPermiteB,
-      permiteC: this.excepcionPermiteC,
-      motivo: this.excepcionMotivo.trim() || null,
-      color: this.excepcionColor,
-      activo: true
-    }).pipe(finalize(() => {
-      this.guardandoExcepcion = false;
-      this.cdr.detectChanges();
-    })).subscribe({
-      next: excepcion => {
-        this.registrarColorExcepcionReciente(excepcion.color);
-        this.excepcionPorAgente.set(excepcion.trabajadorId, excepcion);
-        this.mensaje = 'Excepción del agente guardada correctamente.';
-        this.modalExcepcionAbierto = false;
-        this.agenteExcepcion = null;
-        this.cdr.detectChanges();
-      },
-      error: e => {
-        this.error = this.mensajeError(e, 'No se pudo guardar la excepción.');
-        this.cdr.detectChanges();
-      }
-    });
-  }
 
-  quitarExcepcion(): void {
-    if (!this.plazaId || !this.agenteExcepcion || this.guardandoExcepcion) return;
-    if (!window.confirm(`¿Quitar la excepción de ${this.agenteExcepcion.nombreCompleto}?`)) return;
-
-    const agenteId = this.agenteExcepcion.id;
-    this.guardandoExcepcion = true;
-    this.error = '';
-    this.facade.desactivarExcepcion(agenteId, this.plazaId)
-      .pipe(finalize(() => {
-        this.guardandoExcepcion = false;
-        this.cdr.detectChanges();
-      }))
+    this.facade
+      .guardarExcepcion(
+        request
+      )
+      .pipe(
+        finalize(
+          () => {
+            this.guardandoExcepcion = false;
+            this.cdr.detectChanges();
+          }
+        )
+      )
       .subscribe({
-        next: () => {
-          this.excepcionPorAgente.delete(agenteId);
-          this.mensaje = 'Excepción eliminada correctamente.';
-          this.modalExcepcionAbierto = false;
-          this.agenteExcepcion = null;
+        next: excepcion => {
+          this.excepcionState.aplicar(
+            excepcion
+          );
+
+          this.mensaje =
+            'Excepción del agente guardada correctamente.';
+
           this.cdr.detectChanges();
         },
         error: e => {
-          this.error = this.mensajeError(e, 'No se pudo eliminar la excepción.');
+          this.error =
+            this.mensajeError(
+              e,
+              'No se pudo guardar la excepción.'
+            );
+
           this.cdr.detectChanges();
         }
       });
   }
 
+  quitarExcepcion(): void {
+    if (
+      !this.plazaId ||
+      !this.agenteExcepcion ||
+      this.guardandoExcepcion
+    ) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `¿Quitar la excepción de ${this.agenteExcepcion.nombreCompleto}?`
+      )
+    ) {
+      return;
+    }
+
+    const agenteId =
+      this.agenteExcepcion.id;
+
+    this.guardandoExcepcion = true;
+    this.error = '';
+
+    this.facade
+      .desactivarExcepcion(
+        agenteId,
+        this.plazaId
+      )
+      .pipe(
+        finalize(
+          () => {
+            this.guardandoExcepcion = false;
+            this.cdr.detectChanges();
+          }
+        )
+      )
+      .subscribe({
+        next: () => {
+          this.excepcionState.quitar(
+            agenteId
+          );
+
+          this.mensaje =
+            'Excepción eliminada correctamente.';
+
+          this.cdr.detectChanges();
+        },
+        error: e => {
+          this.error =
+            this.mensajeError(
+              e,
+              'No se pudo eliminar la excepción.'
+            );
+
+          this.cdr.detectChanges();
+        }
+      });
+  }
 
   /*
    * ============================================================

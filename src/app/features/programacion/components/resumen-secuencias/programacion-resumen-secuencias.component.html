@@ -1,0 +1,22 @@
+<section class="sequence-summary">
+  @for(grupo of grupos; track grupo.codigo){
+    <article class="sequence-summary-card">
+      <span>{{ grupo.nombre }}</span>
+      <strong>{{ cantidad(grupo.codigo) }}</strong>
+      <small>agentes</small>
+    </article>
+  }
+
+  <article
+    class="sequence-summary-card unassigned-summary"
+    role="button"
+    tabindex="0"
+    (click)="abrirPendientes.emit()"
+    (keydown.enter)="abrirPendientes.emit()"
+    title="Ver agentes sin secuencia"
+  >
+    <span>Sin secuencia</span>
+    <strong>{{ sinSecuencia }}</strong>
+    <small>agentes</small>
+  </article>
+</section>

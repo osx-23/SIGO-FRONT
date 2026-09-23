@@ -451,8 +451,8 @@ export class ProgramacionSupervisorComponent
 
     this.error = '';
 
-    this.facade
-      .getPlazas()
+    this.cargaFacade
+      .cargarPlazas()
       .subscribe({
 
         next: (
@@ -602,35 +602,12 @@ export class ProgramacionSupervisorComponent
      * Los líderes se cargan después
      * y no bloquean la tabla.
      */
-    forkJoin({
-
-      agentes:
-        this.facade
-          .getAgentes(
-            this.plazaId
-          ),
-
-      turnos:
-        this.facade
-          .getTurnos(
-            this.plazaId,
-            this.anio,
-            this.mes
-          ),
-
-      secuencias:
-        this.facade
-          .getSecuencias(
-            this.plazaId
-          ),
-
-      excepciones:
-        this.facade
-          .getExcepciones(
-            this.plazaId
-          )
-
-    })
+    this.cargaFacade
+      .cargarPrincipal(
+        this.plazaId,
+        this.anio,
+        this.mes
+      )
       .pipe(
 
         finalize(
@@ -778,8 +755,8 @@ export class ProgramacionSupervisorComponent
       true;
 
 
-    this.facade
-      .getSecuencias(
+    this.cargaFacade
+      .recargarSecuencias(
         this.plazaId
       )
       .pipe(
@@ -847,21 +824,10 @@ export class ProgramacionSupervisorComponent
       true;
 
 
-    forkJoin({
-
-      controladores:
-        this.facade
-          .getControladores(
-            this.plazaId
-          ),
-
-      grupos:
-        this.facade
-          .getGrupos(
-            this.plazaId
-          )
-
-    })
+    this.liderFacade
+      .cargar(
+        this.plazaId
+      )
       .pipe(
 
         finalize(
@@ -894,18 +860,11 @@ export class ProgramacionSupervisorComponent
             ];
 
 
-          const liderSeleccionadoPorAgente = new Map<number, number>();
-
-          for (const grupo of this.grupos) {
-            if (grupo.activo) {
-              liderSeleccionadoPorAgente.set(grupo.agenteId, grupo.controladorId);
-            }
-          }
-
-          for (const agente of this.agentes) {
-            this.liderSeleccionado[agente.id] =
-              liderSeleccionadoPorAgente.get(agente.id) ?? null;
-          }
+          this.liderSeleccionado =
+            this.liderFacade.construirSeleccion(
+              this.agentes,
+              this.grupos
+            );
 
 
           this.cdr.detectChanges();
@@ -970,31 +929,12 @@ export class ProgramacionSupervisorComponent
    * el orden guardado.
    */
   secuenciasDeGrupo(
-    grupo:
-      GrupoProgramacion
+    grupo: GrupoProgramacion
   ): SecuenciaAgente[] {
-
-    return this.secuencias
-      .filter(
-        s =>
-          s.grupo ===
-            grupo
-      )
-      .sort(
-        (
-          a,
-          b
-        ) =>
-          (
-            a.orden ??
-            Number.MAX_SAFE_INTEGER
-          )
-          -
-          (
-            b.orden ??
-            Number.MAX_SAFE_INTEGER
-          )
-      );
+    return this.secuenciaFacade.ordenarGrupo(
+      this.secuencias,
+      grupo
+    );
   }
 
 
@@ -1062,17 +1002,12 @@ export class ProgramacionSupervisorComponent
     this.cdr.detectChanges();
 
 
-    this.facade
-      .asignarSecuencia({
-
+    this.secuenciaFacade
+      .asignar(
+        this.plazaId,
         agenteId,
-
-        plazaId:
-          this.plazaId,
-
         grupo
-
-      })
+      )
       .pipe(
 
         finalize(
@@ -1098,19 +1033,11 @@ export class ProgramacionSupervisorComponent
            * Reemplazamos localmente
            * el registro del agente.
            */
-          const restantes =
-            this.secuencias
-              .filter(
-                s =>
-                  s.agenteId !==
-                    agenteId
-              );
-
-
-          this.secuencias = [
-            ...restantes,
-            registro
-          ];
+          this.secuencias =
+            this.secuenciaFacade.reemplazarRegistro(
+              this.secuencias,
+              registro
+            );
 
           this.reconstruirCacheSecuencias();
           // La respuesta ya se aplicó localmente; evitamos otro GET /secuencias.
@@ -1308,35 +1235,12 @@ export class ProgramacionSupervisorComponent
       '';
 
 
-    const request = {
 
-      plazaId:
+    this.secuenciaFacade
+      .guardarOrden(
         this.plazaId,
-
-      grupo,
-
-      agentes:
-        integrantes.map(
-          (
-            integrante,
-            index
-          ) => ({
-
-            agenteId:
-              integrante.agenteId,
-
-            orden:
-              index + 1
-
-          })
-        )
-
-    };
-
-
-    this.facade
-      .guardarOrdenSecuencia(
-        request
+        grupo,
+        integrantes
       )
       .pipe(
 
@@ -1360,70 +1264,12 @@ export class ProgramacionSupervisorComponent
            * Actualizamos localmente
            * las posiciones del grupo.
            */
-          const ordenPorAgente =
-            new Map<
-              number,
-              number
-            >();
-
-
-          integrantes.forEach(
-            (
-              integrante,
-              index
-            ) => {
-
-              ordenPorAgente.set(
-                integrante.agenteId,
-                index + 1
-              );
-
-            }
-          );
-
-
           this.secuencias =
-            this.secuencias
-              .map(
-                registro => {
-
-                  if (
-                    registro.grupo !==
-                      grupo
-                  ) {
-
-                    return registro;
-
-                  }
-
-
-                  const nuevoOrden =
-                    ordenPorAgente.get(
-                      registro.agenteId
-                    );
-
-
-                  if (
-                    nuevoOrden ===
-                      undefined
-                  ) {
-
-                    return registro;
-
-                  }
-
-
-                  return {
-
-                    ...registro,
-
-                    orden:
-                      nuevoOrden
-
-                  };
-
-                }
-              );
+            this.secuenciaFacade.aplicarOrden(
+              this.secuencias,
+              grupo,
+              integrantes
+            );
 
           this.reconstruirCacheSecuencias();
 
@@ -2022,44 +1868,6 @@ export class ProgramacionSupervisorComponent
     }
 
 
-    const programaciones =
-      [
-        ...this.cambios.entries()
-      ]
-        .map(
-          (
-            [
-              key,
-              estado
-            ]
-          ) => {
-
-            const [
-              trabajadorId,
-              dia
-            ] =
-              key
-                .split('-')
-                .map(Number);
-
-
-            return {
-
-              trabajadorId,
-
-              fecha:
-                this.fecha(
-                  dia
-                ),
-
-              estado
-
-            };
-
-          }
-        );
-
-
     this.guardando =
       true;
 
@@ -2070,15 +1878,13 @@ export class ProgramacionSupervisorComponent
       '';
 
 
-    this.facade
-      .guardarTurnos({
-
-        plazaId:
-          this.plazaId,
-
-        programaciones
-
-      })
+    this.guardadoFacade
+      .guardar(
+        this.plazaId,
+        this.cambios,
+        this.anio,
+        this.mes
+      )
       .pipe(
 
         finalize(
@@ -2099,29 +1905,10 @@ export class ProgramacionSupervisorComponent
           turnosGuardados
         ) => {
 
-          for (
-            const turno
-            of turnosGuardados
-          ) {
-
-            const dia =
-              this.diaDeFecha(
-                turno.fecha
-              );
-
-
-            this.matrix.set(
-
-              this.key(
-                turno.trabajadorId,
-                dia
-              ),
-
-              turno.estado
-
-            );
-
-          }
+          this.guardadoFacade.aplicarResultado(
+            this.matrix,
+            turnosGuardados
+          );
 
 
           this.cambios.clear();
@@ -2209,21 +1996,13 @@ export class ProgramacionSupervisorComponent
       '';
 
 
-    this.facade
-      .asignarLider({
-
-        agenteId:
-          agente.id,
-
+    this.liderFacade
+      .asignar(
+        this.plazaId,
+        agente.id,
         controladorId,
-
-        plazaId:
-          this.plazaId,
-
-        fechaInicio:
-          this.hoy()
-
-      })
+        this.hoy()
+      )
       .subscribe({
 
         next: (
@@ -2231,17 +2010,10 @@ export class ProgramacionSupervisorComponent
         ) => {
 
           this.grupos =
-            this.grupos
-              .filter(
-                actual =>
-                  actual.agenteId !==
-                    agente.id
-              );
-
-
-          this.grupos.push(
-            grupo
-          );
+            this.liderFacade.reemplazarGrupo(
+              this.grupos,
+              grupo
+            );
 
 
           this.liderSeleccionado[

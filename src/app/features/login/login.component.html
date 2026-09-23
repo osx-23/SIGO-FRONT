@@ -1,1 +1,126 @@
-<main class="auth-page"><form class="auth-card" (ngSubmit)="entrar()"><div class="logo">SIGO</div><h1>Iniciar sesión</h1><p>Gestión Operativa · Lima Expresa</p><label>Código de trabajador<input type="number" name="codigo" [(ngModel)]="codigo" autocomplete="username" required></label><label>Contraseña<input type="password" name="password" [(ngModel)]="password" autocomplete="current-password" required></label>@if(error()){<div class="error">{{error()}}</div>}<button [disabled]="loading()">{{loading()?'Ingresando...':'Ingresar'}}</button></form></main>
+<main class="login-page">
+  <section class="login-shell" aria-label="Inicio de sesión de SIGO">
+    <aside class="brand-panel">
+      <div class="brand-panel__top">
+        <div class="brand-mark">SIGO</div>
+        <span class="brand-badge">Gestión Operativa</span>
+      </div>
+
+      <div class="brand-panel__content">
+        <p class="brand-eyebrow">Lima Expresa</p>
+        <h1>Sistema Integrado de Gestión Operativa</h1>
+        <p class="brand-description">
+          Centraliza la operación diaria y facilita el seguimiento de tus plazas
+          desde un solo lugar.
+        </p>
+
+        <div class="brand-features" aria-label="Módulos principales">
+          <span>Asistencia</span>
+          <span>Programación</span>
+          <span>Relevos</span>
+          <span>Incidencias</span>
+          <span>Inventario</span>
+        </div>
+      </div>
+
+      <div class="plazas-background" aria-hidden="true">
+        <span>P1</span>
+        <span>P2</span>
+        <span>P3</span>
+        <span>P4</span>
+        <span>P5</span>
+        <span>P6</span>
+        <span>P7</span>
+        <span>P8</span>
+        <span>P9</span>
+        <span>P10</span>
+      </div>
+
+      <p class="brand-panel__footer">
+        Plataforma interna para la gestión de operaciones
+      </p>
+    </aside>
+
+    <section class="form-panel">
+      <form class="login-form" (ngSubmit)="entrar()" novalidate>
+        <div class="mobile-brand" aria-hidden="true">SIGO</div>
+
+        <header class="form-header">
+          <span class="form-kicker">Acceso seguro</span>
+          <h2>Iniciar sesión</h2>
+          <p>Ingresa con tu código de trabajador y contraseña.</p>
+        </header>
+
+        <div class="form-fields">
+          <label class="field" for="codigo">
+            <span>Código de trabajador</span>
+            <input
+              id="codigo"
+              type="number"
+              name="codigo"
+              [(ngModel)]="codigo"
+              autocomplete="username"
+              inputmode="numeric"
+              placeholder="Ej. 287"
+              required
+              [disabled]="loading()"
+            />
+          </label>
+
+          <label class="field" for="password">
+            <span>Contraseña</span>
+
+            <div class="password-field">
+              <input
+                id="password"
+                [type]="mostrarPassword() ? 'text' : 'password'"
+                name="password"
+                [(ngModel)]="password"
+                autocomplete="current-password"
+                placeholder="Ingresa tu contraseña"
+                required
+                [disabled]="loading()"
+              />
+
+              <button
+                class="password-toggle"
+                type="button"
+                (click)="alternarPassword()"
+                [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                [attr.aria-pressed]="mostrarPassword()"
+                [disabled]="loading()"
+              >
+                {{ mostrarPassword() ? 'Ocultar' : 'Ver' }}
+              </button>
+            </div>
+          </label>
+        </div>
+
+        @if (error()) {
+          <div class="error-message" role="alert">
+            {{ error() }}
+          </div>
+        }
+
+        <button
+          class="submit-button"
+          type="submit"
+          [disabled]="loading()"
+        >
+          @if (loading()) {
+            <span class="spinner" aria-hidden="true"></span>
+            Ingresando...
+          } @else {
+            Ingresar a SIGO
+          }
+        </button>
+
+        <footer class="form-footer">
+          <span>SIGO</span>
+          <span class="footer-separator" aria-hidden="true"></span>
+          <span>Lima Expresa</span>
+        </footer>
+      </form>
+    </section>
+  </section>
+</main>

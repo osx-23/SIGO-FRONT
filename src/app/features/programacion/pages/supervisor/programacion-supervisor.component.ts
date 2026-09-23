@@ -36,6 +36,10 @@ import {
   ProgramacionSupervisorFacade
 } from '../../state/programacion-supervisor.facade';
 
+import {
+  ProgramacionSecuenciaState
+} from '../../state/programacion-secuencia.state';
+
 
 @Component({
   selector: 'app-programacion-supervisor',
@@ -66,6 +70,9 @@ export class ProgramacionSupervisorComponent
 
   private readonly facade =
     inject(ProgramacionSupervisorFacade);
+
+  private readonly secuenciaState =
+    inject(ProgramacionSecuenciaState);
 
   private readonly cdr =
     inject(ChangeDetectorRef);
@@ -191,19 +198,8 @@ export class ProgramacionSupervisorComponent
 
   agentesProgramadosLista: TrabajadorResumen[] = [];
 
-  private readonly grupoPorAgente =
-    new Map<number, GrupoProgramacion>();
-
-  private readonly posicionPorAgente =
-    new Map<number, number>();
-
   private readonly liderPorAgente =
     new Map<number, TrabajadorResumen>();
-
-  private readonly agentePorId = new Map<number, TrabajadorResumen>();
-  private readonly puedeSubirPorAgente = new Map<number, boolean>();
-  private readonly puedeBajarPorAgente = new Map<number, boolean>();
-  private readonly cantidadPorGrupo = new Map<GrupoProgramacion, number>();
 
   readonly excepcionPorAgente =
     new Map<number, AgenteProgramacionExcepcion>();
@@ -1010,7 +1006,7 @@ export class ProgramacionSupervisorComponent
   grupoDeAgente(
     agenteId: number
   ): GrupoProgramacion | null {
-    return this.grupoPorAgente.get(agenteId) ?? null;
+    return this.secuenciaState.grupoDe(agenteId);
   }
 
 
@@ -1741,7 +1737,7 @@ export class ProgramacionSupervisorComponent
       !this.turnoRecomendado(agenteId, estado)
     ) {
       const excepcion = this.excepcionPorAgente.get(agenteId);
-      const agente = this.agentePorId.get(agenteId);
+      const agente = this.secuenciaState.agente(agenteId);
 
       this.advertenciaTurno = {
         agenteId,
@@ -2455,7 +2451,7 @@ export class ProgramacionSupervisorComponent
   cantidadGrupo(
     grupo: GrupoProgramacion
   ): number {
-    return this.cantidadPorGrupo.get(grupo) ?? 0;
+    return this.secuenciaState.cantidad(grupo);
   }
 
 
@@ -2473,7 +2469,7 @@ export class ProgramacionSupervisorComponent
   posicionEnGrupo(
     agenteId: number
   ): number {
-    return this.posicionPorAgente.get(agenteId) ?? 0;
+    return this.secuenciaState.posicionDe(agenteId);
   }
 
 
@@ -2486,8 +2482,10 @@ export class ProgramacionSupervisorComponent
     grupo: GrupoProgramacion,
     agenteId: number
   ): boolean {
-    return this.grupoPorAgente.get(agenteId) === grupo &&
-      (this.puedeSubirPorAgente.get(agenteId) ?? false);
+    return this.secuenciaState.puedeSubir(
+      grupo,
+      agenteId
+    );
   }
 
 
@@ -2495,8 +2493,10 @@ export class ProgramacionSupervisorComponent
     grupo: GrupoProgramacion,
     agenteId: number
   ): boolean {
-    return this.grupoPorAgente.get(agenteId) === grupo &&
-      (this.puedeBajarPorAgente.get(agenteId) ?? false);
+    return this.secuenciaState.puedeBajar(
+      grupo,
+      agenteId
+    );
   }
 
 
@@ -2557,61 +2557,20 @@ export class ProgramacionSupervisorComponent
 
 
   private reconstruirCacheSecuencias(): void {
-    this.grupoPorAgente.clear();
-    this.posicionPorAgente.clear();
-    this.puedeSubirPorAgente.clear();
-    this.puedeBajarPorAgente.clear();
-    this.agentePorId.clear();
-    this.cantidadPorGrupo.clear();
-
-    for (const agente of this.agentes) {
-      this.agentePorId.set(agente.id, agente);
-    }
-
-    const secuenciasPorGrupo = new Map<GrupoProgramacion, SecuenciaAgente[]>();
-    for (const grupo of this.gruposProgramacion) {
-      secuenciasPorGrupo.set(grupo.codigo, []);
-    }
-
-    for (const secuencia of this.secuencias) {
-      if (!secuencia.grupo) continue;
-
-      secuenciasPorGrupo.get(secuencia.grupo)?.push(secuencia);
-      this.cantidadPorGrupo.set(
-        secuencia.grupo,
-        (this.cantidadPorGrupo.get(secuencia.grupo) ?? 0) + 1
-      );
-    }
-
-    const query = this.busqueda.trim().toLowerCase();
-    const resultado: TrabajadorResumen[] = [];
-
-    for (const grupo of this.gruposProgramacion) {
-      const registros = secuenciasPorGrupo.get(grupo.codigo) ?? [];
-      registros.sort((a, b) =>
-        (a.orden ?? Number.MAX_SAFE_INTEGER) -
-        (b.orden ?? Number.MAX_SAFE_INTEGER)
+    this.agentesProgramadosLista =
+      this.secuenciaState.reconstruir(
+        this.agentes,
+        this.secuencias,
+        this.gruposProgramacion.map(
+          grupo => grupo.codigo
+        ),
+        this.busqueda
       );
 
-      registros.forEach((registro, index) => {
-        this.grupoPorAgente.set(registro.agenteId, grupo.codigo);
-        this.posicionPorAgente.set(registro.agenteId, index + 1);
-        this.puedeSubirPorAgente.set(registro.agenteId, index > 0);
-        this.puedeBajarPorAgente.set(registro.agenteId, index < registros.length - 1);
-
-        const agente = this.agentePorId.get(registro.agenteId);
-        if (agente && (!query || this.coincideBusqueda(agente, query))) {
-          resultado.push(agente);
-        }
-      });
-    }
-
-    this.agentesProgramadosLista = resultado;
     if (this.diaSeleccionado) {
       this.recalcularResumenDia();
     }
   }
-
 
 
   private reconstruirCacheLideres(): void {

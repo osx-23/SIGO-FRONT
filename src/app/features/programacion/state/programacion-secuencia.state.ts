@@ -5,7 +5,7 @@ import {
   TrabajadorResumen
 } from '../models/programacion.models';
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class ProgramacionSecuenciaState {
   private readonly grupoPorAgente =
     new Map<number, GrupoProgramacion>();

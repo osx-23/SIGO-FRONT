@@ -1,6 +1,4 @@
 import { inject, Injectable } from '@angular/core';
-import { forkJoin } from 'rxjs';
-
 import {
   ProgramacionSupervisorFacade
 } from './programacion-supervisor.facade';
@@ -15,26 +13,11 @@ export class ProgramacionCargaFacade {
     anio: number,
     mes: number
   ) {
-    return forkJoin({
-      agentes:
-        this.facade.getAgentes(
-          plazaId
-        ),
-      turnos:
-        this.facade.getTurnos(
-          plazaId,
-          anio,
-          mes
-        ),
-      secuencias:
-        this.facade.getSecuencias(
-          plazaId
-        ),
-      excepciones:
-        this.facade.getExcepciones(
-          plazaId
-        )
-    });
+    return this.facade.getContexto(
+      plazaId,
+      anio,
+      mes
+    );
   }
 
   cargarLideres(

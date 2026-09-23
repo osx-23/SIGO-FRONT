@@ -29,9 +29,12 @@ import {
   ConflictoProgramacionPropuesta,
   DiaEspecialProgramacionRequest,
   NovedadProgramacionRequest,
-  ProgramacionApiService,
   ProgramacionPropuestaResponse
 } from '../../data-access/programacion-api.service';
+
+import {
+  ProgramacionSupervisorFacade
+} from '../../state/programacion-supervisor.facade';
 
 
 @Component({
@@ -61,8 +64,8 @@ export class ProgramacionSupervisorComponent
    * ============================================================
    */
 
-  private readonly api =
-    inject(ProgramacionApiService);
+  private readonly facade =
+    inject(ProgramacionSupervisorFacade);
 
   private readonly cdr =
     inject(ChangeDetectorRef);
@@ -415,7 +418,7 @@ export class ProgramacionSupervisorComponent
 
     this.error = '';
 
-    this.api
+    this.facade
       .getPlazas()
       .subscribe({
 
@@ -572,13 +575,13 @@ export class ProgramacionSupervisorComponent
     forkJoin({
 
       agentes:
-        this.api
+        this.facade
           .getAgentes(
             this.plazaId
           ),
 
       turnos:
-        this.api
+        this.facade
           .getTurnos(
             this.plazaId,
             this.anio,
@@ -586,13 +589,13 @@ export class ProgramacionSupervisorComponent
           ),
 
       secuencias:
-        this.api
+        this.facade
           .getSecuencias(
             this.plazaId
           ),
 
       excepciones:
-        this.api
+        this.facade
           .getExcepciones(
             this.plazaId
           )
@@ -748,7 +751,7 @@ export class ProgramacionSupervisorComponent
       true;
 
 
-    this.api
+    this.facade
       .getSecuencias(
         this.plazaId
       )
@@ -820,13 +823,13 @@ export class ProgramacionSupervisorComponent
     forkJoin({
 
       controladores:
-        this.api
+        this.facade
           .getControladores(
             this.plazaId
           ),
 
       grupos:
-        this.api
+        this.facade
           .getGrupos(
             this.plazaId
           )
@@ -1109,7 +1112,7 @@ export class ProgramacionSupervisorComponent
     this.cdr.detectChanges();
 
 
-    this.api
+    this.facade
       .asignarSecuencia({
 
         agenteId,
@@ -1381,7 +1384,7 @@ export class ProgramacionSupervisorComponent
     };
 
 
-    this.api
+    this.facade
       .guardarOrdenSecuencia(
         request
       )
@@ -1604,7 +1607,7 @@ export class ProgramacionSupervisorComponent
     this.error = '';
     this.mensaje = '';
 
-    this.api.generarPropuesta({
+    this.facade.generarPropuesta({
       plazaId: this.plazaId,
       anio: this.anio,
       mes: this.mes,
@@ -1951,7 +1954,7 @@ export class ProgramacionSupervisorComponent
 
     this.guardandoExcepcion = true;
     this.error = '';
-    this.api.guardarExcepcion({
+    this.facade.guardarExcepcion({
       trabajadorId: this.agenteExcepcion.id,
       plazaId: this.plazaId,
       permiteA: this.excepcionPermiteA,
@@ -1986,7 +1989,7 @@ export class ProgramacionSupervisorComponent
     const agenteId = this.agenteExcepcion.id;
     this.guardandoExcepcion = true;
     this.error = '';
-    this.api.desactivarExcepcion(agenteId, this.plazaId)
+    this.facade.desactivarExcepcion(agenteId, this.plazaId)
       .pipe(finalize(() => {
         this.guardandoExcepcion = false;
         this.cdr.detectChanges();
@@ -2130,7 +2133,7 @@ export class ProgramacionSupervisorComponent
       '';
 
 
-    this.api
+    this.facade
       .guardarTurnos({
 
         plazaId:
@@ -2269,7 +2272,7 @@ export class ProgramacionSupervisorComponent
       '';
 
 
-    this.api
+    this.facade
       .asignarLider({
 
         agenteId:

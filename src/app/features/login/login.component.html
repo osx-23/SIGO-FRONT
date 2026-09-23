@@ -2,7 +2,20 @@
   <section class="login-shell" aria-label="Inicio de sesión de SIGO">
     <aside class="brand-panel">
       <div class="brand-panel__top">
-        <div class="brand-mark">SIGO</div>
+        <div class="brand-logos">
+          <img
+            class="brand-logo brand-logo--sigo"
+            src="assets/sigo_logo.png"
+            alt="SIGO"
+          />
+          <span class="brand-logo-divider" aria-hidden="true"></span>
+          <img
+            class="brand-logo brand-logo--lima"
+            src="assets/logo-lima-expresa.png"
+            alt="Lima Expresa"
+          />
+        </div>
+
         <span class="brand-badge">Gestión Operativa</span>
       </div>
 
@@ -43,7 +56,17 @@
 
     <section class="form-panel">
       <form class="login-form" (ngSubmit)="entrar()" novalidate>
-        <div class="mobile-brand" aria-hidden="true">SIGO</div>
+        <div class="mobile-brand">
+          <img
+            src="assets/sigo_logo.png"
+            alt="SIGO"
+          />
+          <span class="mobile-brand__divider" aria-hidden="true"></span>
+          <img
+            src="assets/logo-lima-expresa.png"
+            alt="Lima Expresa"
+          />
+        </div>
 
         <header class="form-header">
           <span class="form-kicker">Acceso seguro</span>

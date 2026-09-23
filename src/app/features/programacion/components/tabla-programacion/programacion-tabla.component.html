@@ -1,0 +1,297 @@
+<section class="card sequence-block">
+  <div class="sequence-head">
+    <div class="sequence-title">
+      <div>
+        <span class="sequence-label">PROGRAMACIÓN</span>
+        <h2>Todos los agentes</h2>
+      </div>
+
+      <span class="sequence-count">
+        {{ agentes.length }} agentes
+      </span>
+    </div>
+
+    <div class="table-actions">
+      @if(guardandoOrden){
+        <span class="saving-order">
+          Guardando orden...
+        </span>
+      }
+
+      <button
+        class="primary generator-button"
+        type="button"
+        (click)="abrirGenerador.emit()"
+        [disabled]="!plazaId || generador.procesando"
+      >
+        {{ generador.procesando ? 'Generando...' : 'Generar con IA' }}
+      </button>
+
+      <button
+        class="secondary"
+        type="button"
+        (click)="abrirPendientes.emit()"
+      >
+        Asignar secuencia
+
+        @if(agentesSinSecuencia > 0){
+          <span class="badge">
+            {{ agentesSinSecuencia }}
+          </span>
+        }
+      </button>
+
+      <button
+        class="secondary exception-main-button"
+        type="button"
+        (click)="abrirExcepciones.emit()"
+      >
+        Añadir excepción
+      </button>
+
+      <button
+        class="secondary details-toggle"
+        type="button"
+        (click)="alternarDetalles.emit()"
+      >
+        {{ mostrarDetalles
+          ? 'Ocultar detalles'
+          : 'Mostrar detalles' }}
+      </button>
+    </div>
+  </div>
+
+  @if(diaSeleccionado){
+    <div class="day-summary">
+      <div class="day-summary-title">
+        <strong>
+          {{ nombreDiaSeleccionado() }}
+        </strong>
+
+        <span>
+          Resumen de agentes asignados
+        </span>
+      </div>
+
+      <div class="day-summary-counts">
+        <span class="summary-shift estado-a">
+          A: {{ cantidadTurnoDia('A') }}
+        </span>
+
+        <span class="summary-shift estado-b">
+          B: {{ cantidadTurnoDia('B') }}
+        </span>
+
+        <span class="summary-shift estado-c">
+          C: {{ cantidadTurnoDia('C') }}
+        </span>
+
+        <span class="summary-total">
+          Total: {{ totalTurnosDia() }}
+        </span>
+      </div>
+    </div>
+  }
+
+  @if(agentes.length === 0){
+    <div class="empty">
+      No hay agentes con secuencia asignada.
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table [class.details-hidden]="!mostrarDetalles">
+        <thead>
+          <tr>
+            <th class="order-column">Pos.</th>
+            <th class="sticky-code">Cód.</th>
+            <th class="sticky-name">Nombre</th>
+
+            @if(mostrarDetalles){
+              <th class="sticky-leader-code">
+                Cód. líder
+              </th>
+              <th class="sticky-leader-name">
+                Nombre líder
+              </th>
+              <th class="group-column">
+                Secuencia
+              </th>
+            }
+
+            @for(dia of dias; track dia){
+              <th
+                class="day-column"
+                [class.day-selected]="diaSeleccionado === dia"
+                (click)="seleccionarDia(dia)"
+                title="Ver resumen del día"
+              >
+                <div class="day-header">
+                  <span class="day-name">
+                    {{ diaSemana(dia) }}
+                  </span>
+
+                  <strong class="day-number">
+                    {{ dia }}
+                  </strong>
+                </div>
+              </th>
+            }
+          </tr>
+        </thead>
+
+        <tbody>
+          @for(agente of agentes; track agente.id){
+            @let grupoActual = secuencias.grupoDe(agente.id);
+
+            <tr>
+              <td class="order-column">
+                <div class="order-control">
+                  <span class="order-number">
+                    {{ secuencias.posicionDe(agente.id) }}
+                  </span>
+
+                  <div class="order-buttons">
+                    <button
+                      class="order-btn"
+                      type="button"
+                      title="Subir"
+                      [disabled]="
+                        !grupoActual ||
+                        guardandoOrden ||
+                        !secuencias.puedeSubir(
+                          grupoActual,
+                          agente.id
+                        )
+                      "
+                      (click)="grupoActual && subir(grupoActual, agente.id)"
+                    >
+                      ↑
+                    </button>
+
+                    <button
+                      class="order-btn"
+                      type="button"
+                      title="Bajar"
+                      [disabled]="
+                        !grupoActual ||
+                        guardandoOrden ||
+                        !secuencias.puedeBajar(
+                          grupoActual,
+                          agente.id
+                        )
+                      "
+                      (click)="grupoActual && bajar(grupoActual, agente.id)"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </div>
+              </td>
+
+              <td class="sticky-code">
+                {{ agente.codigo }}
+              </td>
+
+              <td class="sticky-name">
+                <div
+                  class="agent-cell agent-cell-exception"
+                  [style.background-color]="
+                    excepciones.tiene(agente.id)
+                      ? excepciones.colorSuaveDe(agente.id)
+                      : null
+                  "
+                  [title]="
+                    excepciones.tiene(agente.id)
+                      ? (
+                          'Excepción: turnos recomendados ' +
+                          excepciones.turnosRecomendados(agente.id) +
+                          (
+                            excepciones.excepcion(agente.id)?.motivo
+                              ? ' · ' + excepciones.excepcion(agente.id)?.motivo
+                              : ''
+                          )
+                        )
+                      : ''
+                  "
+                >
+                  <div class="agent-name-line">
+                    <strong>
+                      {{ agente.nombreCompleto }}
+                    </strong>
+                  </div>
+
+                  @if(estaProcesandoAgente(agente.id)){
+                    <div class="agent-actions-line">
+                      <span class="processing">
+                        Actualizando...
+                      </span>
+                    </div>
+                  }
+                </div>
+              </td>
+
+              @if(mostrarDetalles){
+                <td class="sticky-leader-code">
+                  {{ codigoLider(agente.id) }}
+                </td>
+
+                <td class="sticky-leader-name">
+                  {{ nombreLider(agente.id) }}
+                </td>
+
+                <td class="group-column">
+                  <select
+                    class="group-select"
+                    [ngModel]="grupoActual"
+                    (ngModelChange)="
+                      cambiarSecuencia(
+                        agente.id,
+                        $event
+                      )
+                    "
+                    [disabled]="estaProcesandoAgente(agente.id)"
+                  >
+                    @for(opcion of gruposProgramacion; track opcion.codigo){
+                      <option [ngValue]="opcion.codigo">
+                        {{ opcion.nombre }}
+                      </option>
+                    }
+                  </select>
+                </td>
+              }
+
+              @for(dia of dias; track dia){
+                @let valor = estado(agente.id, dia);
+
+                <td class="cell">
+                  <select
+                    class="shift-select"
+                    [ngModel]="valor"
+                    (ngModelChange)="
+                      cambiarEstado(
+                        agente.id,
+                        dia,
+                        $event
+                      )
+                    "
+                    [class]="'shift-select ' + claseEstado(valor)"
+                  >
+                    <option [ngValue]="null">
+                      -
+                    </option>
+
+                    @for(estadoItem of estados; track estadoItem){
+                      <option [ngValue]="estadoItem">
+                        {{ estadoItem }}
+                      </option>
+                    }
+                  </select>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

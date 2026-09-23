@@ -95,6 +95,11 @@
 .brand-logo--lima {
   width: 126px;
   max-height: 42px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.16);
 }
 
 .brand-logo-divider {
@@ -124,22 +129,17 @@
 .mobile-brand img:last-child {
   width: 118px;
   max-height: 40px;
+  padding: 6px 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
 }
 
 .mobile-brand__divider {
   width: 1px;
   height: 28px;
   background: #cbd5e1;
-}
-
-.brand-badge {
-  padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #dbeafe;
-  font-size: 0.78rem;
-  font-weight: 700;
 }
 
 .brand-panel__content {

@@ -1,0 +1,1031 @@
+<section class="page">
+
+  <header class="page-head">
+
+    <div>
+
+      <span class="eyebrow">
+        PROGRAMACIÓN
+      </span>
+
+      <h1>
+        Programación mensual de turnos
+      </h1>
+
+      <p>
+        Organiza a los agentes por secuencias,
+        define su orden y asigna los turnos del mes.
+      </p>
+
+    </div>
+
+
+    <button
+      class="primary"
+      type="button"
+      (click)="guardar()"
+      [disabled]="
+        guardando ||
+        cambios.size === 0
+      "
+    >
+
+      {{
+        guardando
+          ? 'Guardando...'
+          : 'Guardar cambios'
+      }}
+
+      @if(
+        cambios.size > 0
+      ){
+
+        <span class="badge">
+          {{ cambios.size }}
+        </span>
+
+      }
+
+    </button>
+
+  </header>
+
+
+  <!-- ======================================================= -->
+  <!-- FILTROS -->
+  <!-- ======================================================= -->
+
+  <section class="filters">
+
+    <label>
+
+      Plaza
+
+      <select
+        [(ngModel)]="plazaId"
+        (ngModelChange)="cargar()"
+      >
+
+        @for(
+          plaza of plazas;
+          track plaza.id
+        ){
+
+          <option
+            [ngValue]="plaza.id"
+          >
+
+            {{ plaza.codigo }}
+
+            @if(
+              plaza.descripcion
+            ){
+              · {{ plaza.descripcion }}
+            }
+
+          </option>
+
+        }
+
+      </select>
+
+    </label>
+
+
+    <label>
+
+      Mes
+
+      <input
+        type="month"
+        [ngModel]="mesInput"
+        (ngModelChange)="
+          cambiarMes(
+            $event
+          )
+        "
+      >
+
+    </label>
+
+
+    <label class="search">
+
+      Buscar agente
+
+      <input
+        [ngModel]="busqueda"
+        (ngModelChange)="cambiarBusqueda($event)"
+        placeholder="Código o nombre"
+      >
+
+    </label>
+
+  </section>
+
+
+  <!-- ======================================================= -->
+  <!-- MENSAJES -->
+  <!-- ======================================================= -->
+
+  @if(
+    error
+  ){
+
+    <div class="alert error">
+
+      {{ error }}
+
+    </div>
+
+  }
+
+
+  @if(
+    mensaje
+  ){
+
+    <div class="alert success">
+
+      {{ mensaje }}
+
+    </div>
+
+  }
+
+
+  @if(ultimaPropuesta){
+    <section class="proposal-status">
+      <div class="proposal-status-main">
+        <span class="proposal-status-kicker">PROPUESTA GENERADA</span>
+        <strong>La propuesta está cargada en la matriz y todavía no se ha guardado.</strong>
+        <small>Puedes modificar cualquier turno manualmente antes de usar “Guardar cambios”.</small>
+      </div>
+
+      <div class="proposal-status-metrics">
+        <div>
+          <span>Días con déficit</span>
+          <strong>{{ diasPropuestaConDeficit() }}</strong>
+        </div>
+        <div>
+          <span>Días con exceso</span>
+          <strong>{{ diasPropuestaConExceso() }}</strong>
+        </div>
+        <div>
+          <span>Alertas</span>
+          <strong>{{ propuestaConflictos.length }}</strong>
+        </div>
+      </div>
+
+      @if(propuestaConflictos.length > 0){
+        <details class="proposal-conflicts">
+          <summary>Ver alertas de la propuesta</summary>
+          <div class="proposal-conflict-list">
+            @for(conflicto of conflictosVisibles(); track $index){
+              <div class="proposal-conflict-item">
+                <strong>{{ conflicto.nivel }}</strong>
+                <span>{{ conflicto.fecha || 'General' }} · {{ conflicto.mensaje }}</span>
+              </div>
+            }
+          </div>
+        </details>
+      }
+    </section>
+  }
+
+  <!-- ======================================================= -->
+  <!-- CARGA -->
+  <!-- ======================================================= -->
+
+  @if(
+    cargando
+  ){
+
+    <section class="card">
+
+      <div class="empty">
+
+        Cargando programación...
+
+      </div>
+
+    </section>
+
+  }
+  @else{
+
+
+    <!-- ===================================================== -->
+    <!-- RESUMEN DE SECUENCIAS -->
+    <!-- ===================================================== -->
+
+    <section class="sequence-summary">
+
+      @for(
+        grupo
+        of gruposProgramacion;
+        track grupo.codigo
+      ){
+
+        <article class="sequence-summary-card">
+
+          <span>
+            {{ grupo.nombre }}
+          </span>
+
+          <strong>
+            {{ cantidadGrupo(grupo.codigo) }}
+          </strong>
+
+          <small>
+            agentes
+          </small>
+
+        </article>
+
+      }
+
+
+      <article
+        class="sequence-summary-card unassigned-summary"
+        role="button"
+        tabindex="0"
+        (click)="abrirSinSecuencia()"
+        (keydown.enter)="abrirSinSecuencia()"
+        title="Ver agentes sin secuencia"
+      >
+
+        <span>
+          Sin secuencia
+        </span>
+
+        <strong>
+          {{ agentesSinSecuencia.length }}
+        </strong>
+
+        <small>
+          agentes
+        </small>
+
+      </article>
+
+    </section>
+
+
+    <!-- ===================================================== -->
+    <!-- PROGRAMACIÓN GENERAL - TABLA ÚNICA -->
+    <!-- ===================================================== -->
+
+    <section class="card sequence-block">
+
+      <div class="sequence-head">
+
+        <div class="sequence-title">
+          <div>
+            <span class="sequence-label">PROGRAMACIÓN</span>
+            <h2>Todos los agentes</h2>
+          </div>
+
+          <span class="sequence-count">
+            {{ agentesProgramadosLista.length }} agentes
+          </span>
+        </div>
+
+        <div class="table-actions">
+          @if(guardandoOrden){
+            <span class="saving-order">Guardando orden...</span>
+          }
+
+          <button
+            class="primary generator-button"
+            type="button"
+            (click)="abrirGenerador()"
+            [disabled]="!plazaId || cargando || generandoPropuesta"
+          >
+            {{ generandoPropuesta ? 'Generando...' : 'Generar con IA' }}
+          </button>
+
+          <button
+            class="secondary"
+            type="button"
+            (click)="abrirSinSecuencia()"
+          >
+            Asignar secuencia
+            @if(agentesSinSecuencia.length > 0){
+              <span class="badge">{{ agentesSinSecuencia.length }}</span>
+            }
+          </button>
+
+          <button
+            class="secondary exception-main-button"
+            type="button"
+            (click)="abrirModalExcepcion()"
+          >
+            Añadir excepción
+          </button>
+
+          <button
+            class="secondary details-toggle"
+            type="button"
+            (click)="alternarDetalles()"
+          >
+            {{ mostrarDetalles ? 'Ocultar detalles' : 'Mostrar detalles' }}
+          </button>
+        </div>
+
+      </div>
+
+      @if(diaSeleccionado){
+        <div class="day-summary">
+          <div class="day-summary-title">
+            <strong>{{ nombreDiaSeleccionado() }}</strong>
+            <span>Resumen de agentes asignados</span>
+          </div>
+
+          <div class="day-summary-counts">
+            <span class="summary-shift estado-a">A: {{ cantidadTurnoDia('A') }}</span>
+            <span class="summary-shift estado-b">B: {{ cantidadTurnoDia('B') }}</span>
+            <span class="summary-shift estado-c">C: {{ cantidadTurnoDia('C') }}</span>
+            <span class="summary-total">Total: {{ totalTurnosDia() }}</span>
+          </div>
+        </div>
+      }
+
+      @if(agentesProgramadosLista.length === 0){
+        <div class="empty">
+          No hay agentes con secuencia asignada.
+        </div>
+      }
+      @else{
+
+        <div class="table-wrap">
+
+          <table [class.details-hidden]="!mostrarDetalles">
+
+            <thead>
+              <tr>
+                <th class="order-column">Pos.</th>
+                <th class="sticky-code">Cód.</th>
+                <th class="sticky-name">Nombre</th>
+
+                @if(mostrarDetalles){
+                  <th class="sticky-leader-code">Cód. líder</th>
+                  <th class="sticky-leader-name">Nombre líder</th>
+                  <th class="group-column">Secuencia</th>
+                }
+
+                @for(dia of dias; track dia){
+                  <th
+                    class="day-column"
+                    [class.day-selected]="diaSeleccionado === dia"
+                    (click)="seleccionarDia(dia)"
+                    title="Ver resumen del día"
+                  >
+                    <div class="day-header">
+                      <span class="day-name">{{ diaSemana(dia) }}</span>
+                      <strong class="day-number">{{ dia }}</strong>
+                    </div>
+                  </th>
+                }
+              </tr>
+            </thead>
+
+            <tbody>
+
+              @for(agente of agentesProgramadosLista; track agente.id){
+                @let grupoActual = grupoDeAgente(agente.id);
+
+                <tr>
+
+                  <td class="order-column">
+                    <div class="order-control">
+                      <span class="order-number">
+                        {{ posicionEnGrupo(agente.id) }}
+                      </span>
+
+                      <div class="order-buttons">
+                        <button
+                          class="order-btn"
+                          type="button"
+                          title="Subir"
+                          [disabled]="
+                            !grupoActual ||
+                            guardandoOrden ||
+                            !puedeSubir(grupoActual, agente.id)
+                          "
+                          (click)="grupoActual && subir(grupoActual, agente.id)"
+                        >↑</button>
+
+                        <button
+                          class="order-btn"
+                          type="button"
+                          title="Bajar"
+                          [disabled]="
+                            !grupoActual ||
+                            guardandoOrden ||
+                            !puedeBajar(grupoActual, agente.id)
+                          "
+                          (click)="grupoActual && bajar(grupoActual, agente.id)"
+                        >↓</button>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td class="sticky-code">{{ agente.codigo }}</td>
+
+                  <td class="sticky-name">
+                    <div
+                      class="agent-cell agent-cell-exception"
+                      [style.background-color]="tieneExcepcion(agente.id) ? colorExcepcionSuave(agente.id) : null"
+                      [title]="tieneExcepcion(agente.id) ? ('Excepción: turnos recomendados ' + turnosRecomendados(agente.id) + (excepcionDeAgente(agente.id)?.motivo ? ' · ' + excepcionDeAgente(agente.id)?.motivo : '')) : ''"
+                    >
+                      <div class="agent-name-line">
+                        <strong>{{ agente.nombreCompleto }}</strong>
+                      </div>
+
+                      @if(estaProcesandoAgente(agente.id)){
+                        <div class="agent-actions-line">
+                          <span class="processing">Actualizando...</span>
+                        </div>
+                      }
+                    </div>
+                  </td>
+
+                  @if(mostrarDetalles){
+                    <td class="sticky-leader-code">
+                      {{ codigoLider(agente.id) }}
+                    </td>
+
+                    <td class="sticky-leader-name">
+                      {{ nombreLider(agente.id) }}
+                    </td>
+
+                    <td class="group-column">
+                      <select
+                        class="group-select"
+                        [ngModel]="grupoActual"
+                        (ngModelChange)="cambiarSecuencia(agente.id, $event)"
+                        [disabled]="estaProcesandoAgente(agente.id)"
+                      >
+                        @for(opcion of gruposProgramacion; track opcion.codigo){
+                          <option [ngValue]="opcion.codigo">
+                            {{ opcion.nombre }}
+                          </option>
+                        }
+                      </select>
+                    </td>
+                  }
+
+                  @for(dia of dias; track dia){
+                    @let valor = estado(agente.id, dia);
+
+                    <td class="cell">
+                      <select
+                        class="shift-select"
+                        [ngModel]="valor"
+                        (ngModelChange)="cambiarEstado(agente.id, dia, $event)"
+                        [class]="'shift-select ' + claseEstado(valor)"
+                      >
+                        <option [ngValue]="null">-</option>
+                        @for(estadoItem of estados; track estadoItem){
+                          <option [ngValue]="estadoItem">{{ estadoItem }}</option>
+                        }
+                      </select>
+                    </td>
+                  }
+
+                </tr>
+              }
+
+            </tbody>
+          </table>
+        </div>
+      }
+
+    </section>
+
+
+    <!-- ===================================================== -->
+    <!-- LEYENDA -->
+    <!-- ===================================================== -->
+
+    <section class="card legend-card">
+
+      <div class="card-head">
+
+        <div>
+
+          <h2>
+            Estados de turno
+          </h2>
+
+          <p>
+            Leyenda utilizada en la programación mensual.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="legend">
+
+        <span class="estado-a">
+          A · Turno A
+        </span>
+
+        <span class="estado-b">
+          B · Turno B
+        </span>
+
+        <span class="estado-c">
+          C · Turno C
+        </span>
+
+        <span class="estado-d">
+          D · Descanso
+        </span>
+
+        <span class="estado-v">
+          V · Vacaciones
+        </span>
+
+        <span class="estado-com">
+          COM · Compensación
+        </span>
+
+        <span class="estado-dm">
+          DM · Descanso médico
+        </span>
+
+        <span class="estado-lic">
+          LIC · Licencia
+        </span>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================== -->
+    <!-- ORGANIZACIÓN -->
+    <!-- ===================================================== -->
+
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <span class="eyebrow">ORGANIZACIÓN</span>
+          <h2>Líder fijo por agente</h2>
+          <p>Administra la relación fija entre cada agente y su líder.</p>
+        </div>
+
+        <button class="secondary" type="button" (click)="abrirLideres()">
+          Administrar líderes
+        </button>
+      </div>
+    </section>
+
+  }
+
+</section>
+
+@if(modalGeneradorAbierto){
+  <div class="generator-backdrop" (click)="cerrarGenerador()">
+    <section class="generator-modal" (click)="$event.stopPropagation()">
+      <div class="generator-head">
+        <div>
+          <span class="sequence-label">GENERADOR DE PROGRAMACIÓN</span>
+          <h2>Generar propuesta de {{ nombreMes() }}</h2>
+          <p>Configura la cobertura. La propuesta se cargará en la matriz, pero no se guardará automáticamente.</p>
+        </div>
+        <button class="exception-close" type="button" (click)="cerrarGenerador()" [disabled]="generandoPropuesta">×</button>
+      </div>
+
+      <div class="generator-body">
+        <section class="generator-section">
+          <div class="generator-section-head">
+            <div>
+              <h3>Cobertura normal</h3>
+              <p>Personal requerido de lunes a sábado, salvo fechas especiales.</p>
+            </div>
+          </div>
+          <div class="coverage-grid">
+            <label><span>Turno A</span><input type="number" min="0" step="1" [(ngModel)]="coberturaNormal.a"></label>
+            <label><span>Turno B</span><input type="number" min="0" step="1" [(ngModel)]="coberturaNormal.b"></label>
+            <label><span>Turno C</span><input type="number" min="0" step="1" [(ngModel)]="coberturaNormal.c"></label>
+          </div>
+        </section>
+
+        <section class="generator-section">
+          <div class="generator-section-head">
+            <div>
+              <h3>Cobertura de domingo</h3>
+              <p>Se aplica automáticamente a todos los domingos del mes.</p>
+            </div>
+          </div>
+          <div class="coverage-grid">
+            <label><span>Turno A</span><input type="number" min="0" step="1" [(ngModel)]="coberturaDomingo.a"></label>
+            <label><span>Turno B</span><input type="number" min="0" step="1" [(ngModel)]="coberturaDomingo.b"></label>
+            <label><span>Turno C</span><input type="number" min="0" step="1" [(ngModel)]="coberturaDomingo.c"></label>
+          </div>
+        </section>
+
+        <section class="generator-section">
+          <div class="generator-section-head">
+            <div>
+              <h3>Días especiales</h3>
+              <p>Estas fechas tienen prioridad sobre la cobertura normal y la del domingo.</p>
+            </div>
+            <button class="secondary" type="button" (click)="agregarDiaEspecial()">Añadir fecha</button>
+          </div>
+
+          @if(diasEspeciales.length === 0){
+            <div class="generator-empty">No hay días especiales configurados.</div>
+          } @else {
+            <div class="special-days-list">
+              @for(dia of diasEspeciales; track $index; let i = $index){
+                <article class="special-day-row">
+                  <label><span>Fecha</span><input type="date" [(ngModel)]="dia.fecha"></label>
+                  <label class="special-description"><span>Descripción</span><input type="text" maxlength="100" [(ngModel)]="dia.descripcion" placeholder="Ej.: Feriado"></label>
+                  <label><span>A</span><input type="number" min="0" step="1" [(ngModel)]="dia.a"></label>
+                  <label><span>B</span><input type="number" min="0" step="1" [(ngModel)]="dia.b"></label>
+                  <label><span>C</span><input type="number" min="0" step="1" [(ngModel)]="dia.c"></label>
+                  <button class="generator-remove" type="button" (click)="quitarDiaEspecial(i)" title="Eliminar">×</button>
+                </article>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="generator-section">
+          <div class="generator-section-head">
+            <div>
+              <h3>Novedades del mes</h3>
+              <p>Vacaciones, compensación, descanso médico o licencia. No modifican el ciclo estructural 6x2.</p>
+            </div>
+            <button class="secondary" type="button" (click)="agregarNovedadGenerador()">Añadir novedad</button>
+          </div>
+
+          @if(novedadesGenerador.length === 0){
+            <div class="generator-empty">No hay novedades agregadas.</div>
+          } @else {
+            <div class="novelty-list">
+              @for(novedad of novedadesGenerador; track $index; let i = $index){
+                <article class="novelty-row">
+                  <label class="novelty-agent">
+                    <span>Agente</span>
+                    <select [(ngModel)]="novedad.trabajadorId">
+                      @for(agente of agentesProgramadosLista; track agente.id){
+                        <option [ngValue]="agente.id">{{ agente.codigo }} · {{ agente.nombreCompleto }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label><span>Desde</span><input type="date" [(ngModel)]="novedad.desde"></label>
+                  <label><span>Hasta</span><input type="date" [(ngModel)]="novedad.hasta"></label>
+                  <label><span>Estado</span>
+                    <select [(ngModel)]="novedad.estado">
+                      <option value="V">V</option>
+                      <option value="COM">COM</option>
+                      <option value="DM">DM</option>
+                      <option value="LIC">LIC</option>
+                    </select>
+                  </label>
+                  <label class="novelty-observation"><span>Observación</span><input type="text" maxlength="250" [(ngModel)]="novedad.observacion" placeholder="Opcional"></label>
+                  <button class="generator-remove" type="button" (click)="quitarNovedadGenerador(i)" title="Eliminar">×</button>
+                </article>
+              }
+            </div>
+          }
+        </section>
+
+        <div class="generator-note">
+          El generador respetará secuencias, 6x2, restricciones individuales y las reglas de progresión configuradas en el backend.
+        </div>
+      </div>
+
+      <div class="generator-actions">
+        <button class="secondary" type="button" (click)="cerrarGenerador()" [disabled]="generandoPropuesta">Cancelar</button>
+        <button class="primary" type="button" (click)="generarPropuesta()" [disabled]="generandoPropuesta">
+          {{ generandoPropuesta ? 'Generando propuesta...' : 'Generar propuesta' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
+@if(modalConfirmacionAccionAbierto){
+  <div class="shift-warning-backdrop" (click)="cerrarConfirmacionAccion()">
+    <section class="shift-warning-modal" (click)="$event.stopPropagation()">
+      <div class="shift-warning-accent"></div>
+
+      <div class="shift-warning-content">
+        <div class="shift-warning-heading">
+          <div class="shift-warning-icon">✓</div>
+          <div>
+            <span class="shift-warning-kicker">OPERACIÓN COMPLETADA</span>
+            <h2>{{ tituloConfirmacionAccion }}</h2>
+            <p>{{ mensajeConfirmacionAccion }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="shift-warning-actions">
+        <button class="shift-warning-confirm" type="button" (click)="cerrarConfirmacionAccion()">
+          Aceptar
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
+@if(modalConfirmarGuardadoAbierto){
+  <div class="shift-warning-backdrop" (click)="cancelarGuardar()">
+    <section class="shift-warning-modal" (click)="$event.stopPropagation()">
+      <div class="shift-warning-accent"></div>
+
+      <div class="shift-warning-content">
+        <div class="shift-warning-heading">
+          <div class="shift-warning-icon">!</div>
+          <div>
+            <span class="shift-warning-kicker">CONFIRMAR PROGRAMACIÓN</span>
+            <h2>¿Está seguro de guardar los cambios?</h2>
+            <p>Se guardarán {{ cambios.size }} cambio(s) de la programación de {{ nombreMes() }}.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="shift-warning-actions">
+        <button class="secondary" type="button" (click)="cancelarGuardar()">Cancelar</button>
+        <button class="shift-warning-confirm" type="button" (click)="confirmarGuardar()">
+          Sí, guardar cambios
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
+@if(modalSinSecuenciaAbierto){
+  <div class="exception-modal-backdrop" (click)="cerrarSinSecuencia()">
+    <section class="exception-modal" (click)="$event.stopPropagation()">
+      <div class="exception-modal-head">
+        <div>
+          <span class="sequence-label">PENDIENTES</span>
+          <h2>Sin secuencia</h2>
+          <small>{{ agentesSinSecuencia.length }} agente(s) pendientes de asignación.</small>
+        </div>
+        <button class="exception-close" type="button" (click)="cerrarSinSecuencia()">×</button>
+      </div>
+
+      <div class="exception-modal-body">
+        <div class="unassigned-list">
+          @for(agente of agentesSinSecuencia; track agente.id){
+            <article class="unassigned-row">
+              <div
+                class="unassigned-agent unassigned-agent-exception"
+                [style.background-color]="tieneExcepcion(agente.id) ? colorExcepcionSuave(agente.id) : null"
+              >
+                <strong>{{ agente.nombreCompleto }}</strong>
+                <span>Código {{ agente.codigo }}</span>
+              </div>
+
+              <select
+                class="group-select"
+                [ngModel]="null"
+                (ngModelChange)="cambiarSecuencia(agente.id, $event)"
+                [disabled]="estaProcesandoAgente(agente.id)"
+              >
+                <option [ngValue]="null" disabled>Seleccionar secuencia</option>
+                @for(grupo of gruposProgramacion; track grupo.codigo){
+                  <option [ngValue]="grupo.codigo">{{ grupo.nombre }}</option>
+                }
+              </select>
+
+              @if(estaProcesandoAgente(agente.id)){
+                <span class="processing">Moviendo...</span>
+              }
+            </article>
+          } @empty {
+            <div class="empty">Todos los agentes tienen una secuencia asignada.</div>
+          }
+        </div>
+      </div>
+
+      <div class="exception-modal-actions">
+        <span class="modal-spacer"></span>
+        <button class="secondary" type="button" (click)="cerrarSinSecuencia()">Cerrar</button>
+      </div>
+    </section>
+  </div>
+}
+
+@if(modalLideresAbierto){
+  <div class="exception-modal-backdrop" (click)="cerrarLideres()">
+    <section class="exception-modal" (click)="$event.stopPropagation()">
+      <div class="exception-modal-head">
+        <div>
+          <span class="sequence-label">ORGANIZACIÓN</span>
+          <h2>Líder fijo por agente</h2>
+          <small>El líder es independiente de la secuencia y del turno mensual.</small>
+        </div>
+        <button class="exception-close" type="button" (click)="cerrarLideres()">×</button>
+      </div>
+
+      <div class="exception-modal-body">
+        @if(cargandoLideres){
+          <div class="empty">Cargando líderes...</div>
+        } @else {
+          <div class="leader-grid">
+            @for(agente of agentes; track agente.id){
+              <article class="leader-row">
+                <div class="agent">
+                  <strong>{{ agente.nombreCompleto }}</strong>
+                  <span>Cód. {{ agente.codigo }}</span>
+                </div>
+
+                <select [(ngModel)]="liderSeleccionado[agente.id]">
+                  <option [ngValue]="null">Sin líder</option>
+                  @for(controlador of controladores; track controlador.id){
+                    <option [ngValue]="controlador.id">{{ controlador.nombreCompleto }}</option>
+                  }
+                </select>
+
+                <button type="button" class="secondary" (click)="guardarLider(agente)">
+                  Actualizar
+                </button>
+              </article>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="exception-modal-actions">
+        <span class="modal-spacer"></span>
+        <button class="secondary" type="button" (click)="cerrarLideres()">Cerrar</button>
+      </div>
+    </section>
+  </div>
+}
+
+@if(modalAdvertenciaTurnoAbierto && advertenciaTurno){
+  <div class="shift-warning-backdrop" (click)="cancelarAdvertenciaTurno()">
+    <section class="shift-warning-modal" (click)="$event.stopPropagation()">
+      <div class="shift-warning-accent"></div>
+
+      <div class="shift-warning-content">
+        <div class="shift-warning-heading">
+          <div class="shift-warning-icon">!</div>
+          <div>
+            <span class="shift-warning-kicker">EXCEPCIÓN DE PROGRAMACIÓN</span>
+            <h2>Este turno no está recomendado</h2>
+            <p>Puedes asignarlo de todas formas si la operación lo requiere.</p>
+          </div>
+        </div>
+
+        <div class="shift-warning-agent">
+          <div>
+            <small>AGENTE</small>
+            <strong>{{ advertenciaTurno.nombreAgente }}</strong>
+            <span>Cód. {{ advertenciaTurno.codigoAgente }}</span>
+          </div>
+          <div class="shift-warning-selected">
+            <small>TURNO A ASIGNAR</small>
+            <strong [class]="'estado-' + advertenciaTurno.estado.toLowerCase()">{{ advertenciaTurno.estado }}</strong>
+          </div>
+        </div>
+
+        <div class="shift-warning-details">
+          <div>
+            <span>Turnos recomendados</span>
+            <strong>{{ advertenciaTurno.recomendados }}</strong>
+          </div>
+          <div>
+            <span>Motivo / observación</span>
+            <strong>{{ advertenciaTurno.motivo }}</strong>
+          </div>
+        </div>
+
+        <div class="shift-warning-note">
+          La excepción es informativa y no impide realizar la asignación.
+        </div>
+      </div>
+
+      <div class="shift-warning-actions">
+        <button class="secondary" type="button" (click)="cancelarAdvertenciaTurno()">Cancelar</button>
+        <button class="shift-warning-confirm" type="button" (click)="confirmarAdvertenciaTurno()">
+          Asignar turno {{ advertenciaTurno.estado }}
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
+@if(modalExcepcionAbierto){
+  <div class="exception-modal-backdrop" (click)="cerrarExcepcion()">
+    <section class="exception-modal" (click)="$event.stopPropagation()">
+      <div class="exception-modal-head">
+        <div>
+          <span class="sequence-label">EXCEPCIONES DE PROGRAMACIÓN</span>
+          <h2>{{ agenteExcepcion ? agenteExcepcion.nombreCompleto : 'Añadir excepción' }}</h2>
+          @if(agenteExcepcion){
+            <small>Cód. {{ agenteExcepcion.codigo }}</small>
+          } @else {
+            <small>Busca y selecciona al agente.</small>
+          }
+        </div>
+        <button class="exception-close" type="button" (click)="cerrarExcepcion()" [disabled]="guardandoExcepcion">×</button>
+      </div>
+
+      <div class="exception-modal-body">
+        <div class="exception-field">
+          <label for="exception-agent-search">Agente</label>
+          <input
+            id="exception-agent-search"
+            type="search"
+            [(ngModel)]="busquedaAgenteExcepcion"
+            placeholder="Buscar por código o nombre..."
+            autocomplete="off"
+          >
+
+          <div class="exception-agent-results">
+            @for(agente of agentesParaExcepcion(); track agente.id){
+              <button
+                type="button"
+                class="exception-agent-option"
+                [class.selected]="agenteExcepcion?.id === agente.id"
+                (click)="seleccionarAgenteExcepcion(agente)"
+              >
+                <span><strong>{{ agente.codigo }}</strong> · {{ agente.nombreCompleto }}</span>
+                @if(tieneExcepcion(agente.id)){
+                  <span class="exception-badge">Con excepción</span>
+                }
+              </button>
+            } @empty {
+              <div class="exception-agent-empty">No se encontraron agentes.</div>
+            }
+          </div>
+        </div>
+
+        @if(agenteExcepcion){
+          <div class="exception-selected-agent">
+            <strong>{{ agenteExcepcion.nombreCompleto }}</strong>
+            <span>Cód. {{ agenteExcepcion.codigo }}</span>
+          </div>
+
+          <div class="exception-field">
+            <label>Turnos recomendados</label>
+            <p>Si asignas un turno no marcado, SIGO mostrará una advertencia, pero permitirá continuar.</p>
+            <div class="exception-shifts">
+              <label><input type="checkbox" [(ngModel)]="excepcionPermiteA"> <span class="estado-a">A</span></label>
+              <label><input type="checkbox" [(ngModel)]="excepcionPermiteB"> <span class="estado-b">B</span></label>
+              <label><input type="checkbox" [(ngModel)]="excepcionPermiteC"> <span class="estado-c">C</span></label>
+            </div>
+          </div>
+
+          <div class="exception-field">
+            <label for="exception-motivo">Motivo / observación</label>
+            <textarea id="exception-motivo" maxlength="500" rows="4" [(ngModel)]="excepcionMotivo" placeholder="Ej.: Estudia por las noches; preferentemente turno A o B."></textarea>
+            <small>{{ excepcionMotivo.length }}/500</small>
+          </div>
+
+          <div class="exception-field">
+            <label for="exception-color">Color para identificar al agente</label>
+            <p>El color se mostrará con una intensidad suave en la tabla.</p>
+            <div class="exception-color-row">
+              <input id="exception-color" type="color" [(ngModel)]="excepcionColor">
+              <span class="exception-color-preview" [style.background-color]="colorPreviewSuave()">{{ excepcionColor }}</span>
+            </div>
+
+            @if(coloresExcepcionRecientes.length){
+              <div class="exception-recent-colors">
+                <small>Colores usados recientemente</small>
+                <div class="exception-color-swatches">
+                  @for(color of coloresExcepcionRecientes; track color){
+                    <button
+                      type="button"
+                      class="exception-color-swatch"
+                      [class.selected]="excepcionColor.toUpperCase() === color.toUpperCase()"
+                      [style.background-color]="color"
+                      [title]="'Usar ' + color"
+                      (click)="seleccionarColorExcepcion(color)"
+                    ></button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="exception-modal-actions">
+        @if(agenteExcepcion && tieneExcepcion(agenteExcepcion.id)){
+          <button class="danger exception-remove" type="button" (click)="quitarExcepcion()" [disabled]="guardandoExcepcion">Quitar excepción</button>
+        }
+        <span class="modal-spacer"></span>
+        <button class="secondary" type="button" (click)="cerrarExcepcion()" [disabled]="guardandoExcepcion">Cancelar</button>
+        <button type="button" (click)="guardarExcepcion()" [disabled]="!agenteExcepcion || guardandoExcepcion || (!excepcionPermiteA && !excepcionPermiteB && !excepcionPermiteC)">
+          {{ guardandoExcepcion ? 'Guardando...' : 'Guardar excepción' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

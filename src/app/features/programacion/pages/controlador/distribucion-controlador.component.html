@@ -1,0 +1,654 @@
+<section class="page">
+
+  <header class="page-head">
+    <div>
+      <span class="eyebrow">DISTRIBUCIÓN</span>
+      <h1>Asignación diaria de casetas</h1>
+      <p>
+        Los turnos son definidos por el Supervisor.
+        Aquí se asigna únicamente la ubicación diaria de cada agente.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      @if(esSupervisor){
+        <button
+          class="secondary"
+          type="button"
+          (click)="abrirConfiguracionUbicaciones()"
+        >
+          Configurar casetas
+        </button>
+      }
+
+      <button
+        class="primary"
+        type="button"
+        (click)="guardar()"
+        [disabled]="guardando || cambios.size === 0"
+      >
+        {{ guardando ? 'Guardando...' : 'Guardar distribución' }}
+
+        @if(cambios.size > 0){
+          <span class="badge">{{ cambios.size }}</span>
+        }
+      </button>
+    </div>
+  </header>
+
+
+  <!-- FILTROS -->
+  <section class="filters">
+
+    @if(esSupervisor){
+      <label>
+        Plaza
+        <select
+          [(ngModel)]="plazaId"
+          (ngModelChange)="cargar()"
+        >
+          @for(plaza of plazas; track plaza.id){
+            <option [ngValue]="plaza.id">
+              {{ plaza.codigo }}
+              @if(plaza.descripcion){
+                · {{ plaza.descripcion }}
+              }
+            </option>
+          }
+        </select>
+      </label>
+    }
+    @else{
+      <label>
+        Plaza
+        <input
+          [value]="auth.usuario()?.plaza || 'Sin plaza'"
+          disabled
+        >
+      </label>
+    }
+
+    <label>
+      Mes
+      <input
+        type="month"
+        [ngModel]="mesInput"
+        (ngModelChange)="cambiarMes($event)"
+      >
+    </label>
+
+    <label class="search">
+      Buscar agente
+      <input
+        [(ngModel)]="busqueda"
+        placeholder="Código o nombre"
+      >
+    </label>
+
+  </section>
+
+
+  @if(error){
+    <div class="alert error">{{ error }}</div>
+  }
+
+  @if(mensaje){
+    <div class="alert success">{{ mensaje }}</div>
+  }
+
+
+  <!-- TABLA ÚNICA + RESUMEN LATERAL -->
+  <div class="main-grid">
+
+    <section class="card distribution-card">
+
+      <div class="card-head distribution-head">
+        <div>
+          <span class="eyebrow">DISTRIBUCIÓN MENSUAL</span>
+          <h2>Ubicación diaria y cobertura por caseta</h2>
+          <p>
+            Arriba se asigna la caseta de cada agente y al final de la misma tabla
+            se muestra la cobertura diaria de cada ubicación.
+          </p>
+        </div>
+
+        <span class="table-note">
+          A, B y C permiten asignar caseta
+        </span>
+      </div>
+
+      @if(cargando){
+        <div class="empty">Cargando distribución...</div>
+      }
+      @else if(agentes.length === 0){
+        <div class="empty">No existen agentes activos en esta plaza.</div>
+      }
+      @else{
+        <div class="table-wrap unified-wrap">
+          <table class="unified-table">
+            <thead>
+              <tr>
+                <th class="sticky-code">Cód.</th>
+                <th class="sticky-name">Nombre</th>
+
+                @for(dia of dias; track dia){
+                  <th class="day-column">
+                    <div class="day-header">
+                      <span class="day-name">{{ diaSemana(dia) }}</span>
+                      <strong class="day-number">{{ dia }}</strong>
+                    </div>
+                  </th>
+                }
+              </tr>
+            </thead>
+
+            <!-- AGENTES EN EL MISMO ORDEN DE PROGRAMACIÓN SUPERVISOR -->
+            <tbody class="agents-body">
+              @for(agente of agentesFiltrados; track agente.id){
+                <tr [class.selected-row]="seleccionado === agente.id">
+
+                  <td class="sticky-code">
+                    {{ agente.codigo }}
+                  </td>
+
+                  <td class="sticky-name">
+                    <button
+                      class="agent-button"
+                      type="button"
+                      (click)="seleccionar(agente.id)"
+                    >
+                      {{ agente.nombreCompleto }}
+                    </button>
+                  </td>
+
+                  @for(dia of dias; track dia){
+                    @let p = programacion(agente.id, dia);
+
+                    <td class="cell">
+                      @if(p){
+                        @let ubicacionActual = asignacion(p.programacionId);
+
+                        <div class="distribution-cell">
+                          <span
+                            [class]="'shift-state ' + claseEstado(p.estado)"
+                          >
+                            {{ p.estado }}
+                          </span>
+
+                          @if(esOperativo(p.estado)){
+                            <select
+                              class="location-select"
+                              [ngModel]="ubicacionActual"
+                              (ngModelChange)="cambiar(p.programacionId, $event)"
+                              title="Asignar caseta"
+                            >
+                              <option [ngValue]="null">-</option>
+
+                              @for(ubicacion of ubicaciones; track ubicacion.id){
+                                <option
+                                  [ngValue]="ubicacion.id"
+                                  [disabled]="!ubicacion.activo"
+                                >
+                                  {{ ubicacion.codigo }}{{ !ubicacion.activo ? ' · Inactiva' : '' }}
+                                </option>
+                              }
+                            </select>
+                          }
+                          @else{
+                            <span class="blocked-location">—</span>
+                          }
+                        </div>
+                      }
+                      @else{
+                        <span class="no-program">—</span>
+                      }
+                    </td>
+                  }
+
+                </tr>
+              }
+            </tbody>
+
+            <!-- COBERTURA EN LA MISMA TABLA -->
+            <tbody class="coverage-body">
+
+              <tr class="coverage-divider-row">
+                <td
+                  class="coverage-divider-title"
+                  colspan="2"
+                >
+                  <span class="eyebrow">COBERTURA</span>
+                  <strong>Cobertura por caseta / día</strong>
+                </td>
+
+                @for(dia of dias; track dia){
+                  <td class="coverage-divider-day"></td>
+                }
+              </tr>
+
+              @if(cargandoCobertura){
+                <tr>
+                  <td class="coverage-loading" [attr.colspan]="dias.length + 2">
+                    Cargando cobertura...
+                  </td>
+                </tr>
+              }
+              @else if(cobertura.length === 0){
+                <tr>
+                  <td class="coverage-loading" [attr.colspan]="dias.length + 2">
+                    Aún no existen datos de cobertura para este mes.
+                  </td>
+                </tr>
+              }
+              @else{
+                @for(ubicacion of cobertura; track ubicacion.ubicacionId){
+                  <tr class="coverage-row">
+                    <td class="sticky-code coverage-code">
+                      {{ ubicacion.codigo }}
+                    </td>
+
+                    <td class="sticky-name coverage-location">
+                      <strong>{{ ubicacion.nombre }}</strong>
+                      <small>{{ ubicacion.codigo }}</small>
+                    </td>
+
+                    @for(dia of dias; track dia){
+                      @let cantidad = count(ubicacion, dia);
+
+                      <td class="coverage-cell">
+                        <span
+                          class="coverage-number"
+                          [class.hot]="cantidad >= 2"
+                          [class.zero]="cantidad === 0"
+                        >
+                          {{ cantidad }}
+                        </span>
+                      </td>
+                    }
+                  </tr>
+                }
+              }
+
+            </tbody>
+          </table>
+        </div>
+      }
+
+    </section>
+
+
+    <!-- RESUMEN LATERAL DEL AGENTE -->
+    <aside class="card side-summary">
+      <div class="side-summary-head">
+        <span class="eyebrow">RESUMEN MENSUAL</span>
+        <h2>Casetas por agente</h2>
+        <p>
+          Selecciona un agente para ver cuántas veces le tocó cada caseta.
+        </p>
+      </div>
+
+      @if(cargandoResumen){
+        <div class="empty small">Cargando resumen...</div>
+      }
+      @else if(resumen){
+        <div class="side-agent">
+          <span>Agente seleccionado</span>
+          <strong>{{ resumen.nombre }}</strong>
+          <small>Código {{ resumen.codigo }}</small>
+        </div>
+
+        @if(resumen.ubicaciones.length){
+          <div class="side-summary-list">
+            @for(ubicacion of resumen.ubicaciones; track ubicacion.codigo){
+              <div class="side-summary-row">
+                <span>
+                  <i></i>
+                  {{ ubicacion.codigo }}
+                </span>
+
+                <strong>{{ ubicacion.veces }}</strong>
+              </div>
+            }
+          </div>
+        }
+        @else{
+          <div class="summary-empty">
+            Sin asignaciones guardadas.
+          </div>
+        }
+      }
+      @else{
+        <div class="empty small">
+          Selecciona un agente de la tabla.
+        </div>
+      }
+    </aside>
+
+  </div>
+
+
+  <!-- LEYENDA -->
+  <section class="card legend-card">
+    <div class="card-head">
+      <div>
+        <h2>Estados de turno</h2>
+        <p>Leyenda utilizada en la programación mensual.</p>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="estado-a">A · Turno A</span>
+      <span class="estado-b">B · Turno B</span>
+      <span class="estado-c">C · Turno C</span>
+      <span class="estado-d">D · Descanso</span>
+      <span class="estado-v">V · Vacaciones</span>
+      <span class="estado-com">COM · Compensación</span>
+      <span class="estado-dm">DM · Descanso médico</span>
+      <span class="estado-lic">LIC · Licencia</span>
+    </div>
+  </section>
+
+
+  <!-- MODAL CONFIGURACIÓN DE CASETAS -->
+  @if(modalUbicacionesAbierto){
+    <div
+      class="modal-backdrop"
+      (click)="cerrarConfiguracionUbicaciones()"
+    >
+      <section
+        class="locations-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="locations-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="locations-accent"></div>
+
+        <div class="locations-header">
+          <div>
+            <span class="eyebrow">CONFIGURACIÓN</span>
+            <h2 id="locations-title">Casetas y ubicaciones</h2>
+            <p>
+              Configura las ubicaciones disponibles por plaza.
+              Desactivar una caseta no elimina su historial.
+            </p>
+          </div>
+
+          <button
+            class="modal-close"
+            type="button"
+            (click)="cerrarConfiguracionUbicaciones()"
+            [disabled]="guardandoUbicacion || procesandoUbicacionId !== null"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div class="locations-plaza">
+          <label>
+            Plaza a configurar
+            <select
+              [ngModel]="configPlazaId"
+              (ngModelChange)="cambiarPlazaConfiguracion($event)"
+            >
+              @for(plaza of plazas; track plaza.id){
+                <option [ngValue]="plaza.id">
+                  {{ plaza.codigo }}
+                  @if(plaza.descripcion){
+                    · {{ plaza.descripcion }}
+                  }
+                </option>
+              }
+            </select>
+          </label>
+        </div>
+
+        @if(errorConfiguracion){
+          <div class="config-alert error">
+            {{ errorConfiguracion }}
+          </div>
+        }
+
+        @if(mensajeConfiguracion){
+          <div class="config-alert success">
+            {{ mensajeConfiguracion }}
+          </div>
+        }
+
+        <div class="locations-grid">
+
+          <section class="locations-list-panel">
+            <div class="locations-section-head">
+              <div>
+                <strong>Ubicaciones registradas</strong>
+                <span>Activas e inactivas de la plaza seleccionada</span>
+              </div>
+
+              <span class="locations-count">
+                {{ ubicacionesConfiguracion.length }}
+              </span>
+            </div>
+
+            @if(cargandoConfiguracion){
+              <div class="config-empty">
+                Cargando casetas...
+              </div>
+            }
+            @else if(ubicacionesConfiguracion.length === 0){
+              <div class="config-empty">
+                Esta plaza todavía no tiene ubicaciones configuradas.
+              </div>
+            }
+            @else{
+              <div class="locations-list">
+                @for(ubicacion of ubicacionesConfiguracion; track ubicacion.id){
+                  <article
+                    class="location-item"
+                    [class.inactive]="!ubicacion.activo"
+                  >
+                    <div class="location-main">
+                      <div class="location-code">
+                        {{ ubicacion.codigo }}
+                      </div>
+
+                      <div class="location-info">
+                        <strong>{{ ubicacion.nombre }}</strong>
+                        <span>
+                          {{ ubicacion.tipo }} · Orden {{ ubicacion.orden }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="location-status">
+                      <span
+                        class="status-pill"
+                        [class.active]="ubicacion.activo"
+                      >
+                        {{ ubicacion.activo ? 'Activa' : 'Inactiva' }}
+                      </span>
+                    </div>
+
+                    <div class="location-actions">
+                      <button
+                        class="text-button"
+                        type="button"
+                        (click)="editarUbicacion(ubicacion)"
+                        [disabled]="guardandoUbicacion || procesandoUbicacionId !== null"
+                      >
+                        Editar
+                      </button>
+
+                      <button
+                        class="text-button danger"
+                        type="button"
+                        (click)="cambiarEstadoUbicacionConfiguracion(ubicacion)"
+                        [disabled]="guardandoUbicacion || procesandoUbicacionId !== null"
+                      >
+                        @if(procesandoUbicacionId === ubicacion.id){
+                          Procesando...
+                        }
+                        @else{
+                          {{ ubicacion.activo ? 'Desactivar' : 'Activar' }}
+                        }
+                      </button>
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+
+          <section class="location-form-panel">
+            <div class="locations-section-head">
+              <div>
+                <strong>
+                  {{ ubicacionEditandoId !== null ? 'Editar ubicación' : 'Añadir ubicación' }}
+                </strong>
+                <span>Los cambios se guardan directamente en la plaza.</span>
+              </div>
+            </div>
+
+            <div class="location-form">
+              <label>
+                Código
+                <input
+                  [(ngModel)]="ubicacionCodigo"
+                  maxlength="30"
+                  placeholder="Ej. 106 o AUX1"
+                >
+              </label>
+
+              <label>
+                Nombre
+                <input
+                  [(ngModel)]="ubicacionNombre"
+                  maxlength="100"
+                  placeholder="Ej. Caseta 106"
+                >
+              </label>
+
+              <div class="form-row">
+                <label>
+                  Tipo
+                  <select [(ngModel)]="ubicacionTipo">
+                    <option [ngValue]="'VIA'">VIA</option>
+                    <option [ngValue]="'AUXILIAR'">AUXILIAR</option>
+                    <option [ngValue]="'APOYO'">APOYO</option>
+                  </select>
+                </label>
+
+                <label>
+                  Orden
+                  <input
+                    type="number"
+                    min="1"
+                    [(ngModel)]="ubicacionOrden"
+                    placeholder="Automático"
+                  >
+                </label>
+              </div>
+
+              <div class="location-form-note">
+                Si dejas el orden vacío al crear una ubicación, se colocará al final.
+              </div>
+
+              <div class="location-form-actions">
+                @if(ubicacionEditandoId !== null){
+                  <button
+                    class="secondary"
+                    type="button"
+                    (click)="cancelarEdicionUbicacion()"
+                    [disabled]="guardandoUbicacion"
+                  >
+                    Cancelar edición
+                  </button>
+                }
+
+                <button
+                  class="primary"
+                  type="button"
+                  (click)="guardarUbicacionConfiguracion()"
+                  [disabled]="guardandoUbicacion || !configPlazaId"
+                >
+                  {{
+                    guardandoUbicacion
+                      ? 'Guardando...'
+                      : (ubicacionEditandoId !== null ? 'Guardar cambios' : 'Añadir caseta')
+                  }}
+                </button>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </section>
+    </div>
+  }
+
+
+  <!-- MODAL DE ASIGNACIÓN DUPLICADA -->
+  @if(conflictoVisible && conflictoInfo){
+    <div
+      class="modal-backdrop"
+      (click)="cerrarConflicto()"
+    >
+      <section
+        class="conflict-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="conflict-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="conflict-accent"></div>
+
+        <div class="conflict-content">
+          <div class="conflict-heading">
+            <div class="conflict-icon">!</div>
+
+            <div>
+              <span class="conflict-label">ASIGNACIÓN DUPLICADA</span>
+              <h2 id="conflict-title">Esta caseta ya está ocupada</h2>
+              <p>
+                No puedes asignar dos agentes a la misma ubicación
+                durante el mismo turno.
+              </p>
+            </div>
+          </div>
+
+          <div class="conflict-data">
+            <div>
+              <span>Ubicación</span>
+              <strong>{{ conflictoInfo.ubicacion }}</strong>
+            </div>
+
+            <div>
+              <span>Turno</span>
+              <strong>{{ conflictoInfo.turno }}</strong>
+            </div>
+
+            <div>
+              <span>Fecha</span>
+              <strong>{{ conflictoInfo.fecha }}</strong>
+            </div>
+          </div>
+
+          <div class="conflict-agent">
+            <span>Actualmente asignada a</span>
+            <strong>{{ conflictoInfo.agente }}</strong>
+          </div>
+        </div>
+
+        <div class="conflict-actions">
+          <button
+            type="button"
+            class="primary"
+            (click)="cerrarConflicto()"
+          >
+            Entendido
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+</section>

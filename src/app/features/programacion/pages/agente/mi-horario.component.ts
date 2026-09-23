@@ -13,7 +13,7 @@ import {
   MiHorario
 } from '../../models/programacion.models';
 
-import { ProgramacionApiService } from '../../services/programacion-api.service';
+import { ProgramacionApiService } from '../../data-access/programacion-api.service';
 
 @Component({
   selector: 'app-mi-horario',

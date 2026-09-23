@@ -48,6 +48,14 @@ import {
   ProgramacionExcepcionState
 } from '../../state/programacion-excepcion.state';
 
+import {
+  ProgramacionGeneradorModalComponent
+} from '../../components/generador-modal/programacion-generador-modal.component';
+
+import {
+  ProgramacionExcepcionModalComponent
+} from '../../components/excepcion-modal/programacion-excepcion-modal.component';
+
 
 @Component({
   selector: 'app-programacion-supervisor',
@@ -55,7 +63,9 @@ import {
 
   imports: [
     CommonModule,
-    FormsModule
+    FormsModule,
+    ProgramacionGeneradorModalComponent,
+    ProgramacionExcepcionModalComponent
   ],
 
   templateUrl:

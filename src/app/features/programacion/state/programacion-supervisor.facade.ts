@@ -23,6 +23,18 @@ export class ProgramacionSupervisorFacade {
     return this.api.getAgentes(plazaId);
   }
 
+  getContexto(
+    plazaId: number,
+    anio: number,
+    mes: number
+  ) {
+    return this.api.getContexto(
+      plazaId,
+      anio,
+      mes
+    );
+  }
+
   getControladores(plazaId: number) {
     return this.api.getControladores(plazaId);
   }

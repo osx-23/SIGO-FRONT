@@ -1,4 +1,5 @@
 import { inject, Injectable } from '@angular/core';
+import { forkJoin } from 'rxjs';
 
 import {
   GrupoLider,
@@ -17,7 +18,16 @@ export class ProgramacionLiderFacade {
   cargar(
     plazaId: number
   ) {
-    return import('rxjs').then(() => null);
+    return forkJoin({
+      controladores:
+        this.facade.getControladores(
+          plazaId
+        ),
+      grupos:
+        this.facade.getGrupos(
+          plazaId
+        )
+    });
   }
 
   asignar(

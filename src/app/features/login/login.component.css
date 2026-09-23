@@ -74,11 +74,62 @@
   gap: 20px;
 }
 
-.brand-mark,
+.brand-logos {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.brand-logo {
+  display: block;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.brand-logo--sigo {
+  width: 88px;
+  max-height: 40px;
+}
+
+.brand-logo--lima {
+  width: 126px;
+  max-height: 42px;
+}
+
+.brand-logo-divider {
+  width: 1px;
+  height: 30px;
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.24);
+}
+
 .mobile-brand {
-  font-size: 1.65rem;
-  font-weight: 900;
-  letter-spacing: 0.16em;
+  display: none;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 30px;
+}
+
+.mobile-brand img {
+  display: block;
+  object-fit: contain;
+}
+
+.mobile-brand img:first-child {
+  width: 82px;
+  max-height: 38px;
+}
+
+.mobile-brand img:last-child {
+  width: 118px;
+  max-height: 40px;
+}
+
+.mobile-brand__divider {
+  width: 1px;
+  height: 28px;
+  background: #cbd5e1;
 }
 
 .brand-badge {
@@ -182,11 +233,6 @@
   width: min(440px, 100%);
 }
 
-.mobile-brand {
-  display: none;
-  margin-bottom: 30px;
-  color: #1d4ed8;
-}
 
 .form-header {
   margin-bottom: 34px;
@@ -405,7 +451,7 @@
   }
 
   .mobile-brand {
-    display: block;
+    display: flex;
   }
 }
 
@@ -436,7 +482,15 @@
 
   .mobile-brand {
     margin-bottom: 44px;
-    font-size: 1.5rem;
+    gap: 11px;
+  }
+
+  .mobile-brand img:first-child {
+    width: 76px;
+  }
+
+  .mobile-brand img:last-child {
+    width: 108px;
   }
 
   .form-header {

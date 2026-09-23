@@ -31,7 +31,7 @@ import {
   NovedadProgramacionRequest,
   ProgramacionApiService,
   ProgramacionPropuestaResponse
-} from '../../services/programacion-api.service';
+} from '../../data-access/programacion-api.service';
 
 
 @Component({

@@ -32,7 +32,7 @@ import {
 
 import {
   ProgramacionApiService
-} from '../../services/programacion-api.service';
+} from '../../data-access/programacion-api.service';
 
 @Component({
   selector: 'app-distribucion-controlador',

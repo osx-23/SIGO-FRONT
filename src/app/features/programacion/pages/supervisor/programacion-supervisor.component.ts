@@ -88,10 +88,10 @@ export class ProgramacionSupervisorComponent
   private readonly secuenciaState =
     inject(ProgramacionSecuenciaState);
 
-  private readonly generadorState =
+  readonly generador =
     inject(ProgramacionGeneradorState);
 
-  private readonly excepcionState =
+  readonly excepciones =
     inject(ProgramacionExcepcionState);
 
   private readonly cdr =
@@ -161,71 +161,6 @@ export class ProgramacionSupervisorComponent
    * ============================================================
    */
 
-  get modalGeneradorAbierto(): boolean {
-    return this.generadorState.modalAbierto;
-  }
-
-  set modalGeneradorAbierto(value: boolean) {
-    this.generadorState.modalAbierto = value;
-  }
-
-  get generandoPropuesta(): boolean {
-    return this.generadorState.procesando;
-  }
-
-  set generandoPropuesta(value: boolean) {
-    this.generadorState.procesando = value;
-  }
-
-  get coberturaNormal() {
-    return this.generadorState.coberturaNormal;
-  }
-
-  get coberturaDomingo() {
-    return this.generadorState.coberturaDomingo;
-  }
-
-  get diasEspeciales(): DiaEspecialProgramacionRequest[] {
-    return this.generadorState.diasEspeciales;
-  }
-
-  set diasEspeciales(value: DiaEspecialProgramacionRequest[]) {
-    this.generadorState.diasEspeciales = value;
-  }
-
-  get novedadesGenerador(): NovedadProgramacionRequest[] {
-    return this.generadorState.novedades;
-  }
-
-  set novedadesGenerador(value: NovedadProgramacionRequest[]) {
-    this.generadorState.novedades = value;
-  }
-
-  get propuestaCobertura(): CoberturaDiaPropuesta[] {
-    return this.generadorState.coberturaPropuesta;
-  }
-
-  set propuestaCobertura(value: CoberturaDiaPropuesta[]) {
-    this.generadorState.coberturaPropuesta = value;
-  }
-
-  get propuestaConflictos(): ConflictoProgramacionPropuesta[] {
-    return this.generadorState.conflictosPropuesta;
-  }
-
-  set propuestaConflictos(value: ConflictoProgramacionPropuesta[]) {
-    this.generadorState.conflictosPropuesta = value;
-  }
-
-  get ultimaPropuesta(): ProgramacionPropuestaResponse | null {
-    return this.generadorState.ultimaPropuesta;
-  }
-
-  set ultimaPropuesta(value: ProgramacionPropuestaResponse | null) {
-    this.generadorState.ultimaPropuesta = value;
-  }
-
-
   /*
    * Agentes que actualmente están siendo modificados.
    *
@@ -271,91 +206,6 @@ export class ProgramacionSupervisorComponent
 
   private readonly liderPorAgente =
     new Map<number, TrabajadorResumen>();
-
-  get excepcionPorAgente():
-    Map<number, AgenteProgramacionExcepcion> {
-    return this.excepcionState.porAgente;
-  }
-
-  get modalExcepcionAbierto(): boolean {
-    return this.excepcionState.modalAbierto;
-  }
-
-  set modalExcepcionAbierto(value: boolean) {
-    this.excepcionState.modalAbierto = value;
-  }
-
-  get agenteExcepcion(): TrabajadorResumen | null {
-    return this.excepcionState.agente;
-  }
-
-  set agenteExcepcion(value: TrabajadorResumen | null) {
-    this.excepcionState.agente = value;
-  }
-
-  get excepcionPermiteA(): boolean {
-    return this.excepcionState.permiteA;
-  }
-
-  set excepcionPermiteA(value: boolean) {
-    this.excepcionState.permiteA = value;
-  }
-
-  get excepcionPermiteB(): boolean {
-    return this.excepcionState.permiteB;
-  }
-
-  set excepcionPermiteB(value: boolean) {
-    this.excepcionState.permiteB = value;
-  }
-
-  get excepcionPermiteC(): boolean {
-    return this.excepcionState.permiteC;
-  }
-
-  set excepcionPermiteC(value: boolean) {
-    this.excepcionState.permiteC = value;
-  }
-
-  get excepcionMotivo(): string {
-    return this.excepcionState.motivo;
-  }
-
-  set excepcionMotivo(value: string) {
-    this.excepcionState.motivo = value;
-  }
-
-  get excepcionColor(): string {
-    return this.excepcionState.color;
-  }
-
-  set excepcionColor(value: string) {
-    this.excepcionState.color = value;
-  }
-
-  get guardandoExcepcion(): boolean {
-    return this.excepcionState.guardando;
-  }
-
-  set guardandoExcepcion(value: boolean) {
-    this.excepcionState.guardando = value;
-  }
-
-  get busquedaAgenteExcepcion(): string {
-    return this.excepcionState.busqueda;
-  }
-
-  set busquedaAgenteExcepcion(value: string) {
-    this.excepcionState.busqueda = value;
-  }
-
-  get coloresExcepcionRecientes(): string[] {
-    return this.excepcionState.coloresRecientes;
-  }
-
-  set coloresExcepcionRecientes(value: string[]) {
-    this.excepcionState.coloresRecientes = value;
-  }
 
   modalConfirmarGuardadoAbierto = false;
   modalConfirmacionAccionAbierto = false;
@@ -672,7 +522,7 @@ export class ProgramacionSupervisorComponent
     this.mensaje =
       '';
 
-    this.generadorState.limpiarResultado();
+    this.generador.limpiarResultado();
 
 
     this.diaSeleccionado = null;
@@ -767,7 +617,7 @@ export class ProgramacionSupervisorComponent
               ...resultado.secuencias
             ];
 
-          this.excepcionState.reemplazar(
+          this.excepciones.reemplazar(
             resultado.excepciones
           );
 
@@ -1655,34 +1505,34 @@ export class ProgramacionSupervisorComponent
    */
 
   abrirGenerador(): void {
-    if (!this.plazaId || this.generandoPropuesta) {
+    if (!this.plazaId || this.generador.procesando) {
       return;
     }
 
     this.error = '';
     this.mensaje = '';
-    this.generadorState.abrir();
+    this.generador.abrir();
     this.cdr.detectChanges();
   }
 
   cerrarGenerador(): void {
-    if (this.generandoPropuesta) {
+    if (this.generador.procesando) {
       return;
     }
 
-    this.generadorState.cerrar();
+    this.generador.cerrar();
     this.cdr.detectChanges();
   }
 
   agregarDiaEspecial(): void {
-    this.generadorState.agregarDiaEspecial(
+    this.generador.agregarDiaEspecial(
       this.fecha(1)
     );
     this.cdr.detectChanges();
   }
 
   quitarDiaEspecial(index: number): void {
-    this.generadorState.quitarDiaEspecial(index);
+    this.generador.quitarDiaEspecial(index);
     this.cdr.detectChanges();
   }
 
@@ -1692,7 +1542,7 @@ export class ProgramacionSupervisorComponent
       this.agentes[0];
 
     const error =
-      this.generadorState.agregarNovedad(
+      this.generador.agregarNovedad(
         agente,
         this.fecha(1)
       );
@@ -1706,17 +1556,17 @@ export class ProgramacionSupervisorComponent
   }
 
   quitarNovedadGenerador(index: number): void {
-    this.generadorState.quitarNovedad(index);
+    this.generador.quitarNovedad(index);
     this.cdr.detectChanges();
   }
 
   generarPropuesta(): void {
-    if (!this.plazaId || this.generandoPropuesta) {
+    if (!this.plazaId || this.generador.procesando) {
       return;
     }
 
     const errorValidacion =
-      this.generadorState.validar(
+      this.generador.validar(
         this.anio,
         this.mes
       );
@@ -1726,12 +1576,12 @@ export class ProgramacionSupervisorComponent
       return;
     }
 
-    this.generandoPropuesta = true;
+    this.generador.procesando = true;
     this.error = '';
     this.mensaje = '';
 
     this.facade.generarPropuesta(
-      this.generadorState.construirRequest(
+      this.generador.construirRequest(
         this.plazaId,
         this.anio,
         this.mes
@@ -1739,14 +1589,14 @@ export class ProgramacionSupervisorComponent
     )
       .pipe(
         finalize(() => {
-          this.generandoPropuesta = false;
+          this.generador.procesando = false;
           this.cdr.detectChanges();
         })
       )
       .subscribe({
         next: propuesta => {
           this.aplicarPropuesta(propuesta);
-          this.modalGeneradorAbierto = false;
+          this.generador.modalAbierto = false;
           this.mensaje = 'Propuesta generada. Revísala y edítala antes de guardar.';
           this.cdr.detectChanges();
         },
@@ -1765,7 +1615,7 @@ export class ProgramacionSupervisorComponent
     propuesta: ProgramacionPropuestaResponse
   ): void {
     const celdas =
-      this.generadorState.aplicarPropuesta(
+      this.generador.aplicarPropuesta(
         propuesta
       );
 
@@ -1798,15 +1648,15 @@ export class ProgramacionSupervisorComponent
   }
 
   diasPropuestaConDeficit(): number {
-    return this.generadorState.diasConDeficit();
+    return this.generador.diasConDeficit();
   }
 
   diasPropuestaConExceso(): number {
-    return this.generadorState.diasConExceso();
+    return this.generador.diasConExceso();
   }
 
   conflictosVisibles(): ConflictoProgramacionPropuesta[] {
-    return this.generadorState.conflictosVisibles();
+    return this.generador.conflictosVisibles();
   }
 
 
@@ -1847,7 +1697,7 @@ export class ProgramacionSupervisorComponent
       (estado === 'A' || estado === 'B' || estado === 'C') &&
       !this.turnoRecomendado(agenteId, estado)
     ) {
-      const excepcion = this.excepcionPorAgente.get(agenteId);
+      const excepcion = this.excepciones.porAgente.get(agenteId);
       const agente = this.secuenciaState.agente(agenteId);
 
       this.advertenciaTurno = {
@@ -1935,7 +1785,7 @@ export class ProgramacionSupervisorComponent
   excepcionDeAgente(
     agenteId: number
   ): AgenteProgramacionExcepcion | null {
-    return this.excepcionState.excepcion(
+    return this.excepciones.excepcion(
       agenteId
     );
   }
@@ -1943,7 +1793,7 @@ export class ProgramacionSupervisorComponent
   tieneExcepcion(
     agenteId: number
   ): boolean {
-    return this.excepcionState.tiene(
+    return this.excepciones.tiene(
       agenteId
     );
   }
@@ -1951,7 +1801,7 @@ export class ProgramacionSupervisorComponent
   colorExcepcion(
     agenteId: number
   ): string {
-    return this.excepcionState.colorDe(
+    return this.excepciones.colorDe(
       agenteId
     );
   }
@@ -1959,23 +1809,23 @@ export class ProgramacionSupervisorComponent
   colorExcepcionSuave(
     agenteId: number
   ): string {
-    return this.excepcionState.colorSuaveDe(
+    return this.excepciones.colorSuaveDe(
       agenteId
     );
   }
 
   colorPreviewSuave(): string {
-    return this.excepcionState.colorPreviewSuave();
+    return this.excepciones.colorPreviewSuave();
   }
 
   agentesParaExcepcion(): TrabajadorResumen[] {
-    return this.excepcionState.filtrarAgentes(
+    return this.excepciones.filtrarAgentes(
       this.agentes
     );
   }
 
   abrirModalExcepcion(): void {
-    this.excepcionState.abrirNueva();
+    this.excepciones.abrirNueva();
     this.cdr.detectChanges();
   }
 
@@ -1990,7 +1840,7 @@ export class ProgramacionSupervisorComponent
   turnosRecomendados(
     agenteId: number
   ): string {
-    return this.excepcionState.turnosRecomendados(
+    return this.excepciones.turnosRecomendados(
       agenteId
     );
   }
@@ -1999,7 +1849,7 @@ export class ProgramacionSupervisorComponent
     agenteId: number,
     estado: 'A' | 'B' | 'C'
   ): boolean {
-    return this.excepcionState.turnoRecomendado(
+    return this.excepciones.turnoRecomendado(
       agenteId,
       estado
     );
@@ -2008,7 +1858,7 @@ export class ProgramacionSupervisorComponent
   abrirExcepcion(
     agente: TrabajadorResumen
   ): void {
-    this.excepcionState.abrir(
+    this.excepciones.abrir(
       agente
     );
     this.cdr.detectChanges();
@@ -2017,14 +1867,14 @@ export class ProgramacionSupervisorComponent
   seleccionarColorExcepcion(
     color: string
   ): void {
-    this.excepcionState.seleccionarColor(
+    this.excepciones.seleccionarColor(
       color
     );
   }
 
   cerrarExcepcion(): void {
     if (
-      this.excepcionState.cerrar()
+      this.excepciones.cerrar()
     ) {
       this.cdr.detectChanges();
     }
@@ -2033,14 +1883,14 @@ export class ProgramacionSupervisorComponent
   guardarExcepcion(): void {
     if (
       !this.plazaId ||
-      !this.agenteExcepcion ||
-      this.guardandoExcepcion
+      !this.excepciones.agente ||
+      this.excepciones.guardando
     ) {
       return;
     }
 
     const errorValidacion =
-      this.excepcionState.validar();
+      this.excepciones.validar();
 
     if (errorValidacion) {
       this.error = errorValidacion;
@@ -2048,7 +1898,7 @@ export class ProgramacionSupervisorComponent
     }
 
     const request =
-      this.excepcionState.construirRequest(
+      this.excepciones.construirRequest(
         this.plazaId
       );
 
@@ -2056,7 +1906,7 @@ export class ProgramacionSupervisorComponent
       return;
     }
 
-    this.guardandoExcepcion = true;
+    this.excepciones.guardando = true;
     this.error = '';
 
     this.facade
@@ -2066,14 +1916,14 @@ export class ProgramacionSupervisorComponent
       .pipe(
         finalize(
           () => {
-            this.guardandoExcepcion = false;
+            this.excepciones.guardando = false;
             this.cdr.detectChanges();
           }
         )
       )
       .subscribe({
         next: excepcion => {
-          this.excepcionState.aplicar(
+          this.excepciones.aplicar(
             excepcion
           );
 
@@ -2097,24 +1947,24 @@ export class ProgramacionSupervisorComponent
   quitarExcepcion(): void {
     if (
       !this.plazaId ||
-      !this.agenteExcepcion ||
-      this.guardandoExcepcion
+      !this.excepciones.agente ||
+      this.excepciones.guardando
     ) {
       return;
     }
 
     if (
       !window.confirm(
-        `¿Quitar la excepción de ${this.agenteExcepcion.nombreCompleto}?`
+        `¿Quitar la excepción de ${this.excepciones.agente.nombreCompleto}?`
       )
     ) {
       return;
     }
 
     const agenteId =
-      this.agenteExcepcion.id;
+      this.excepciones.agente.id;
 
-    this.guardandoExcepcion = true;
+    this.excepciones.guardando = true;
     this.error = '';
 
     this.facade
@@ -2125,14 +1975,14 @@ export class ProgramacionSupervisorComponent
       .pipe(
         finalize(
           () => {
-            this.guardandoExcepcion = false;
+            this.excepciones.guardando = false;
             this.cdr.detectChanges();
           }
         )
       )
       .subscribe({
         next: () => {
-          this.excepcionState.quitar(
+          this.excepciones.quitar(
             agenteId
           );
 

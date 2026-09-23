@@ -1,26 +1,61 @@
-import{Routes}from'@angular/router';import{MainLayoutComponent}from'./layout/main-layout/main-layout.component';import{authGuard,moduleGuard,passwordChangedGuard,roleGuard}from'./core/auth/guards';
-export const routes:Routes=[
- {path:'login',loadComponent:()=>import('./features/login/login.component').then(m=>m.LoginComponent)},
- {path:'cambiar-password',canActivate:[authGuard],loadComponent:()=>import('./features/change-password/change-password.component').then(m=>m.ChangePasswordComponent)},
- {path:'forbidden',loadComponent:()=>import('./features/forbidden/forbidden.component').then(m=>m.ForbiddenComponent)},
- {path:'',component:MainLayoutComponent,canActivate:[authGuard,passwordChangedGuard],children:[
-  {path:'',pathMatch:'full',redirectTo:'dashboard'},
-  {path:'dashboard',canActivate:[moduleGuard('DASHBOARD')],loadComponent:()=>import('./features/dashboard/dashboard.component').then(m=>m.DashboardComponent)},
-  {path:'programacion/turnos',canActivate:[moduleGuard('PROGRAMACION'),roleGuard('SUPERVISOR')],loadComponent:()=>import('./features/programacion/pages/supervisor/programacion-supervisor.component').then(m=>m.ProgramacionSupervisorComponent)},
-  {path:'programacion/distribucion',canActivate:[moduleGuard('DISTRIBUCION'),roleGuard('SUPERVISOR','CONTROLADOR')],loadComponent:()=>import('./features/programacion/pages/controlador/distribucion-controlador.component').then(m=>m.DistribucionControladorComponent)},
-  {path:'programacion/mi-horario',canActivate:[moduleGuard('MI_HORARIO'),roleGuard('SUPERVISOR','CONTROLADOR','OPERADOR')],loadComponent:()=>import('./features/programacion/pages/agente/mi-horario.component').then(m=>m.MiHorarioComponent)},
-  {path:'asistencia/registrar',canActivate:[moduleGuard('ASISTENCIA')],loadComponent:()=>import('./features/asistencia/pages/registrar/asistencia-form.component').then(m=>m.AsistenciaFormComponent)},
-  {path:'asistencia/historial',canActivate:[moduleGuard('ASISTENCIA')],loadComponent:()=>import('./features/asistencia/pages/historial/asistencia-history.component').then(m=>m.AsistenciaHistoryComponent)},
-  {path:'asistencia/historial/editar/:id',canActivate:[moduleGuard('ASISTENCIA')],loadComponent:()=>import('./features/asistencia/pages/editar/asistencia-edit.component').then(m=>m.AsistenciaEditComponent)},
-  {path:'relevos/nuevo',canActivate:[moduleGuard('RELEVOS'),roleGuard('SUPERVISOR','OPERADOR')],loadComponent:()=>import('./features/relevos/pages/nuevo/relevo-nuevo.component').then(m=>m.RelevoNuevoComponent)},
-  {path:'relevos/historial',canActivate:[moduleGuard('RELEVOS'),roleGuard('SUPERVISOR','OPERADOR')],loadComponent:()=>import('./features/relevos/pages/historial/relevo-historial.component').then(m=>m.RelevoHistorialComponent)},
-  {path:'relevos/editar/:id',canActivate:[moduleGuard('RELEVOS'),roleGuard('SUPERVISOR')],loadComponent:()=>import('./features/relevos/pages/editar/relevo-editar.component').then(m=>m.RelevoEditarComponent)},
-  {path:'relevos/:id',canActivate:[moduleGuard('RELEVOS'),roleGuard('SUPERVISOR','OPERADOR')],loadComponent:()=>import('./features/relevos/pages/detalle/relevo-detalle.component').then(m=>m.RelevoDetalleComponent)},
-  {path:'inventario/nuevo',canActivate:[roleGuard('SUPERVISOR','OPERADOR')],loadComponent:()=>import('./features/inventario/pages/nuevo-inventario/nuevo-inventario.component').then(m=>m.NuevoInventarioComponent)},
-  {path:'inventario/historial',canActivate:[moduleGuard('INVENTARIO'),roleGuard('SUPERVISOR')],loadComponent:()=>import('./features/inventario/pages/historial/historial.component').then(m=>m.HistorialComponent)},
-  {path:'inventario/stock',canActivate:[moduleGuard('INVENTARIO'),roleGuard('SUPERVISOR')],loadComponent:()=>import('./features/inventario/pages/stock/stock.component').then(m=>m.StockComponent)},
-  {path:'inventario/productos',canActivate:[moduleGuard('ADMIN_PRODUCTOS'),roleGuard('SUPERVISOR')],loadComponent:()=>import('./features/inventario/pages/productos/productos.component').then(m=>m.ProductosComponent)},
-  {path:'usuarios/contrasenas',canActivate:[moduleGuard('TRABAJADORES'),roleGuard('SUPERVISOR')],loadComponent:()=>import('./features/usuarios/password-admin/password-admin.component').then(m=>m.PasswordAdminComponent)}
- ]},
- {path:'**',redirectTo:''}
+import { Routes } from '@angular/router';
+import { authGuard, moduleGuard, passwordChangedGuard } from './core/auth/guards';
+import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
+import { ASISTENCIA_ROUTES } from './features/asistencia/asistencia.routes';
+import { INVENTARIO_ROUTES } from './features/inventario/inventario.routes';
+import { PROGRAMACION_ROUTES } from './features/programacion/programacion.routes';
+import { RELEVOS_ROUTES } from './features/relevos/relevos.routes';
+import { USUARIOS_ROUTES } from './features/usuarios/usuarios.routes';
+
+export const routes: Routes = [
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('./features/login/login.component')
+        .then(m => m.LoginComponent)
+  },
+  {
+    path: 'cambiar-password',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/change-password/change-password.component')
+        .then(m => m.ChangePasswordComponent)
+  },
+  {
+    path: 'forbidden',
+    loadComponent: () =>
+      import('./features/forbidden/forbidden.component')
+        .then(m => m.ForbiddenComponent)
+  },
+  {
+    path: '',
+    component: MainLayoutComponent,
+    canActivate: [
+      authGuard,
+      passwordChangedGuard
+    ],
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'dashboard'
+      },
+      {
+        path: 'dashboard',
+        canActivate: [moduleGuard('DASHBOARD')],
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component')
+            .then(m => m.DashboardComponent)
+      },
+      ...PROGRAMACION_ROUTES,
+      ...ASISTENCIA_ROUTES,
+      ...RELEVOS_ROUTES,
+      ...INVENTARIO_ROUTES,
+      ...USUARIOS_ROUTES
+    ]
+  },
+  {
+    path: '**',
+    redirectTo: ''
+  }
 ];

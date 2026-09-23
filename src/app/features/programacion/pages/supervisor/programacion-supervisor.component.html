@@ -154,7 +154,7 @@
   }
 
 
-  @if(ultimaPropuesta){
+  @if(generador.ultimaPropuesta){
     <section class="proposal-status">
       <div class="proposal-status-main">
         <span class="proposal-status-kicker">PROPUESTA GENERADA</span>
@@ -173,11 +173,11 @@
         </div>
         <div>
           <span>Alertas</span>
-          <strong>{{ propuestaConflictos.length }}</strong>
+          <strong>{{ generador.conflictosPropuesta.length }}</strong>
         </div>
       </div>
 
-      @if(propuestaConflictos.length > 0){
+      @if(generador.conflictosPropuesta.length > 0){
         <details class="proposal-conflicts">
           <summary>Ver alertas de la propuesta</summary>
           <div class="proposal-conflict-list">
@@ -300,9 +300,9 @@
             class="primary generator-button"
             type="button"
             (click)="abrirGenerador()"
-            [disabled]="!plazaId || cargando || generandoPropuesta"
+            [disabled]="!plazaId || cargando || generador.procesando"
           >
-            {{ generandoPropuesta ? 'Generando...' : 'Generar con IA' }}
+            {{ generador.procesando ? 'Generando...' : 'Generar con IA' }}
           </button>
 
           <button
@@ -589,7 +589,7 @@
 
 </section>
 
-@if(modalGeneradorAbierto){
+@if(generador.modalAbierto){
   <div class="generator-backdrop" (click)="cerrarGenerador()">
     <section class="generator-modal" (click)="$event.stopPropagation()">
       <div class="generator-head">
@@ -598,7 +598,7 @@
           <h2>Generar propuesta de {{ nombreMes() }}</h2>
           <p>Configura la cobertura. La propuesta se cargará en la matriz, pero no se guardará automáticamente.</p>
         </div>
-        <button class="exception-close" type="button" (click)="cerrarGenerador()" [disabled]="generandoPropuesta">×</button>
+        <button class="exception-close" type="button" (click)="cerrarGenerador()" [disabled]="generador.procesando">×</button>
       </div>
 
       <div class="generator-body">
@@ -610,9 +610,9 @@
             </div>
           </div>
           <div class="coverage-grid">
-            <label><span>Turno A</span><input type="number" min="0" step="1" [(ngModel)]="coberturaNormal.a"></label>
-            <label><span>Turno B</span><input type="number" min="0" step="1" [(ngModel)]="coberturaNormal.b"></label>
-            <label><span>Turno C</span><input type="number" min="0" step="1" [(ngModel)]="coberturaNormal.c"></label>
+            <label><span>Turno A</span><input type="number" min="0" step="1" [(ngModel)]="generador.coberturaNormal.a"></label>
+            <label><span>Turno B</span><input type="number" min="0" step="1" [(ngModel)]="generador.coberturaNormal.b"></label>
+            <label><span>Turno C</span><input type="number" min="0" step="1" [(ngModel)]="generador.coberturaNormal.c"></label>
           </div>
         </section>
 
@@ -624,9 +624,9 @@
             </div>
           </div>
           <div class="coverage-grid">
-            <label><span>Turno A</span><input type="number" min="0" step="1" [(ngModel)]="coberturaDomingo.a"></label>
-            <label><span>Turno B</span><input type="number" min="0" step="1" [(ngModel)]="coberturaDomingo.b"></label>
-            <label><span>Turno C</span><input type="number" min="0" step="1" [(ngModel)]="coberturaDomingo.c"></label>
+            <label><span>Turno A</span><input type="number" min="0" step="1" [(ngModel)]="generador.coberturaDomingo.a"></label>
+            <label><span>Turno B</span><input type="number" min="0" step="1" [(ngModel)]="generador.coberturaDomingo.b"></label>
+            <label><span>Turno C</span><input type="number" min="0" step="1" [(ngModel)]="generador.coberturaDomingo.c"></label>
           </div>
         </section>
 
@@ -639,11 +639,11 @@
             <button class="secondary" type="button" (click)="agregarDiaEspecial()">Añadir fecha</button>
           </div>
 
-          @if(diasEspeciales.length === 0){
+          @if(generador.diasEspeciales.length === 0){
             <div class="generator-empty">No hay días especiales configurados.</div>
           } @else {
             <div class="special-days-list">
-              @for(dia of diasEspeciales; track $index; let i = $index){
+              @for(dia of generador.diasEspeciales; track $index; let i = $index){
                 <article class="special-day-row">
                   <label><span>Fecha</span><input type="date" [(ngModel)]="dia.fecha"></label>
                   <label class="special-description"><span>Descripción</span><input type="text" maxlength="100" [(ngModel)]="dia.descripcion" placeholder="Ej.: Feriado"></label>
@@ -666,11 +666,11 @@
             <button class="secondary" type="button" (click)="agregarNovedadGenerador()">Añadir novedad</button>
           </div>
 
-          @if(novedadesGenerador.length === 0){
+          @if(generador.novedades.length === 0){
             <div class="generator-empty">No hay novedades agregadas.</div>
           } @else {
             <div class="novelty-list">
-              @for(novedad of novedadesGenerador; track $index; let i = $index){
+              @for(novedad of generador.novedades; track $index; let i = $index){
                 <article class="novelty-row">
                   <label class="novelty-agent">
                     <span>Agente</span>
@@ -704,9 +704,9 @@
       </div>
 
       <div class="generator-actions">
-        <button class="secondary" type="button" (click)="cerrarGenerador()" [disabled]="generandoPropuesta">Cancelar</button>
-        <button class="primary" type="button" (click)="generarPropuesta()" [disabled]="generandoPropuesta">
-          {{ generandoPropuesta ? 'Generando propuesta...' : 'Generar propuesta' }}
+        <button class="secondary" type="button" (click)="cerrarGenerador()" [disabled]="generador.procesando">Cancelar</button>
+        <button class="primary" type="button" (click)="generarPropuesta()" [disabled]="generador.procesando">
+          {{ generador.procesando ? 'Generando propuesta...' : 'Generar propuesta' }}
         </button>
       </div>
     </section>
@@ -919,20 +919,20 @@
   </div>
 }
 
-@if(modalExcepcionAbierto){
+@if(excepciones.modalAbierto){
   <div class="exception-modal-backdrop" (click)="cerrarExcepcion()">
     <section class="exception-modal" (click)="$event.stopPropagation()">
       <div class="exception-modal-head">
         <div>
           <span class="sequence-label">EXCEPCIONES DE PROGRAMACIÓN</span>
-          <h2>{{ agenteExcepcion ? agenteExcepcion.nombreCompleto : 'Añadir excepción' }}</h2>
-          @if(agenteExcepcion){
-            <small>Cód. {{ agenteExcepcion.codigo }}</small>
+          <h2>{{ excepciones.agente ? excepciones.agente.nombreCompleto : 'Añadir excepción' }}</h2>
+          @if(excepciones.agente){
+            <small>Cód. {{ excepciones.agente.codigo }}</small>
           } @else {
             <small>Busca y selecciona al agente.</small>
           }
         </div>
-        <button class="exception-close" type="button" (click)="cerrarExcepcion()" [disabled]="guardandoExcepcion">×</button>
+        <button class="exception-close" type="button" (click)="cerrarExcepcion()" [disabled]="excepciones.guardando">×</button>
       </div>
 
       <div class="exception-modal-body">
@@ -941,7 +941,7 @@
           <input
             id="exception-agent-search"
             type="search"
-            [(ngModel)]="busquedaAgenteExcepcion"
+            [(ngModel)]="excepciones.busqueda"
             placeholder="Buscar por código o nombre..."
             autocomplete="off"
           >
@@ -951,7 +951,7 @@
               <button
                 type="button"
                 class="exception-agent-option"
-                [class.selected]="agenteExcepcion?.id === agente.id"
+                [class.selected]="excepciones.agente?.id === agente.id"
                 (click)="seleccionarAgenteExcepcion(agente)"
               >
                 <span><strong>{{ agente.codigo }}</strong> · {{ agente.nombreCompleto }}</span>
@@ -965,45 +965,45 @@
           </div>
         </div>
 
-        @if(agenteExcepcion){
+        @if(excepciones.agente){
           <div class="exception-selected-agent">
-            <strong>{{ agenteExcepcion.nombreCompleto }}</strong>
-            <span>Cód. {{ agenteExcepcion.codigo }}</span>
+            <strong>{{ excepciones.agente.nombreCompleto }}</strong>
+            <span>Cód. {{ excepciones.agente.codigo }}</span>
           </div>
 
           <div class="exception-field">
             <label>Turnos recomendados</label>
             <p>Si asignas un turno no marcado, SIGO mostrará una advertencia, pero permitirá continuar.</p>
             <div class="exception-shifts">
-              <label><input type="checkbox" [(ngModel)]="excepcionPermiteA"> <span class="estado-a">A</span></label>
-              <label><input type="checkbox" [(ngModel)]="excepcionPermiteB"> <span class="estado-b">B</span></label>
-              <label><input type="checkbox" [(ngModel)]="excepcionPermiteC"> <span class="estado-c">C</span></label>
+              <label><input type="checkbox" [(ngModel)]="excepciones.permiteA"> <span class="estado-a">A</span></label>
+              <label><input type="checkbox" [(ngModel)]="excepciones.permiteB"> <span class="estado-b">B</span></label>
+              <label><input type="checkbox" [(ngModel)]="excepciones.permiteC"> <span class="estado-c">C</span></label>
             </div>
           </div>
 
           <div class="exception-field">
             <label for="exception-motivo">Motivo / observación</label>
-            <textarea id="exception-motivo" maxlength="500" rows="4" [(ngModel)]="excepcionMotivo" placeholder="Ej.: Estudia por las noches; preferentemente turno A o B."></textarea>
-            <small>{{ excepcionMotivo.length }}/500</small>
+            <textarea id="exception-motivo" maxlength="500" rows="4" [(ngModel)]="excepciones.motivo" placeholder="Ej.: Estudia por las noches; preferentemente turno A o B."></textarea>
+            <small>{{ excepciones.motivo.length }}/500</small>
           </div>
 
           <div class="exception-field">
             <label for="exception-color">Color para identificar al agente</label>
             <p>El color se mostrará con una intensidad suave en la tabla.</p>
             <div class="exception-color-row">
-              <input id="exception-color" type="color" [(ngModel)]="excepcionColor">
-              <span class="exception-color-preview" [style.background-color]="colorPreviewSuave()">{{ excepcionColor }}</span>
+              <input id="exception-color" type="color" [(ngModel)]="excepciones.color">
+              <span class="exception-color-preview" [style.background-color]="colorPreviewSuave()">{{ excepciones.color }}</span>
             </div>
 
-            @if(coloresExcepcionRecientes.length){
+            @if(excepciones.coloresRecientes.length){
               <div class="exception-recent-colors">
                 <small>Colores usados recientemente</small>
                 <div class="exception-color-swatches">
-                  @for(color of coloresExcepcionRecientes; track color){
+                  @for(color of excepciones.coloresRecientes; track color){
                     <button
                       type="button"
                       class="exception-color-swatch"
-                      [class.selected]="excepcionColor.toUpperCase() === color.toUpperCase()"
+                      [class.selected]="excepciones.color.toUpperCase() === color.toUpperCase()"
                       [style.background-color]="color"
                       [title]="'Usar ' + color"
                       (click)="seleccionarColorExcepcion(color)"
@@ -1017,13 +1017,13 @@
       </div>
 
       <div class="exception-modal-actions">
-        @if(agenteExcepcion && tieneExcepcion(agenteExcepcion.id)){
-          <button class="danger exception-remove" type="button" (click)="quitarExcepcion()" [disabled]="guardandoExcepcion">Quitar excepción</button>
+        @if(excepciones.agente && tieneExcepcion(excepciones.agente.id)){
+          <button class="danger exception-remove" type="button" (click)="quitarExcepcion()" [disabled]="excepciones.guardando">Quitar excepción</button>
         }
         <span class="modal-spacer"></span>
-        <button class="secondary" type="button" (click)="cerrarExcepcion()" [disabled]="guardandoExcepcion">Cancelar</button>
-        <button type="button" (click)="guardarExcepcion()" [disabled]="!agenteExcepcion || guardandoExcepcion || (!excepcionPermiteA && !excepcionPermiteB && !excepcionPermiteC)">
-          {{ guardandoExcepcion ? 'Guardando...' : 'Guardar excepción' }}
+        <button class="secondary" type="button" (click)="cerrarExcepcion()" [disabled]="excepciones.guardando">Cancelar</button>
+        <button type="button" (click)="guardarExcepcion()" [disabled]="!excepciones.agente || excepciones.guardando || (!excepciones.permiteA && !excepciones.permiteB && !excepciones.permiteC)">
+          {{ excepciones.guardando ? 'Guardando...' : 'Guardar excepción' }}
         </button>
       </div>
     </section>

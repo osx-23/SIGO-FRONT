@@ -56,6 +56,14 @@ import {
   ProgramacionExcepcionModalComponent
 } from '../../components/excepcion-modal/programacion-excepcion-modal.component';
 
+import {
+  ProgramacionResumenSecuenciasComponent
+} from '../../components/resumen-secuencias/programacion-resumen-secuencias.component';
+
+import {
+  ProgramacionTablaComponent
+} from '../../components/tabla-programacion/programacion-tabla.component';
+
 
 @Component({
   selector: 'app-programacion-supervisor',
@@ -65,7 +73,9 @@ import {
     CommonModule,
     FormsModule,
     ProgramacionGeneradorModalComponent,
-    ProgramacionExcepcionModalComponent
+    ProgramacionExcepcionModalComponent,
+    ProgramacionResumenSecuenciasComponent,
+    ProgramacionTablaComponent
   ],
 
   templateUrl:

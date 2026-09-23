@@ -116,6 +116,13 @@ export interface ProgramacionPropuestaResponse {
   conflictos: ConflictoProgramacionPropuesta[];
 }
 
+export interface ProgramacionContextoResponse {
+  agentes: TrabajadorResumen[];
+  turnos: ProgramacionDia[];
+  secuencias: SecuenciaAgente[];
+  excepciones: AgenteProgramacionExcepcion[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProgramacionApiService {
   private readonly http = inject(HttpClient);
@@ -129,6 +136,22 @@ export class ProgramacionApiService {
     return this.http.get<TrabajadorResumen[]>(`${this.api}/trabajadores/agentes`, {
       params: new HttpParams().set('plazaId', plazaId)
     });
+  }
+
+  getContexto(
+    plazaId: number,
+    anio: number,
+    mes: number
+  ): Observable<ProgramacionContextoResponse> {
+    const params = new HttpParams()
+      .set('plazaId', plazaId)
+      .set('anio', anio)
+      .set('mes', mes);
+
+    return this.http.get<ProgramacionContextoResponse>(
+      `${this.api}/programacion/contexto`,
+      { params }
+    );
   }
 
   getControladores(plazaId: number): Observable<TrabajadorResumen[]> {

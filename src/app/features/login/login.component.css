@@ -70,15 +70,27 @@
 .brand-panel__top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  justify-content: center;
+  min-height: 58px;
+  padding: 2px 8px 0;
 }
 
 .brand-logos {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
+}
+
+.brand-logos--desktop {
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(4px);
 }
 
 .brand-logo {
@@ -88,32 +100,38 @@
 }
 
 .brand-logo--sigo {
-  width: 88px;
-  max-height: 40px;
+  width: 84px;
+  max-height: 38px;
 }
 
 .brand-logo--lima {
-  width: 126px;
-  max-height: 42px;
-  padding: 7px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.92);
-  border-radius: 10px;
-  background: #ffffff;
-  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.16);
+  width: 112px;
+  max-height: 38px;
+  padding: 3px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
 }
 
 .brand-logo-divider {
   width: 1px;
-  height: 30px;
+  height: 26px;
   flex: 0 0 auto;
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.20);
 }
 
 .mobile-brand {
   display: none;
   align-items: center;
+  justify-content: center;
   gap: 13px;
-  margin-bottom: 30px;
+  width: fit-content;
+  margin: 0 auto 30px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
 }
 
 .mobile-brand img {
@@ -127,13 +145,13 @@
 }
 
 .mobile-brand img:last-child {
-  width: 118px;
-  max-height: 40px;
-  padding: 6px 9px;
-  border: 1px solid #e2e8f0;
-  border-radius: 9px;
+  width: 108px;
+  max-height: 38px;
+  padding: 3px 5px;
+  border: 1px solid #dbe4ee;
+  border-radius: 7px;
   background: #ffffff;
-  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
 }
 
 .mobile-brand__divider {
@@ -481,7 +499,7 @@
   }
 
   .mobile-brand {
-    margin-bottom: 44px;
+    margin: 0 auto 40px;
     gap: 11px;
   }
 

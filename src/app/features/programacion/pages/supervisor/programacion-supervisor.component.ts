@@ -220,12 +220,7 @@ export class ProgramacionSupervisorComponent
 
   diaSeleccionado: number | null = null;
 
-  resumenDia = { A: 0, B: 0, C: 0, total: 0 };
-
   agentesProgramadosLista: TrabajadorResumen[] = [];
-
-  private readonly liderPorAgente =
-    new Map<number, TrabajadorResumen>();
 
   modalConfirmarGuardadoAbierto = false;
   modalConfirmacionAccionAbierto = false;
@@ -546,7 +541,6 @@ export class ProgramacionSupervisorComponent
 
 
     this.diaSeleccionado = null;
-    this.resumenDia = { A: 0, B: 0, C: 0, total: 0 };
 
     this.dias =
       Array.from(
@@ -868,7 +862,6 @@ export class ProgramacionSupervisorComponent
               ...resultado.grupos
             ];
 
-          this.reconstruirCacheLideres();
 
           const liderSeleccionadoPorAgente = new Map<number, number>();
 
@@ -919,77 +912,6 @@ export class ProgramacionSupervisorComponent
    * ============================================================
    */
 
-  agentesDeGrupo(
-    grupo:
-      GrupoProgramacion
-  ): TrabajadorResumen[] {
-
-    const query =
-      this.busqueda
-        .trim()
-        .toLowerCase();
-
-
-    const registros =
-      this.secuencias
-        .filter(
-          s =>
-            s.grupo ===
-              grupo
-        )
-        .sort(
-          (
-            a,
-            b
-          ) =>
-            (
-              a.orden ??
-              Number.MAX_SAFE_INTEGER
-            )
-            -
-            (
-              b.orden ??
-              Number.MAX_SAFE_INTEGER
-            )
-        );
-
-
-    const agentes =
-      registros
-        .map(
-          registro =>
-            this.agentes.find(
-              agente =>
-                agente.id ===
-                  registro.agenteId
-            )
-        )
-        .filter(
-          (
-            agente
-          ):
-            agente is TrabajadorResumen =>
-              !!agente
-        );
-
-
-    if (
-      !query
-    ) {
-
-      return agentes;
-
-    }
-
-
-    return agentes.filter(
-      agente =>
-        this.coincideBusqueda(
-          agente,
-          query
-        )
-    );
-  }
 
 
   /*
@@ -1009,11 +931,6 @@ export class ProgramacionSupervisorComponent
   }
 
 
-  grupoDeAgente(
-    agenteId: number
-  ): GrupoProgramacion | null {
-    return this.secuenciaState.grupoDe(agenteId);
-  }
 
 
   /*
@@ -1662,9 +1579,6 @@ export class ProgramacionSupervisorComponent
       );
     }
 
-    if (this.diaSeleccionado) {
-      this.recalcularResumenDia();
-    }
   }
 
   diasPropuestaConDeficit(): number {
@@ -1768,38 +1682,17 @@ export class ProgramacionSupervisorComponent
     this.matrix.set(key, estado);
     this.cambios.set(key, estado);
 
-    if (this.diaSeleccionado === dia) {
-      this.recalcularResumenDia();
-    }
-
     this.cdr.detectChanges();
   }
 
 
   seleccionarDia(dia: number): void {
     this.diaSeleccionado = dia;
-    this.recalcularResumenDia();
+    this.cdr.detectChanges();
   }
 
-  cantidadTurnoDia(estado: 'A' | 'B' | 'C'): number {
-    return this.resumenDia[estado];
-  }
 
-  totalTurnosDia(): number {
-    return this.resumenDia.total;
-  }
 
-  nombreDiaSeleccionado(): string {
-    if (!this.diaSeleccionado) {
-      return '';
-    }
-    const fecha = new Date(this.anio, this.mes - 1, this.diaSeleccionado);
-    return new Intl.DateTimeFormat('es-PE', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    }).format(fecha);
-  }
 
 
   excepcionDeAgente(
@@ -2319,7 +2212,6 @@ export class ProgramacionSupervisorComponent
             grupo
           );
 
-          this.reconstruirCacheLideres();
 
           this.liderSeleccionado[
             agente.id
@@ -2371,80 +2263,14 @@ export class ProgramacionSupervisorComponent
    * ============================================================
    */
 
-  diaSemana(
-    dia: number
-  ): string {
-
-    const fecha =
-      new Date(
-        this.anio,
-        this.mes - 1,
-        dia
-      );
-
-    const diasSemana = [
-      'Dom',
-      'Lun',
-      'Mar',
-      'Mié',
-      'Jue',
-      'Vie',
-      'Sáb'
-    ];
-
-    return diasSemana[
-      fecha.getDay()
-    ];
-  }
 
 
-  liderDeAgente(
-    agenteId: number
-  ): TrabajadorResumen | null {
-    return this.liderPorAgente.get(agenteId) ?? null;
-  }
 
 
-  codigoLider(
-    agenteId: number
-  ): string {
-
-    const lider =
-      this.liderDeAgente(
-        agenteId
-      );
-
-    return lider?.codigo
-      ? String(lider.codigo)
-      : '-';
-  }
 
 
-  nombreLider(
-    agenteId: number
-  ): string {
-
-    const lider =
-      this.liderDeAgente(
-        agenteId
-      );
-
-    return (
-      lider?.nombreCompleto ??
-      'Sin líder'
-    );
-  }
 
 
-  claseEstado(
-    estado:
-      EstadoProgramacion | null
-  ): string {
-
-    return estado
-      ? `estado-${estado.toLowerCase()}`
-      : '';
-  }
 
 
   nombreGrupo(
@@ -2465,11 +2291,6 @@ export class ProgramacionSupervisorComponent
   }
 
 
-  cantidadGrupo(
-    grupo: GrupoProgramacion
-  ): number {
-    return this.secuenciaState.cantidad(grupo);
-  }
 
 
   estaProcesandoAgente(
@@ -2483,11 +2304,6 @@ export class ProgramacionSupervisorComponent
   }
 
 
-  posicionEnGrupo(
-    agenteId: number
-  ): number {
-    return this.secuenciaState.posicionDe(agenteId);
-  }
 
 
   alternarDetalles(): void {
@@ -2495,26 +2311,8 @@ export class ProgramacionSupervisorComponent
   }
 
 
-  puedeSubir(
-    grupo: GrupoProgramacion,
-    agenteId: number
-  ): boolean {
-    return this.secuenciaState.puedeSubir(
-      grupo,
-      agenteId
-    );
-  }
 
 
-  puedeBajar(
-    grupo: GrupoProgramacion,
-    agenteId: number
-  ): boolean {
-    return this.secuenciaState.puedeBajar(
-      grupo,
-      agenteId
-    );
-  }
 
 
   nombreMes(): string {
@@ -2552,25 +2350,6 @@ export class ProgramacionSupervisorComponent
    * ============================================================
    */
 
-  private recalcularResumenDia(): void {
-    if (!this.diaSeleccionado) {
-      this.resumenDia = { A: 0, B: 0, C: 0, total: 0 };
-      return;
-    }
-
-    let A = 0;
-    let B = 0;
-    let C = 0;
-
-    for (const agente of this.agentesProgramadosLista) {
-      const estado = this.matrix.get(this.key(agente.id, this.diaSeleccionado));
-      if (estado === 'A') A++;
-      else if (estado === 'B') B++;
-      else if (estado === 'C') C++;
-    }
-
-    this.resumenDia = { A, B, C, total: A + B + C };
-  }
 
 
   private reconstruirCacheSecuencias(): void {
@@ -2584,29 +2363,9 @@ export class ProgramacionSupervisorComponent
         this.busqueda
       );
 
-    if (this.diaSeleccionado) {
-      this.recalcularResumenDia();
-    }
   }
 
 
-  private reconstruirCacheLideres(): void {
-    this.liderPorAgente.clear();
-
-    const controladorPorId = new Map(
-      this.controladores.map(controlador => [controlador.id, controlador] as const)
-    );
-
-    for (const grupo of this.grupos) {
-      if (!grupo.activo) {
-        continue;
-      }
-      const lider = controladorPorId.get(grupo.controladorId);
-      if (lider) {
-        this.liderPorAgente.set(grupo.agenteId, lider);
-      }
-    }
-  }
 
 
   private coincideBusqueda(

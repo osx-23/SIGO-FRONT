@@ -1,0 +1,234 @@
+@if(excepciones.modalAbierto){
+  <div class="exception-modal-backdrop" (click)="cerrar()">
+    <section class="exception-modal" (click)="$event.stopPropagation()">
+      <div class="exception-modal-head">
+        <div>
+          <span class="sequence-label">EXCEPCIONES DE PROGRAMACIÓN</span>
+
+          <h2>
+            {{ excepciones.agente
+              ? excepciones.agente.nombreCompleto
+              : 'Añadir excepción' }}
+          </h2>
+
+          @if(excepciones.agente){
+            <small>
+              Cód. {{ excepciones.agente.codigo }}
+            </small>
+          } @else {
+            <small>
+              Busca y selecciona al agente.
+            </small>
+          }
+        </div>
+
+        <button
+          class="exception-close"
+          type="button"
+          (click)="cerrar()"
+          [disabled]="excepciones.guardando"
+        >
+          ×
+        </button>
+      </div>
+
+      <div class="exception-modal-body">
+        <div class="exception-field">
+          <label for="exception-agent-search">
+            Agente
+          </label>
+
+          <input
+            id="exception-agent-search"
+            type="search"
+            [(ngModel)]="excepciones.busqueda"
+            placeholder="Buscar por código o nombre..."
+            autocomplete="off"
+          >
+
+          <div class="exception-agent-results">
+            @for(agente of agentesFiltrados(); track agente.id){
+              <button
+                type="button"
+                class="exception-agent-option"
+                [class.selected]="excepciones.agente?.id === agente.id"
+                (click)="seleccionarAgente(agente)"
+              >
+                <span>
+                  <strong>{{ agente.codigo }}</strong>
+                  · {{ agente.nombreCompleto }}
+                </span>
+
+                @if(tieneExcepcion(agente.id)){
+                  <span class="exception-badge">
+                    Con excepción
+                  </span>
+                }
+              </button>
+            } @empty {
+              <div class="exception-agent-empty">
+                No se encontraron agentes.
+              </div>
+            }
+          </div>
+        </div>
+
+        @if(excepciones.agente){
+          <div class="exception-selected-agent">
+            <strong>
+              {{ excepciones.agente.nombreCompleto }}
+            </strong>
+            <span>
+              Cód. {{ excepciones.agente.codigo }}
+            </span>
+          </div>
+
+          <div class="exception-field">
+            <label>
+              Turnos recomendados
+            </label>
+
+            <p>
+              Si asignas un turno no marcado, SIGO mostrará una advertencia, pero permitirá continuar.
+            </p>
+
+            <div class="exception-shifts">
+              <label>
+                <input
+                  type="checkbox"
+                  [(ngModel)]="excepciones.permiteA"
+                >
+                <span class="estado-a">A</span>
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  [(ngModel)]="excepciones.permiteB"
+                >
+                <span class="estado-b">B</span>
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  [(ngModel)]="excepciones.permiteC"
+                >
+                <span class="estado-c">C</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="exception-field">
+            <label for="exception-motivo">
+              Motivo / observación
+            </label>
+
+            <textarea
+              id="exception-motivo"
+              maxlength="500"
+              rows="4"
+              [(ngModel)]="excepciones.motivo"
+              placeholder="Ej.: Estudia por las noches; preferentemente turno A o B."
+            ></textarea>
+
+            <small>
+              {{ excepciones.motivo.length }}/500
+            </small>
+          </div>
+
+          <div class="exception-field">
+            <label for="exception-color">
+              Color para identificar al agente
+            </label>
+
+            <p>
+              El color se mostrará con una intensidad suave en la tabla.
+            </p>
+
+            <div class="exception-color-row">
+              <input
+                id="exception-color"
+                type="color"
+                [(ngModel)]="excepciones.color"
+              >
+
+              <span
+                class="exception-color-preview"
+                [style.background-color]="excepciones.colorPreviewSuave()"
+              >
+                {{ excepciones.color }}
+              </span>
+            </div>
+
+            @if(excepciones.coloresRecientes.length){
+              <div class="exception-recent-colors">
+                <small>
+                  Colores usados recientemente
+                </small>
+
+                <div class="exception-color-swatches">
+                  @for(color of excepciones.coloresRecientes; track color){
+                    <button
+                      type="button"
+                      class="exception-color-swatch"
+                      [class.selected]="excepciones.color.toUpperCase() === color.toUpperCase()"
+                      [style.background-color]="color"
+                      [title]="'Usar ' + color"
+                      (click)="seleccionarColor(color)"
+                    ></button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="exception-modal-actions">
+        @if(
+          excepciones.agente &&
+          tieneExcepcion(excepciones.agente.id)
+        ){
+          <button
+            class="danger exception-remove"
+            type="button"
+            (click)="solicitarEliminacion()"
+            [disabled]="excepciones.guardando"
+          >
+            Quitar excepción
+          </button>
+        }
+
+        <span class="modal-spacer"></span>
+
+        <button
+          class="secondary"
+          type="button"
+          (click)="cerrar()"
+          [disabled]="excepciones.guardando"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          (click)="solicitarGuardado()"
+          [disabled]="
+            !excepciones.agente ||
+            excepciones.guardando ||
+            (
+              !excepciones.permiteA &&
+              !excepciones.permiteB &&
+              !excepciones.permiteC
+            )
+          "
+        >
+          {{ excepciones.guardando
+            ? 'Guardando...'
+            : 'Guardar excepción' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

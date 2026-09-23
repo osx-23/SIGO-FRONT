@@ -10,8 +10,7 @@ import {
 import { FormsModule } from '@angular/forms';
 
 import {
-  finalize,
-  forkJoin
+  finalize
 } from 'rxjs';
 
 import {
@@ -64,6 +63,22 @@ import {
   ProgramacionTablaComponent
 } from '../../components/tabla-programacion/programacion-tabla.component';
 
+import {
+  ProgramacionCargaFacade
+} from '../../state/programacion-carga.facade';
+
+import {
+  ProgramacionSecuenciaFacade
+} from '../../state/programacion-secuencia.facade';
+
+import {
+  ProgramacionGuardadoFacade
+} from '../../state/programacion-guardado.facade';
+
+import {
+  ProgramacionLiderFacade
+} from '../../state/programacion-lider.facade';
+
 
 @Component({
   selector: 'app-programacion-supervisor',
@@ -90,7 +105,11 @@ import {
   providers: [
     ProgramacionSecuenciaState,
     ProgramacionGeneradorState,
-    ProgramacionExcepcionState
+    ProgramacionExcepcionState,
+    ProgramacionCargaFacade,
+    ProgramacionSecuenciaFacade,
+    ProgramacionGuardadoFacade,
+    ProgramacionLiderFacade
   ]
 })
 export class ProgramacionSupervisorComponent
@@ -107,6 +126,18 @@ export class ProgramacionSupervisorComponent
 
   private readonly secuenciaState =
     inject(ProgramacionSecuenciaState);
+
+  private readonly cargaFacade =
+    inject(ProgramacionCargaFacade);
+
+  private readonly secuenciaFacade =
+    inject(ProgramacionSecuenciaFacade);
+
+  private readonly guardadoFacade =
+    inject(ProgramacionGuardadoFacade);
+
+  private readonly liderFacade =
+    inject(ProgramacionLiderFacade);
 
   readonly generador =
     inject(ProgramacionGeneradorState);

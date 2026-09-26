@@ -18,7 +18,7 @@ interface PlazaAdmin {
   activo: boolean;
 }
 
-interface PuestoAgenteAdmin {
+interface PuestoAdmin {
   id: number;
   nombre: string;
 }
@@ -60,7 +60,7 @@ export class PasswordAdminComponent implements OnInit {
 
   trabajadores: TrabajadorAdmin[] = [];
   plazas: PlazaAdmin[] = [];
-  puestosAgente: PuestoAgenteAdmin[] = [];
+  puestos: PuestoAdmin[] = [];
 
   filtro = '';
   filtroEstado: FiltroEstado = 'TODOS';
@@ -84,6 +84,7 @@ export class PasswordAdminComponent implements OnInit {
   exigirCambio = true;
 
   plazaSeleccionada: number | null = null;
+  puestoSeleccionado: number | null = null;
   activoSeleccionado = true;
 
   nuevoCodigo: number | null = null;
@@ -183,14 +184,14 @@ export class PasswordAdminComponent implements OnInit {
           plazas: this.http.get<PlazaAdmin[]>(
             `${this.api}/plazas`
           ),
-          puestos: this.http.get<PuestoAgenteAdmin[]>(
-            `${this.api}/trabajadores/admin/puestos-agente`
+          puestos: this.http.get<PuestoAdmin[]>(
+            `${this.api}/trabajadores/admin/puestos`
           )
         })
       );
 
       this.trabajadores = data.trabajadores ?? [];
-      this.puestosAgente = data.puestos ?? [];
+      this.puestos = data.puestos ?? [];
 
       this.plazas = (data.plazas ?? [])
         .filter(p => p.activo)
@@ -300,9 +301,7 @@ export class PasswordAdminComponent implements OnInit {
     this.nuevoCodigo = null;
     this.nuevoNombre = '';
     this.nuevoPuestoId =
-      this.puestosAgente.length === 1
-        ? this.puestosAgente[0].id
-        : null;
+      null;
     this.nuevaPlazaId =
       this.filtroPlaza === 'TODAS'
         ? null
@@ -350,21 +349,21 @@ export class PasswordAdminComponent implements OnInit {
       this.nuevoNombre.trim().length < 3
     ) {
       this.error =
-        'Ingresa el nombre completo del agente.';
+        'Ingresa el nombre completo del trabajador.';
       this.cdr.markForCheck();
       return;
     }
 
     if (this.nuevoPuestoId === null) {
       this.error =
-        'Selecciona el puesto del agente.';
+        'Selecciona el puesto del trabajador.';
       this.cdr.markForCheck();
       return;
     }
 
     if (this.nuevaPlazaId === null) {
       this.error =
-        'Selecciona la plaza del agente.';
+        'Selecciona la plaza del trabajador.';
       this.cdr.markForCheck();
       return;
     }
@@ -396,7 +395,7 @@ export class PasswordAdminComponent implements OnInit {
       const creado =
         await firstValueFrom(
           this.http.post<TrabajadorAdmin>(
-            `${this.api}/trabajadores/admin/agentes`,
+            `${this.api}/trabajadores/admin`,
             {
               codigo: this.nuevoCodigo,
               nombreCompleto:
@@ -425,7 +424,7 @@ export class PasswordAdminComponent implements OnInit {
       this.modalNuevoAgente = false;
 
       this.exito =
-        `${creado.nombreCompleto} fue registrado como agente en ${creado.plaza?.codigo ?? 'la plaza seleccionada'}.`;
+        `${creado.nombreCompleto} fue registrado como ${creado.rolSistema} en ${creado.plaza?.codigo ?? 'la plaza seleccionada'}.`;
 
       this.modalExito = true;
 
@@ -433,7 +432,7 @@ export class PasswordAdminComponent implements OnInit {
 
       this.error = this.obtenerMensajeError(
         e,
-        'No se pudo registrar el nuevo agente.'
+        'No se pudo registrar el nuevo usuario.'
       );
 
     } finally {
@@ -482,6 +481,9 @@ export class PasswordAdminComponent implements OnInit {
     this.plazaSeleccionada =
       t.plaza?.id ?? null;
 
+    this.puestoSeleccionado =
+      t.puesto?.id ?? null;
+
     this.activoSeleccionado =
       t.activo;
 
@@ -515,6 +517,7 @@ export class PasswordAdminComponent implements OnInit {
     this.confirmar = '';
 
     this.plazaSeleccionada = null;
+    this.puestoSeleccionado = null;
 
     this.error = '';
 
@@ -629,10 +632,13 @@ export class PasswordAdminComponent implements OnInit {
       return;
     }
 
-    if (this.plazaSeleccionada === null) {
+    if (
+      this.plazaSeleccionada === null ||
+      this.puestoSeleccionado === null
+    ) {
 
       this.error =
-        'Selecciona una plaza.';
+        'Selecciona una plaza y un puesto.';
 
       this.cdr.markForCheck();
 
@@ -653,6 +659,7 @@ export class PasswordAdminComponent implements OnInit {
             `${this.api}/trabajadores/admin/${trabajadorAnterior.id}`,
             {
               plazaId: this.plazaSeleccionada,
+              puestoId: this.puestoSeleccionado,
               activo: this.activoSeleccionado
             }
           )
@@ -698,11 +705,15 @@ export class PasswordAdminComponent implements OnInit {
           ? 'Activo'
           : 'Inactivo';
 
+      const puesto =
+        actualizado.puesto?.nombre ??
+        'Sin puesto';
+
       this.modalUsuario = false;
       this.seleccionado = null;
 
       this.exito =
-        `${nombre} actualizado correctamente: ${plaza} · ${estado}.`;
+        `${nombre} actualizado correctamente: ${puesto} · ${actualizado.rolSistema} · ${plaza} · ${estado}.`;
 
       this.modalExito = true;
 

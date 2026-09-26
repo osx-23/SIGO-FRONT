@@ -38,6 +38,35 @@ export class IncidenciaApiService {
     );
   }
 
+  reemplazarEvidencia(
+    incidenciaId: number,
+    evidenciaId: number,
+    file: File
+  ): Observable<EvidenciaIncidencia> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.http.put<EvidenciaIncidencia>(
+      `${this.api}/incidencias/${incidenciaId}/evidencias/${evidenciaId}`,
+      formData
+    );
+  }
+
+  eliminarEvidencia(
+    incidenciaId: number,
+    evidenciaId: number
+  ): Observable<void> {
+    return this.http.delete<void>(
+      `${this.api}/incidencias/${incidenciaId}/evidencias/${evidenciaId}`
+    );
+  }
+
+  obtener(id: number): Observable<IncidenciaResponse> {
+    return this.http.get<IncidenciaResponse>(
+      `${this.api}/incidencias/${id}`
+    );
+  }
+
   listar(
     inicio?: string,
     fin?: string,

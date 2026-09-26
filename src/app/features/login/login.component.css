@@ -1,532 +1,1071 @@
+/* ==========================================================================
+   SIGO — LOGIN
+   ========================================================================== */
+
+   
+
 :host {
+  --primary: #0b5cab;
+  --primary-light: #1688e8;
+  --primary-dark: #073968;
+
+  --navy: #061c33;
+
+  --ink: #132033;
+  --ink-soft: #6c7888;
+
+  --border: #dfe6ee;
+
+  --danger: #d64545;
+  --danger-bg: #fdecec;
+
+  --radius-xl: 28px;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+
   display: block;
 }
+
 
 * {
   box-sizing: border-box;
 }
 
+
+/* ==========================================================================
+   PÁGINA GENERAL
+   ========================================================================== */
+
 .login-page {
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 32px;
-  background:
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 32%),
-    #f4f7fb;
-  color: #0f172a;
-}
+  width: 100%;
+  min-height: 100vh;
 
-.login-shell {
-  width: min(1080px, 100%);
-  min-height: 640px;
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+
+  /*
+   * Izquierda:
+   * imagen principal
+   *
+   * Derecha:
+   * formulario
+   */
+  grid-template-columns:
+    minmax(0, 1.12fr)
+    minmax(480px, 0.88fr);
+
   overflow: hidden;
-  border: 1px solid #e2e8f0;
-  border-radius: 28px;
-  background: #ffffff;
-  box-shadow:
-    0 24px 70px rgba(15, 23, 42, 0.10),
-    0 3px 10px rgba(15, 23, 42, 0.04);
+
+  font-family:
+    "Inter",
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+
+  background: #f4f8fc;
 }
 
-.brand-panel {
+
+/* ==========================================================================
+   PANEL IZQUIERDO
+   ========================================================================== */
+
+.login-visual {
   position: relative;
-  isolation: isolate;
+
+  min-width: 0;
+  min-height: 100vh;
+
+  overflow: hidden;
+
+  background: #061c33;
+}
+
+
+/*
+ * Imagen completa del diseño izquierdo.
+ *
+ * Archivo:
+ * src/assets/login.png
+ */
+.login-visual__image {
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  /*
+   * Llena completamente el panel.
+   * Puede recortar ligeramente los bordes
+   * dependiendo del tamaño del monitor.
+   */
+  object-fit: cover;
+
+  /*
+   * Ajusta la zona visible.
+   * 48% mantiene bien centrados
+   * la S y los monitores.
+   */
+  object-position: 48% center;
+
+  display: block;
+
+  user-select: none;
+  pointer-events: none;
+
+  -webkit-user-drag: none;
+}
+
+
+/* ==========================================================================
+   PANEL DERECHO
+   ========================================================================== */
+
+.login-access {
+  position: relative;
+
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 48px;
+
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(17, 119, 210, 0.08),
+      transparent 35%
+    ),
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #f6faff 55%,
+      #eff6fc 100%
+    );
+}
+
+
+/*
+ * Decoración suave del fondo derecho
+ */
+.login-access::before {
+  content: "";
+
+  position: absolute;
+
+  width: 520px;
+  height: 520px;
+
+  right: -300px;
+  top: -190px;
+
+  border-radius: 50%;
+
+  border:
+    80px solid
+    rgba(14, 100, 180, 0.025);
+
+  pointer-events: none;
+}
+
+
+/*
+ * Segunda decoración
+ */
+.login-access::after {
+  content: "";
+
+  position: absolute;
+
+  width: 500px;
+  height: 500px;
+
+  bottom: -370px;
+  left: -230px;
+
+  border-radius: 50%;
+
+  border:
+    65px solid
+    rgba(14, 100, 180, 0.022);
+
+  pointer-events: none;
+}
+
+
+/* ==========================================================================
+   CARD LOGIN
+   ========================================================================== */
+
+.login-card {
+  position: relative;
+  z-index: 2;
+
+  width: 100%;
+  max-width: 470px;
+
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 640px;
-  padding: 42px;
-  overflow: hidden;
-  color: #ffffff;
+
+  gap: 28px;
+
+  padding:
+    46px
+    44px
+    38px;
+
+  border-radius: var(--radius-xl);
+
   background:
-    linear-gradient(155deg, #0b1f3a 0%, #12345d 58%, #1d4f8f 100%);
+    rgba(255, 255, 255, 0.96);
+
+  border:
+    1px solid
+    rgba(205, 220, 233, 0.75);
+
+  box-shadow:
+    0 32px 80px -30px
+    rgba(5, 48, 87, 0.28);
+
+  backdrop-filter: blur(18px);
+
+  -webkit-backdrop-filter: blur(18px);
 }
 
-.brand-panel::before {
-  content: '';
-  position: absolute;
-  inset: auto -110px -170px auto;
-  width: 360px;
-  aspect-ratio: 1;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 50%;
-  z-index: -1;
-}
 
-.brand-panel::after {
-  content: '';
-  position: absolute;
-  inset: 80px auto auto -150px;
-  width: 300px;
-  aspect-ratio: 1;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 50%;
-  z-index: -1;
-}
+/* ==========================================================================
+   LOGOS
+   ========================================================================== */
 
-.brand-panel__top {
+.brand {
+  min-height: 52px;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 58px;
-  padding: 2px 8px 0;
+
+  gap: 18px;
 }
 
-.brand-logos {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-width: 0;
-}
 
-.brand-logos--desktop {
-  width: fit-content;
-  max-width: 100%;
-  margin-inline: auto;
-  padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(4px);
-}
-
-.brand-logo {
+.brand__logo {
   display: block;
-  max-width: 100%;
+
+  width: auto;
+
   object-fit: contain;
 }
 
-.brand-logo--sigo {
-  width: 84px;
-  max-height: 38px;
+
+.brand__logo--sigo {
+  height: 47px;
+
+  max-width: 125px;
 }
 
-.brand-logo--lima {
-  width: 112px;
-  max-height: 38px;
-  padding: 3px 5px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
+
+.brand__logo--lima {
+  max-width: 150px;
+  max-height: 42px;
 }
 
-.brand-logo-divider {
+
+.brand__divider {
   width: 1px;
-  height: 26px;
-  flex: 0 0 auto;
-  background: rgba(255, 255, 255, 0.20);
+  height: 30px;
+
+  background: #dce4eb;
 }
 
-.mobile-brand {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  gap: 13px;
-  width: fit-content;
-  margin: 0 auto 30px;
-  padding: 8px 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #f8fafc;
-}
 
-.mobile-brand img {
-  display: block;
-  object-fit: contain;
-}
+/* ==========================================================================
+   CABECERA
+   ========================================================================== */
 
-.mobile-brand img:first-child {
-  width: 82px;
-  max-height: 38px;
-}
-
-.mobile-brand img:last-child {
-  width: 108px;
-  max-height: 38px;
-  padding: 3px 5px;
-  border: 1px solid #dbe4ee;
-  border-radius: 7px;
-  background: #ffffff;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
-}
-
-.mobile-brand__divider {
-  width: 1px;
-  height: 28px;
-  background: #cbd5e1;
-}
-
-.brand-panel__content {
-  max-width: 430px;
-  margin: auto 0;
-  padding: 56px 0;
-}
-
-.brand-eyebrow,
-.form-kicker {
-  margin: 0 0 12px;
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.brand-eyebrow {
-  color: #93c5fd;
-}
-
-.brand-panel h1 {
-  max-width: 420px;
-  margin: 0;
-  font-size: clamp(2rem, 3.2vw, 3rem);
-  line-height: 1.07;
-  letter-spacing: -0.04em;
-}
-
-.brand-description {
-  max-width: 410px;
-  margin: 20px 0 0;
-  color: #cbd5e1;
-  font-size: 1rem;
-  line-height: 1.65;
-}
-
-.brand-features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 30px;
-}
-
-.brand-features span {
-  padding: 9px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.07);
-  color: #e2e8f0;
-  font-size: 0.82rem;
-  font-weight: 650;
-}
-
-.plazas-background {
-  position: absolute;
-  right: 34px;
-  bottom: 72px;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-  opacity: 0.13;
-  z-index: -1;
-  transform: rotate(-4deg);
-}
-
-.plazas-background span {
-  min-width: 42px;
-  padding: 9px 7px;
-  border: 1px solid #ffffff;
-  border-radius: 8px;
+.login-card__heading {
   text-align: center;
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.brand-panel__footer {
-  margin: 0;
-  color: #94a3b8;
-  font-size: 0.78rem;
-}
-
-.form-panel {
-  display: grid;
-  place-items: center;
-  padding: 56px;
-  background: #ffffff;
-}
-
-.login-form {
-  width: min(440px, 100%);
 }
 
 
-.form-header {
-  margin-bottom: 34px;
+.login-card__eyebrow {
+  display: block;
+
+  margin-bottom: 11px;
+
+  font-size: 10.5px;
+
+  font-weight: 700;
+
+  line-height: 1.4;
+
+  letter-spacing: 0.13em;
+
+  text-transform: uppercase;
+
+  color: var(--primary);
 }
 
-.form-kicker {
-  display: inline-block;
-  color: #2563eb;
-}
 
-.form-header h2 {
-  margin: 0;
-  font-size: 2.15rem;
-  line-height: 1.1;
+.login-card__title {
+  margin: 0 0 9px;
+
+  font-size: 31px;
+
+  font-weight: 750;
+
+  line-height: 1.15;
+
   letter-spacing: -0.035em;
+
+  color: var(--ink);
 }
 
-.form-header p {
-  margin: 11px 0 0;
-  color: #64748b;
+
+.login-card__subtitle {
+  margin: 0;
+
+  font-size: 14px;
+
   line-height: 1.55;
+
+  font-weight: 400;
+
+  color: var(--ink-soft);
 }
+
+
+/* ==========================================================================
+   FORMULARIO
+   ========================================================================== */
 
 .form-fields {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+
   gap: 20px;
 }
 
+
 .field {
-  display: grid;
-  gap: 9px;
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
 }
 
-.field > span {
-  color: #334155;
-  font-size: 0.88rem;
-  font-weight: 750;
+
+.field__label {
+  font-size: 13px;
+
+  font-weight: 650;
+
+  color: #293547;
 }
 
-.field input {
-  width: 100%;
-  min-height: 50px;
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
-  outline: none;
-  background: #ffffff;
-  padding: 0 14px;
-  color: #0f172a;
-  font: inherit;
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    background-color 160ms ease;
-}
 
-.field input::placeholder {
-  color: #94a3b8;
-}
+/* ==========================================================================
+   INPUT WRAPPER
+   ========================================================================== */
 
-.field input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.11);
-}
-
-.field input:disabled {
-  cursor: not-allowed;
-  background: #f8fafc;
-  color: #94a3b8;
-}
-
-.password-field {
+.input-wrapper {
   position: relative;
+
+  display: flex;
+  align-items: center;
+
+  width: 100%;
 }
+
+
+/* ==========================================================================
+   INPUTS
+   ========================================================================== */
+
+.input-wrapper input {
+  width: 100%;
+  height: 54px;
+
+  padding:
+    0
+    46px
+    0
+    46px;
+
+  border:
+    1.5px solid
+    #dbe4ed;
+
+  border-radius: var(--radius-md);
+
+  outline: none;
+
+  background: #fbfcfe;
+
+  font-family: inherit;
+
+  font-size: 14px;
+
+  font-weight: 400;
+
+  color: var(--ink);
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+
+.input-wrapper input::placeholder {
+  color: #a4afbb;
+}
+
+
+.input-wrapper input:hover:not(:disabled) {
+  border-color: #a4c3de;
+
+  background: #fff;
+}
+
+
+.input-wrapper input:focus {
+  background: #fff;
+
+  border-color: var(--primary);
+
+  box-shadow:
+    0 0 0 4px
+    rgba(11, 92, 171, 0.1);
+}
+
+
+.input-wrapper input:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+
+.input-wrapper input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+
+.input-wrapper input[aria-invalid="true"]:focus {
+  box-shadow:
+    0 0 0 4px
+    rgba(214, 69, 69, 0.1);
+}
+
+
+/* ==========================================================================
+   ICONO INPUT IZQUIERDO
+   ========================================================================== */
+
+.input-icon {
+  position: absolute;
+
+  left: 15px;
+
+  z-index: 2;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #728196;
+
+  pointer-events: none;
+}
+
+
+.input-icon svg {
+  width: 19px;
+  height: 19px;
+
+  stroke: currentColor;
+
+  stroke-width: 1.7;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* ==========================================================================
+   PASSWORD
+   ========================================================================== */
 
 .password-field input {
-  padding-right: 82px;
+  padding-right: 50px;
 }
+
 
 .password-toggle {
   position: absolute;
-  top: 50%;
-  right: 8px;
-  transform: translateY(-50%);
-  min-width: 58px;
+
+  right: 10px;
+
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   border: 0;
-  border-radius: 8px;
+
+  border-radius: 9px;
+
   background: transparent;
-  padding: 8px 9px;
-  color: #2563eb;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 800;
+
+  color: #68788d;
+
   cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
+
+
+.password-toggle svg {
+  width: 19px;
+  height: 19px;
+
+  stroke: currentColor;
+
+  stroke-width: 1.8;
+}
+
 
 .password-toggle:hover:not(:disabled) {
-  background: #eff6ff;
+  background: #edf4fa;
+
+  color: var(--primary);
 }
 
+
 .password-toggle:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
+
 .password-toggle:disabled {
+  opacity: 0.5;
+
   cursor: not-allowed;
-  opacity: 0.55;
 }
 
+
+/* ==========================================================================
+   MENSAJE ERROR
+   ========================================================================== */
+
 .error-message {
-  margin-top: 18px;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  background: #fff7f7;
-  padding: 11px 13px;
-  color: #b91c1c;
-  font-size: 0.85rem;
-  line-height: 1.4;
+  margin-top: -10px;
+
+  padding:
+    11px
+    14px;
+
+  border:
+    1px solid
+    rgba(214, 69, 69, 0.14);
+
+  border-radius: var(--radius-md);
+
+  background: var(--danger-bg);
+
+  color: var(--danger);
+
+  font-size: 12.5px;
+
+  line-height: 1.45;
+
+  font-weight: 500;
+
+  text-align: center;
 }
+
+
+/* ==========================================================================
+   BOTÓN INGRESAR
+   ========================================================================== */
 
 .submit-button {
   width: 100%;
-  min-height: 52px;
-  display: inline-flex;
+  height: 55px;
+
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin-top: 22px;
+
+  gap: 12px;
+
   border: 0;
-  border-radius: 12px;
-  background: #2563eb;
-  padding: 0 18px;
-  color: #ffffff;
-  font: inherit;
-  font-weight: 800;
+
+  border-radius: 13px;
+
+  background:
+    linear-gradient(
+      110deg,
+      #1688e8 0%,
+      #0b63bd 55%,
+      #084f98 100%
+    );
+
+  color: #fff;
+
+  font-family: inherit;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.20);
+
+  box-shadow:
+    0 15px 28px -12px
+    rgba(6, 82, 153, 0.55);
+
   transition:
-    transform 150ms ease,
-    background-color 150ms ease,
-    box-shadow 150ms ease;
+    transform 0.17s ease,
+    box-shadow 0.17s ease,
+    filter 0.17s ease;
 }
 
-.submit-button:hover:not(:disabled) {
-  background: #1d4ed8;
-  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.24);
-  transform: translateY(-1px);
+
+.submit-button svg {
+  width: 19px;
+  height: 19px;
+
+  stroke: currentColor;
+
+  stroke-width: 2;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  transition:
+    transform 0.17s ease;
 }
+
+
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 19px 34px -12px
+    rgba(6, 82, 153, 0.64);
+
+  filter: brightness(1.04);
+}
+
+
+.submit-button:hover:not(:disabled) svg {
+  transform: translateX(3px);
+}
+
 
 .submit-button:active:not(:disabled) {
   transform: translateY(0);
 }
 
+
 .submit-button:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline:
+    3px solid
+    rgba(22, 136, 232, 0.25);
+
   outline-offset: 3px;
 }
 
+
 .submit-button:disabled {
+  opacity: 0.72;
+
   cursor: not-allowed;
-  background: #93b4f5;
-  box-shadow: none;
+
+  transform: none;
 }
 
-.spinner {
-  width: 17px;
-  height: 17px;
-  border: 2px solid rgba(255, 255, 255, 0.45);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spin 700ms linear infinite;
-}
 
-.form-footer {
+/* ==========================================================================
+   ACCESO SEGURO
+   ========================================================================== */
+
+.login-security {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin-top: 34px;
-  color: #94a3b8;
-  font-size: 0.78rem;
-  font-weight: 650;
+
+  gap: 8px;
+
+  color: #8995a4;
+
+  font-size: 11.5px;
+
+  text-align: center;
 }
 
-.footer-separator {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #cbd5e1;
+
+.login-security svg {
+  flex: 0 0 auto;
+
+  width: 17px;
+  height: 17px;
+
+  stroke: #738398;
+
+  stroke-width: 1.7;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
+
+
+/* ==========================================================================
+   SPINNER
+   ========================================================================== */
+
+.spinner {
+  width: 18px;
+  height: 18px;
+
+  border-radius: 50%;
+
+  border:
+    2px solid
+    rgba(255, 255, 255, 0.35);
+
+  border-top-color: #fff;
+
+  animation:
+    spin 0.7s linear infinite;
+}
+
 
 @keyframes spin {
+
   to {
     transform: rotate(360deg);
   }
+
 }
 
-@media (max-width: 900px) {
+
+/* ==========================================================================
+   PANTALLAS GRANDES
+   ========================================================================== */
+
+@media (min-width: 1600px) {
+
   .login-page {
-    padding: 20px;
+    grid-template-columns:
+      minmax(0, 1.18fr)
+      minmax(520px, 0.82fr);
   }
 
-  .login-shell {
-    width: min(560px, 100%);
-    min-height: auto;
-    grid-template-columns: 1fr;
+
+  .login-card {
+    max-width: 490px;
+
+    padding:
+      50px
+      48px
+      42px;
   }
 
-  .brand-panel {
+
+  .login-visual__image {
+    object-position: 50% center;
+  }
+
+}
+
+
+/* ==========================================================================
+   LAPTOPS
+   ========================================================================== */
+
+@media (max-width: 1200px) {
+
+  .login-page {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(450px, 0.92fr);
+  }
+
+
+  .login-access {
+    padding: 38px;
+  }
+
+
+  .login-card {
+    max-width: 450px;
+
+    padding:
+      42px
+      38px
+      34px;
+  }
+
+
+  .login-visual__image {
+    object-position: 46% center;
+  }
+
+}
+
+
+/* ==========================================================================
+   TABLETS HORIZONTALES
+   ========================================================================== */
+
+@media (max-width: 1000px) {
+
+  .login-page {
+    grid-template-columns:
+      minmax(300px, 0.8fr)
+      minmax(420px, 1fr);
+  }
+
+
+  .login-access {
+    padding:
+      32px
+      28px;
+  }
+
+
+  .login-card {
+    padding:
+      38px
+      32px
+      32px;
+
+    gap: 25px;
+  }
+
+
+  .login-card__title {
+    font-size: 29px;
+  }
+
+
+  /*
+   * En pantallas más angostas,
+   * movemos la imagen ligeramente
+   * hacia la izquierda para mantener
+   * visible la S.
+   */
+  .login-visual__image {
+    object-position: 42% center;
+  }
+
+}
+
+
+/* ==========================================================================
+   TABLET / MÓVIL
+   ========================================================================== */
+
+@media (max-width: 760px) {
+
+  .login-page {
+    display: block;
+
+    min-height: 100dvh;
+
+    background:
+      linear-gradient(
+        155deg,
+        #071e35,
+        #0d538e
+      );
+  }
+
+
+  /*
+   * Ocultamos la imagen izquierda.
+   *
+   * En móvil la prioridad es
+   * iniciar sesión.
+   */
+  .login-visual {
     display: none;
   }
 
-  .form-panel {
-    min-height: 620px;
-    padding: 48px 42px;
+
+  .login-access {
+    min-height: 100dvh;
+
+    padding:
+      24px
+      18px;
+
+    background:
+      radial-gradient(
+        circle at 90% 5%,
+        rgba(32, 142, 230, 0.3),
+        transparent 33%
+      ),
+      linear-gradient(
+        160deg,
+        #082d50,
+        #0e5b98
+      );
   }
 
-  .mobile-brand {
-    display: flex;
+
+  .login-access::before,
+  .login-access::after {
+    display: none;
   }
+
+
+  .login-card {
+    max-width: 440px;
+
+    padding:
+      38px
+      26px
+      30px;
+
+    gap: 26px;
+
+    border-radius: 24px;
+
+    box-shadow:
+      0 26px 65px -25px
+      rgba(0, 18, 35, 0.75);
+  }
+
+
+  .login-card__title {
+    font-size: 28px;
+  }
+
 }
 
-@media (max-width: 520px) {
-  .login-page {
-    align-items: stretch;
-    padding: 0;
-    background: #ffffff;
+
+/* ==========================================================================
+   MÓVILES PEQUEÑOS
+   ========================================================================== */
+
+@media (max-width: 420px) {
+
+  .login-access {
+    padding:
+      16px;
   }
 
-  .login-shell {
-    width: 100%;
-    min-height: 100dvh;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
+
+  .login-card {
+    padding:
+      32px
+      22px
+      26px;
+
+    border-radius: 22px;
+
+    gap: 23px;
   }
 
-  .form-panel {
-    min-height: 100dvh;
-    align-items: center;
-    padding: 32px 24px;
+
+  .brand {
+    gap: 13px;
   }
 
-  .login-form {
-    width: 100%;
+
+  .brand__logo--sigo {
+    height: auto;
+    max-height: 40px;
+    max-width: 95px;
   }
 
-  .mobile-brand {
-    margin: 0 auto 40px;
-    gap: 11px;
+
+  .brand__logo--lima {
+    max-width: 120px;
+    max-height: 38px;
   }
 
-  .mobile-brand img:first-child {
-    width: 76px;
+
+  .brand__divider {
+    height: 26px;
   }
 
-  .mobile-brand img:last-child {
-    width: 108px;
+
+  .login-card__eyebrow {
+    font-size: 9.5px;
   }
 
-  .form-header {
-    margin-bottom: 30px;
+
+  .login-card__title {
+    font-size: 26px;
   }
 
-  .form-header h2 {
-    font-size: 1.9rem;
-  }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .field input,
+  .login-card__subtitle {
+    font-size: 13px;
+  }
+
+
+  .input-wrapper input,
   .submit-button {
-    transition: none;
+    height: 52px;
   }
 
-  .spinner {
-    animation-duration: 1.4s;
+
+  .input-wrapper input {
+    font-size: 13.5px;
   }
+
+
+  .login-security {
+    font-size: 10.5px;
+  }
+
+}
+
+
+/* ==========================================================================
+   MÓVILES MUY PEQUEÑOS
+   ========================================================================== */
+
+@media (max-width: 350px) {
+
+  .login-access {
+    padding: 10px;
+  }
+
+
+  .login-card {
+    padding:
+      28px
+      18px
+      24px;
+  }
+
+
+  .brand__logo--sigo {
+    max-width: 82px;
+  }
+
+
+  .brand__logo--lima {
+    max-width: 100px;
+  }
+
 }

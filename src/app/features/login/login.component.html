@@ -1,147 +1,432 @@
+
 <main class="login-page">
-  <section class="login-shell" aria-label="Inicio de sesión de SIGO">
-    <aside class="brand-panel">
-      <div class="brand-panel__top">
-        <div class="brand-logos brand-logos--desktop">
-          <img
-            class="brand-logo brand-logo--sigo"
-            src="assets/sigo_logo.png"
-            alt="SIGO"
-          />
-          <span class="brand-logo-divider" aria-hidden="true"></span>
-          <img
-            class="brand-logo brand-logo--lima"
-            src="assets/logo-lima-expresa.png"
-            alt="Lima Expresa"
-          />
-        </div>
+
+  <!-- =====================================================
+       PANEL IZQUIERDO
+       ===================================================== -->
+  <section class="login-visual" aria-hidden="true">
+
+    <img
+      src="assets/login.png"
+      alt=""
+      class="login-visual__image"
+      draggable="false"
+    />
+
+  </section>
+
+
+  <!-- =====================================================
+       PANEL DERECHO
+       ===================================================== -->
+  <section class="login-access">
+
+    <form
+      class="login-card"
+      (ngSubmit)="entrar()"
+      novalidate
+      autocomplete="on"
+    >
+
+      <!-- =====================================================
+           LOGOS
+           ===================================================== -->
+      <div class="brand">
+
+        <img
+          class="brand__logo brand__logo--sigo"
+          src="assets/sigo_logo.png"
+          alt="SIGO"
+        />
+
+        <span
+          class="brand__divider"
+          aria-hidden="true">
+        </span>
+
+        <img
+          class="brand__logo brand__logo--lima"
+          src="assets/logo-lima-expresa.png"
+          alt="Lima Expresa"
+        />
+
       </div>
 
-      <div class="brand-panel__content">
-        <p class="brand-eyebrow">Lima Expresa</p>
-        <h1>Sistema Integrado de Gestión Operativa</h1>
-        <p class="brand-description">
-          Centraliza la operación diaria y facilita el seguimiento de tus plazas
-          desde un solo lugar.
+
+      <!-- =====================================================
+           CABECERA
+           ===================================================== -->
+      <div class="login-card__heading">
+
+        <span class="login-card__eyebrow">
+          Sistema Integral de Gestión Operativa
+        </span>
+
+        <h1 class="login-card__title">
+          Bienvenido
+        </h1>
+
+        <p class="login-card__subtitle">
+          Ingresa con tus credenciales para continuar.
         </p>
 
-        <div class="brand-features" aria-label="Módulos principales">
-          <span>Asistencia</span>
-          <span>Programación</span>
-          <span>Relevos</span>
-          <span>Incidencias</span>
-          <span>Inventario</span>
-        </div>
       </div>
 
-      <div class="plazas-background" aria-hidden="true">
-        <span>P1</span>
-        <span>P2</span>
-        <span>P3</span>
-        <span>P4</span>
-        <span>P5</span>
-        <span>P6</span>
-        <span>P7</span>
-        <span>P8</span>
-        <span>P9</span>
-        <span>P10</span>
-      </div>
 
-      <p class="brand-panel__footer">
-        Plataforma interna para la gestión de operaciones
-      </p>
-    </aside>
+      <!-- =====================================================
+           CAMPOS
+           ===================================================== -->
+      <div class="form-fields">
 
-    <section class="form-panel">
-      <form class="login-form" (ngSubmit)="entrar()" novalidate>
-        <div class="mobile-brand">
-          <img
-            src="assets/sigo_logo.png"
-            alt="SIGO"
-          />
-          <span class="mobile-brand__divider" aria-hidden="true"></span>
-          <img
-            src="assets/logo-lima-expresa.png"
-            alt="Lima Expresa"
-          />
-        </div>
 
-        <header class="form-header">
-          <span class="form-kicker">Acceso seguro</span>
-          <h2>Iniciar sesión</h2>
-          <p>Ingresa con tu código de trabajador y contraseña.</p>
-        </header>
+        <!-- =========================
+             CÓDIGO
+             ========================= -->
+        <label
+          class="field"
+          for="codigo"
+        >
 
-        <div class="form-fields">
-          <label class="field" for="codigo">
-            <span>Código de trabajador</span>
+          <span class="field__label">
+            Código de usuario
+          </span>
+
+          <div class="input-wrapper">
+
+            <span
+              class="input-icon"
+              aria-hidden="true"
+            >
+
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  cx="12"
+                  cy="8"
+                  r="4"
+                />
+
+                <path
+                  d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"
+                />
+              </svg>
+
+            </span>
+
+
             <input
               id="codigo"
-              type="number"
+              type="text"
               name="codigo"
               [(ngModel)]="codigo"
+
               autocomplete="username"
               inputmode="numeric"
-              placeholder="Ej. 287"
+              pattern="[0-9]*"
+
+              placeholder="Ingresa tu código"
+
               required
+              autofocus
+
               [disabled]="loading()"
+              [attr.aria-invalid]="error() ? true : null"
             />
-          </label>
 
-          <label class="field" for="password">
-            <span>Contraseña</span>
+          </div>
 
-            <div class="password-field">
-              <input
-                id="password"
-                [type]="mostrarPassword() ? 'text' : 'password'"
-                name="password"
-                [(ngModel)]="password"
-                autocomplete="current-password"
-                placeholder="Ingresa tu contraseña"
-                required
-                [disabled]="loading()"
-              />
+        </label>
 
-              <button
-                class="password-toggle"
-                type="button"
-                (click)="alternarPassword()"
-                [attr.aria-label]="mostrarPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                [attr.aria-pressed]="mostrarPassword()"
-                [disabled]="loading()"
+
+
+        <!-- =========================
+             CONTRASEÑA
+             ========================= -->
+        <label
+          class="field"
+          for="password"
+        >
+
+          <span class="field__label">
+            Contraseña
+          </span>
+
+          <div class="input-wrapper password-field">
+
+
+            <!-- Candado -->
+            <span
+              class="input-icon"
+              aria-hidden="true"
+            >
+
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
               >
-                {{ mostrarPassword() ? 'Ocultar' : 'Ver' }}
-              </button>
-            </div>
-          </label>
+
+                <rect
+                  x="5"
+                  y="10"
+                  width="14"
+                  height="10"
+                  rx="2"
+                />
+
+                <path
+                  d="M8 10V7a4 4 0 118 0v3"
+                />
+
+              </svg>
+
+            </span>
+
+
+            <!-- Input contraseña -->
+            <input
+              id="password"
+              [type]="mostrarPassword() ? 'text' : 'password'"
+
+              name="password"
+              [(ngModel)]="password"
+
+              autocomplete="current-password"
+
+              placeholder="Ingresa tu contraseña"
+
+              required
+
+              [disabled]="loading()"
+
+              [attr.aria-invalid]="error() ? true : null"
+
+              [attr.aria-describedby]="
+                error() ? 'login-error' : null
+              "
+            />
+
+
+            <!-- Mostrar / ocultar contraseña -->
+            <button
+              class="password-toggle"
+              type="button"
+
+              (click)="alternarPassword()"
+
+              [attr.aria-label]="
+                mostrarPassword()
+                  ? 'Ocultar contraseña'
+                  : 'Mostrar contraseña'
+              "
+
+              [attr.aria-pressed]="mostrarPassword()"
+
+              [disabled]="loading()"
+            >
+
+              @if (mostrarPassword()) {
+
+                <!-- Ojo tachado -->
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+
+                  <path
+                    d="M3 3l18 18"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+
+                  <path
+                    d="M10.58 10.58a2 2 0 002.83 2.83"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+
+                  <path
+                    d="
+                    M9.36 5.11
+                    A9.77 9.77 0 0112 5
+                    c5 0 9 4 10.5 7
+                    -.5 1
+                    -1.2 2.06
+                    -2.09 3.02
+
+                    M6.6 6.6
+                    C4.5 8
+                    3 10
+                    2 12
+
+                    c1.5 3
+                    5.5 7
+                    10 7
+
+                    1.32 0
+                    2.58-.24
+                    3.72-.66
+                    "
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+
+                </svg>
+
+              } @else {
+
+                <!-- Ojo -->
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+
+                  <path
+                    d="
+                    M2 12
+                    s3.5-7 10-7
+                    10 7 10 7
+                    -3.5 7
+                    -10 7
+                    -10-7
+                    -10-7z
+                    "
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+
+                </svg>
+
+              }
+
+            </button>
+
+          </div>
+
+        </label>
+
+      </div>
+
+
+
+      <!-- =====================================================
+           ERROR
+           ===================================================== -->
+      @if (error()) {
+
+        <div
+          class="error-message"
+          id="login-error"
+          role="alert"
+        >
+
+          {{ error() }}
+
         </div>
 
-        @if (error()) {
-          <div class="error-message" role="alert">
-            {{ error() }}
-          </div>
+      }
+
+
+
+      <!-- =====================================================
+           BOTÓN INGRESAR
+           ===================================================== -->
+      <button
+        class="submit-button"
+        type="submit"
+        [disabled]="loading()"
+      >
+
+        @if (loading()) {
+
+          <span
+            class="spinner"
+            aria-hidden="true">
+          </span>
+
+          <span>
+            Ingresando...
+          </span>
+
+        } @else {
+
+          <span>
+            Iniciar sesión
+          </span>
+
+
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+
+            <path
+              d="M5 12h14M13 6l6 6-6 6"
+            />
+
+          </svg>
+
         }
 
-        <button
-          class="submit-button"
-          type="submit"
-          [disabled]="loading()"
-        >
-          @if (loading()) {
-            <span class="spinner" aria-hidden="true"></span>
-            Ingresando...
-          } @else {
-            Ingresar a SIGO
-          }
-        </button>
+      </button>
 
-        <footer class="form-footer">
-          <span>SIGO</span>
-          <span class="footer-separator" aria-hidden="true"></span>
-          <span>Lima Expresa</span>
-        </footer>
-      </form>
-    </section>
+
+
+      <!-- =====================================================
+           SEGURIDAD
+           ===================================================== -->
+      <div class="login-security">
+
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+
+          <path
+            d="
+            M12 3
+            l7 3
+            v5
+            c0 4.8
+            -3 8.5
+            -7 10
+
+            -4-1.5
+            -7-5.2
+            -7-10
+
+            V6
+            l7-3z
+            "
+          />
+
+          <path
+            d="M9 12l2 2 4-4"
+          />
+
+        </svg>
+
+        <span>
+          Acceso seguro para personal autorizado
+        </span>
+
+      </div>
+
+    </form>
+
   </section>
+
 </main>

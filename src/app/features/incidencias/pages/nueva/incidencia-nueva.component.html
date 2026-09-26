@@ -1,0 +1,140 @@
+<div class="mx-auto w-full max-w-[1200px] space-y-6 px-4 py-5 sm:px-6 lg:px-8">
+  <section>
+    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">SIGO · Incidencias</p>
+    <h1 class="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Nueva incidencia</h1>
+    <p class="mt-2 text-sm text-slate-500">Registra un evento ocurrido durante el turno y adjunta evidencia fotográfica.</p>
+  </section>
+
+  @if (error()) {
+    <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error() }}</div>
+  }
+  @if (mensaje()) {
+    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ mensaje() }}</div>
+  }
+
+  @if (cargando()) {
+    <div class="h-64 animate-pulse rounded-3xl bg-slate-200"></div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="registrar()" class="space-y-6">
+      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          @if (esOperador) {
+            <div class="space-y-2">
+              <span class="text-sm font-semibold text-slate-700">Plaza</span>
+              <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-900">
+                {{ auth.usuario()?.plaza || 'Sin plaza asignada' }}
+              </div>
+            </div>
+          } @else {
+            <label class="space-y-2 text-sm font-semibold text-slate-700">
+              Plaza
+              <select class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5" formControlName="plazaId">
+                <option [ngValue]="null">Selecciona una plaza</option>
+                @for (plaza of plazas; track plaza.id) {
+                  <option [ngValue]="plaza.id">{{ plaza.codigo }}{{ plaza.descripcion ? ' · ' + plaza.descripcion : '' }}</option>
+                }
+              </select>
+            </label>
+          }
+
+          <label class="space-y-2 text-sm font-semibold text-slate-700">
+            Turno
+            <select class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5" formControlName="turnoId">
+              <option [ngValue]="null">Selecciona un turno</option>
+              @for (turno of turnos; track turno.id) {
+                <option [ngValue]="turno.id">Turno {{ turno.codigo }}{{ turno.nombre ? ' · ' + turno.nombre : '' }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="space-y-2 text-sm font-semibold text-slate-700">
+            Tipo
+            <select class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5" formControlName="tipoId">
+              <option [ngValue]="null">Selecciona el tipo</option>
+              @for (tipo of tipos; track tipo.id) {
+                <option [ngValue]="tipo.id">{{ tipo.nombre }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="space-y-2 text-sm font-semibold text-slate-700">
+            Vía
+            <select class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5" formControlName="viaId">
+              <option [ngValue]="null">No aplica / Plaza general</option>
+              @for (via of vias; track via.id) {
+                <option [ngValue]="via.id">Vía {{ via.numero }}{{ via.nombre ? ' · ' + via.nombre : '' }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="space-y-2 text-sm font-semibold text-slate-700">
+            Fecha
+            <input type="date" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" formControlName="fecha">
+          </label>
+
+          <label class="space-y-2 text-sm font-semibold text-slate-700">
+            Hora
+            <input type="time" class="w-full rounded-xl border border-slate-300 px-3 py-2.5" formControlName="hora">
+          </label>
+        </div>
+      </section>
+
+      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <label class="block space-y-2 text-sm font-semibold text-slate-700">
+          Detalle de la incidencia
+          <textarea
+            rows="5"
+            class="w-full rounded-xl border border-slate-300 px-3 py-3 font-normal"
+            formControlName="descripcion"
+            placeholder="Ejemplo: un vehículo impactó el letrero lateral de la vía..."
+          ></textarea>
+        </label>
+
+        <div class="mt-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-slate-700">Evidencia</p>
+              <p class="text-xs text-slate-400">Opcional · máximo 5 fotografías.</p>
+            </div>
+            <label class="cursor-pointer rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700">
+              Agregar foto
+              <input type="file" class="hidden" accept="image/jpeg,image/png,image/webp" (change)="seleccionarEvidencia($event)">
+            </label>
+          </div>
+
+          @if (fotos.length) {
+            <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+              @for (foto of fotos; track foto.url; let i = $index) {
+                <div class="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                  <img [src]="foto.url" class="aspect-[3/4] w-full object-cover" alt="Evidencia">
+                  <button type="button" (click)="quitarFoto(i)" class="absolute right-2 top-2 rounded-lg bg-slate-950/80 px-2 py-1 text-xs font-bold text-white">×</button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="mt-6 flex justify-end">
+          <button
+            type="submit"
+            [disabled]="guardando()"
+            class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">
+            {{ guardando() ? 'Registrando...' : 'Registrar incidencia' }}
+          </button>
+        </div>
+      </section>
+    </form>
+  }
+
+  <app-image-cropper-modal
+    [visible]="cropperVisible()"
+    [imageFile]="cropperFile()"
+    titulo="Ajustar evidencia"
+    [aspectRatio]="3 / 4"
+    aspectRatioLabel="3:4"
+    [outputWidth]="900"
+    [outputHeight]="1200"
+    (cancelar)="onCropperCancel()"
+    (confirmar)="onCropperConfirm($event)">
+  </app-image-cropper-modal>
+</div>

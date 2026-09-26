@@ -29,6 +29,16 @@ export class IncidenciaApiService {
     return this.http.post<IncidenciaResponse>(`${this.api}/incidencias`, request);
   }
 
+  actualizar(
+    id: number,
+    request: IncidenciaRequest
+  ): Observable<IncidenciaResponse> {
+    return this.http.put<IncidenciaResponse>(
+      `${this.api}/incidencias/${id}`,
+      request
+    );
+  }
+
   subirEvidencia(id: number, file: File): Observable<EvidenciaIncidencia> {
     const formData = new FormData();
     formData.append('file', file);

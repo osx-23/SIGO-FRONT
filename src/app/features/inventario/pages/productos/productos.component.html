@@ -1,206 +1,1409 @@
-<div class="page-shell">
-  <section class="hero">
-    <div>
-      <p class="eyebrow">SIGO · Inventario</p>
-      <h1>Administrar productos</h1>
-      @if (esControlador()) {
-        <p>Gestiona los productos disponibles para tu plaza <strong>{{ auth.usuario()?.plaza }}</strong>.</p>
-      } @else {
-        <p>Gestiona productos, visibilidad por rol, plazas asignadas y stock mínimo.</p>
-      }
-    </div>
-    <div class="hero-actions">
-      <div class="hero-meta">
-        <span>{{ productosVisibles().length }} visibles</span>
-        <span>{{ totalActivos() }} activos</span>
-        <span>{{ totalInactivos() }} inactivos</span>
+<div class="min-h-full bg-slate-50 px-4 py-5 sm:px-6 lg:px-8">
+
+  <div class="mx-auto max-w-7xl space-y-6">
+
+    <!-- ===================================================== -->
+    <!-- HEADER -->
+    <!-- ===================================================== -->
+
+    <section
+      class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
+    >
+      <div
+        class="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between"
+      >
+
+        <div class="min-w-0">
+
+          <div
+            class="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-blue-700"
+          >
+            <span class="h-2 w-2 rounded-full bg-blue-600"></span>
+            SIGO · Inventario
+          </div>
+
+          <h1
+            class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl"
+          >
+            Administrar productos
+          </h1>
+
+          @if (esControlador()) {
+
+            <p
+              class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base"
+            >
+              Gestiona los productos disponibles para tu plaza
+              <strong class="text-slate-700">
+                {{ auth.usuario()?.plaza }}
+              </strong>.
+            </p>
+
+          } @else {
+
+            <p
+              class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base"
+            >
+              Administra productos, roles con visibilidad, plazas asignadas y
+              niveles mínimos de stock.
+            </p>
+
+          }
+
+        </div>
+
+
+        <button
+          type="button"
+          (click)="abrirCrear()"
+          class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
+        >
+
+          <svg
+            viewBox="0 0 24 24"
+            class="h-5 w-5 fill-current"
+          >
+            <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"/>
+          </svg>
+
+          Nuevo producto
+
+        </button>
+
       </div>
-      <button type="button" class="primary create-button" (click)="abrirCrear()">Crear producto</button>
-    </div>
-  </section>
+    </section>
 
-  @if (error && !modalAbierto) { <div class="alert error">{{ error }}</div> }
-  @if (mensaje) { <div class="alert success">{{ mensaje }}</div> }
 
-  <section class="toolbar">
-    <input type="search" placeholder="Buscar por código, nombre, categoría o ámbito" [(ngModel)]="busqueda">
-    <select [(ngModel)]="filtroEstado">
-      <option value="TODOS">Todos los estados</option>
-      <option value="ACTIVOS">Activos</option>
-      <option value="INACTIVOS">Inactivos</option>
-    </select>
-  </section>
+    <!-- ===================================================== -->
+    <!-- MÉTRICAS -->
+    <!-- ===================================================== -->
 
-  <section class="catalog-card">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">Catálogo</p>
-        <h2>Productos registrados</h2>
+    <section
+      class="grid grid-cols-2 gap-3 lg:grid-cols-3"
+    >
+
+      <article
+        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      >
+
+        <span
+          class="text-[11px] font-bold uppercase tracking-wide text-slate-400"
+        >
+          Productos visibles
+        </span>
+
+        <div
+          class="mt-2 flex items-end justify-between gap-3"
+        >
+
+          <strong
+            class="text-3xl font-black tracking-tight text-slate-900"
+          >
+            {{ productosVisibles().length }}
+          </strong>
+
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5 fill-current"
+            >
+              <path
+                d="m12 2 9 4.5v11L12 22l-9-4.5v-11L12 2Zm0 2.2L6.4 7 12 9.8 17.6 7 12 4.2Z"
+              />
+            </svg>
+          </div>
+
+        </div>
+
+      </article>
+
+
+      <article
+        class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:p-5"
+      >
+
+        <span
+          class="text-[11px] font-bold uppercase tracking-wide text-emerald-600"
+        >
+          Activos
+        </span>
+
+        <div
+          class="mt-2 flex items-end justify-between gap-3"
+        >
+
+          <strong
+            class="text-3xl font-black tracking-tight text-emerald-700"
+          >
+            {{ totalActivos() }}
+          </strong>
+
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5 fill-current"
+            >
+              <path d="m9.5 17.5-5-5L6 11l3.5 3.5L18 6l1.5 1.5-10 10Z"/>
+            </svg>
+          </div>
+
+        </div>
+
+      </article>
+
+
+      <article
+        class="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:col-span-1"
+      >
+
+        <span
+          class="text-[11px] font-bold uppercase tracking-wide text-slate-400"
+        >
+          Inactivos
+        </span>
+
+        <div
+          class="mt-2 flex items-end justify-between gap-3"
+        >
+
+          <strong
+            class="text-3xl font-black tracking-tight text-slate-700"
+          >
+            {{ totalInactivos() }}
+          </strong>
+
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5 fill-current"
+            >
+              <path d="M5 11h14v2H5v-2Z"/>
+            </svg>
+          </div>
+
+        </div>
+
+      </article>
+
+    </section>
+
+
+    <!-- ===================================================== -->
+    <!-- MENSAJES -->
+    <!-- ===================================================== -->
+
+    @if (error && !modalAbierto) {
+
+      <div
+        class="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+      >
+
+        <div
+          class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 font-black"
+        >
+          !
+        </div>
+
+        <span>
+          {{ error }}
+        </span>
+
       </div>
-    </div>
 
-    @if (cargando) {
-      <div class="empty">Cargando productos...</div>
-    } @else {
-      <div class="product-list">
-        @for (p of productosVisibles(); track p.id) {
-          <article class="product-card" [class.inactive]="!p.activo">
-            <div class="product-main">
-              <div class="code-badge">{{ p.codigo }}</div>
-              <div>
-                <h3>{{ p.nombre }}</h3>
-                <p>{{ p.descripcion || 'Sin descripción' }}</p>
-                <div class="tags">
-                  @if (p.categoria) { <span>{{ p.categoria }}</span> }
-                  @if (p.ambito) { <span>{{ p.ambito }}</span> }
-                  <span>{{ p.unidadMedida }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="product-data">
-              <div>
-                <small>Roles con visibilidad</small>
-                <strong>{{ p.roles.join(', ') || 'Sin roles' }}</strong>
-              </div>
-              <div>
-                <small>Plazas</small>
-                <div class="plaza-tags">
-                  @for (plaza of p.plazas; track plaza.plazaId) {
-                    <span>{{ plaza.plaza }} · mín. {{ plaza.stockMinimo }}</span>
-                  }
-                </div>
-              </div>
-            </div>
-
-            <div class="product-actions">
-              <span class="status" [class.off]="!p.activo">{{ p.activo ? 'Activo' : 'Inactivo' }}</span>
-              <button type="button" class="secondary" (click)="editar(p)">Editar</button>
-              <button type="button" class="secondary danger" (click)="cambiarEstado(p)">{{ p.activo ? 'Desactivar' : 'Activar' }}</button>
-            </div>
-          </article>
-        } @empty {
-          <div class="empty">No se encontraron productos con los filtros seleccionados.</div>
-        }
-      </div>
     }
-  </section>
+
+
+    @if (mensaje) {
+
+      <div
+        class="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
+      >
+
+        <div
+          class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100"
+        >
+          ✓
+        </div>
+
+        <span>
+          {{ mensaje }}
+        </span>
+
+      </div>
+
+    }
+
+
+    <!-- ===================================================== -->
+    <!-- FILTROS -->
+    <!-- ===================================================== -->
+
+    <section
+      class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+    >
+
+      <div
+        class="mb-4"
+      >
+
+        <h2
+          class="text-base font-extrabold text-slate-900"
+        >
+          Buscar productos
+        </h2>
+
+        <p
+          class="mt-1 text-sm text-slate-500"
+        >
+          Busca por código, nombre, categoría, ámbito o unidad de medida.
+        </p>
+
+      </div>
+
+
+      <div
+        class="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_220px]"
+      >
+
+        <div class="relative">
+
+          <span
+            class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5 fill-current"
+            >
+              <path
+                d="m21 19.6-5.2-5.2a7 7 0 1 0-1.4 1.4l5.2 5.2L21 19.6ZM5 10a5 5 0 1 1 10 0A5 5 0 0 1 5 10Z"
+              />
+            </svg>
+          </span>
+
+          <input
+            type="search"
+            [(ngModel)]="busqueda"
+            placeholder="Código, nombre, categoría o ámbito"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+          >
+
+        </div>
+
+
+        <select
+          [(ngModel)]="filtroEstado"
+          class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+        >
+          <option value="TODOS">
+            Todos los estados
+          </option>
+
+          <option value="ACTIVOS">
+            Activos
+          </option>
+
+          <option value="INACTIVOS">
+            Inactivos
+          </option>
+        </select>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================== -->
+    <!-- LISTADO -->
+    <!-- ===================================================== -->
+
+    <section class="space-y-4">
+
+      <div
+        class="flex items-center justify-between"
+      >
+
+        <div>
+
+          <span
+            class="text-xs font-bold uppercase tracking-[0.12em] text-slate-400"
+          >
+            Catálogo
+          </span>
+
+          <h2
+            class="mt-1 text-lg font-extrabold text-slate-900"
+          >
+            Productos registrados
+          </h2>
+
+        </div>
+
+      </div>
+
+
+      <!-- LOADING -->
+
+      @if (cargando) {
+
+        <div class="space-y-3">
+
+          @for (_ of [1, 2, 3, 4]; track $index) {
+
+            <article
+              class="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+            >
+
+              <div
+                class="flex gap-4"
+              >
+
+                <div
+                  class="h-10 w-24 rounded-xl bg-slate-200"
+                ></div>
+
+                <div class="flex-1 space-y-3">
+
+                  <div
+                    class="h-5 w-1/3 rounded bg-slate-200"
+                  ></div>
+
+                  <div
+                    class="h-4 w-2/3 rounded bg-slate-100"
+                  ></div>
+
+                  <div
+                    class="h-4 w-1/2 rounded bg-slate-100"
+                  ></div>
+
+                </div>
+
+              </div>
+
+            </article>
+
+          }
+
+        </div>
+
+      }
+
+      @else {
+
+        <div class="space-y-3">
+
+          @for (
+            p of productosVisibles();
+            track p.id
+          ) {
+
+            <article
+              class="group overflow-hidden rounded-2xl border bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              [class.border-slate-200]="p.activo"
+              [class.border-slate-300]="!p.activo"
+              [class.bg-slate-50]="!p.activo"
+            >
+
+              <!-- CABECERA -->
+
+              <div
+                class="flex flex-col gap-4 p-5 lg:flex-row lg:items-start lg:justify-between"
+              >
+
+                <div
+                  class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row"
+                >
+
+                  <!-- CÓDIGO -->
+
+                  <div
+                    class="w-fit shrink-0 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black tracking-wide text-blue-700"
+                  >
+                    {{ p.codigo }}
+                  </div>
+
+
+                  <!-- INFO -->
+
+                  <div class="min-w-0">
+
+                    <div
+                      class="flex flex-wrap items-center gap-2"
+                    >
+
+                      <h3
+                        class="text-base font-extrabold text-slate-900 sm:text-lg"
+                      >
+                        {{ p.nombre }}
+                      </h3>
+
+
+                      <span
+                        class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold"
+                        [class.bg-emerald-50]="p.activo"
+                        [class.text-emerald-700]="p.activo"
+                        [class.bg-slate-200]="!p.activo"
+                        [class.text-slate-600]="!p.activo"
+                      >
+
+                        <span
+                          class="h-1.5 w-1.5 rounded-full"
+                          [class.bg-emerald-500]="p.activo"
+                          [class.bg-slate-400]="!p.activo"
+                        ></span>
+
+                        {{ p.activo ? 'Activo' : 'Inactivo' }}
+
+                      </span>
+
+                    </div>
+
+
+                    <p
+                      class="mt-1 max-w-3xl text-sm leading-6 text-slate-500"
+                    >
+                      {{ p.descripcion || 'Sin descripción registrada.' }}
+                    </p>
+
+
+                    <!-- TAGS -->
+
+                    <div
+                      class="mt-3 flex flex-wrap gap-2"
+                    >
+
+                      @if (p.categoria) {
+
+                        <span
+                          class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600"
+                        >
+                          {{ p.categoria }}
+                        </span>
+
+                      }
+
+
+                      @if (p.ambito) {
+
+                        <span
+                          class="rounded-full border px-2.5 py-1 text-xs font-semibold"
+                          [class.border-blue-200]="p.ambito === 'RECURRENTES'"
+                          [class.bg-blue-50]="p.ambito === 'RECURRENTES'"
+                          [class.text-blue-700]="p.ambito === 'RECURRENTES'"
+                          [class.border-violet-200]="p.ambito !== 'RECURRENTES'"
+                          [class.bg-violet-50]="p.ambito !== 'RECURRENTES'"
+                          [class.text-violet-700]="p.ambito !== 'RECURRENTES'"
+                        >
+                          {{ p.ambito }}
+                        </span>
+
+                      }
+
+
+                      <span
+                        class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600"
+                      >
+                        {{ p.unidadMedida }}
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+
+                <!-- ACCIONES -->
+
+                <div
+                  class="flex shrink-0 gap-2"
+                >
+
+                  <button
+                    type="button"
+                    (click)="editar(p)"
+                    class="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 lg:flex-none"
+                  >
+
+                    <svg
+                      viewBox="0 0 24 24"
+                      class="h-4 w-4 fill-current"
+                    >
+                      <path
+                        d="m4 15.5 9.9-9.9 4.5 4.5-9.9 9.9H4v-4.5Zm11.3-11.3 1.4-1.4a2 2 0 0 1 2.8 0l1.7 1.7a2 2 0 0 1 0 2.8l-1.4 1.4-4.5-4.5Z"
+                      />
+                    </svg>
+
+                    Editar
+
+                  </button>
+
+
+                  <button
+                    type="button"
+                    (click)="cambiarEstado(p)"
+                    class="inline-flex h-10 flex-1 items-center justify-center rounded-xl border px-4 text-sm font-bold transition lg:flex-none"
+                    [class.border-red-200]="p.activo"
+                    [class.bg-red-50]="p.activo"
+                    [class.text-red-700]="p.activo"
+                    [class.hover:bg-red-100]="p.activo"
+                    [class.border-emerald-200]="!p.activo"
+                    [class.bg-emerald-50]="!p.activo"
+                    [class.text-emerald-700]="!p.activo"
+                    [class.hover:bg-emerald-100]="!p.activo"
+                  >
+                    {{ p.activo ? 'Desactivar' : 'Activar' }}
+                  </button>
+
+                </div>
+
+              </div>
+
+
+              <!-- CONFIGURACIÓN -->
+
+              <div
+                class="grid gap-4 border-t border-slate-100 bg-slate-50/60 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]"
+              >
+
+                <!-- ROLES -->
+
+                <div>
+
+                  <span
+                    class="text-[11px] font-bold uppercase tracking-wide text-slate-400"
+                  >
+                    Roles con visibilidad
+                  </span>
+
+
+                  <div
+                    class="mt-2 flex flex-wrap gap-2"
+                  >
+
+                    @for (
+                      rol of p.roles;
+                      track rol
+                    ) {
+
+                      <span
+                        class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-700"
+                      >
+                        {{ rol }}
+                      </span>
+
+                    } @empty {
+
+                      <span
+                        class="text-sm font-medium text-slate-400"
+                      >
+                        Sin roles asignados
+                      </span>
+
+                    }
+
+                  </div>
+
+                </div>
+
+
+                <!-- PLAZAS -->
+
+                <div>
+
+                  <span
+                    class="text-[11px] font-bold uppercase tracking-wide text-slate-400"
+                  >
+                    Plazas y stock mínimo
+                  </span>
+
+
+                  <div
+                    class="mt-2 flex flex-wrap gap-2"
+                  >
+
+                    @for (
+                      plaza of p.plazas;
+                      track plaza.plazaId
+                    ) {
+
+                      <span
+                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                      >
+
+                        <strong>
+                          {{ plaza.plaza }}
+                        </strong>
+
+                        <span class="text-slate-300">·</span>
+
+                        mín.
+                        <strong>
+                          {{ plaza.stockMinimo }}
+                        </strong>
+
+                      </span>
+
+                    } @empty {
+
+                      <span
+                        class="text-sm font-medium text-slate-400"
+                      >
+                        Sin plazas asignadas
+                      </span>
+
+                    }
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </article>
+
+          } @empty {
+
+            <div
+              class="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center"
+            >
+
+              <div
+                class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  class="h-7 w-7 fill-current"
+                >
+                  <path
+                    d="M4 4h16v5H4V4Zm0 7h10v9H4v-9Zm12 0h4v4h-4v-4Z"
+                  />
+                </svg>
+              </div>
+
+              <h3
+                class="mt-4 text-lg font-extrabold text-slate-900"
+              >
+                No se encontraron productos
+              </h3>
+
+              <p
+                class="mt-2 text-sm text-slate-500"
+              >
+                Prueba con otra búsqueda o cambia el filtro de estado.
+              </p>
+
+            </div>
+
+          }
+
+        </div>
+
+      }
+
+    </section>
+
+  </div>
+
+
+  <!-- ======================================================= -->
+  <!-- MODAL CREAR / EDITAR -->
+  <!-- ======================================================= -->
 
   @if (modalAbierto) {
-    <div class="modal-backdrop" (click)="cerrarModal()">
-      <section class="product-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
-        <div class="modal-header">
+
+    <div
+      class="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 backdrop-blur-[2px] sm:items-center sm:p-5"
+      (click)="cerrarModal()"
+    >
+
+      <section
+        role="dialog"
+        aria-modal="true"
+        (click)="$event.stopPropagation()"
+        class="flex max-h-[96dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-3xl sm:rounded-3xl"
+      >
+
+        <!-- HEADER -->
+
+        <header
+          class="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6"
+        >
+
           <div>
-            <p class="eyebrow">{{ esEdicion() ? 'Edición de producto' : 'Nuevo producto' }}</p>
-            <h2>{{ esEdicion() ? 'Editar producto' : 'Crear producto' }}</h2>
-            <p>{{ esEdicion() ? 'Actualiza los datos, permisos y plazas del producto.' : 'Registra un nuevo producto y define dónde estará disponible.' }}</p>
-          </div>
-          <button type="button" class="modal-close" (click)="cerrarModal()" [disabled]="guardando" aria-label="Cerrar">×</button>
-        </div>
 
-        <div class="modal-body form-card">
-          @if (error) { <div class="alert error modal-alert">{{ error }}</div> }
+            <span
+              class="text-xs font-bold uppercase tracking-[0.12em] text-blue-600"
+            >
+              {{
+                esEdicion()
+                  ? 'Edición de producto'
+                  : 'Nuevo producto'
+              }}
+            </span>
 
-          <div class="field-grid">
-            <label>Código<input placeholder="Ej. CONO001" [(ngModel)]="form.codigo"></label>
-            <label>Nombre<input placeholder="Nombre del producto" [(ngModel)]="form.nombre"></label>
-          </div>
+            <h2
+              class="mt-1 text-xl font-extrabold text-slate-900 sm:text-2xl"
+            >
+              {{
+                esEdicion()
+                  ? 'Editar producto'
+                  : 'Crear producto'
+              }}
+            </h2>
 
-          <label>Descripción<textarea placeholder="Descripción opcional" [(ngModel)]="form.descripcion"></textarea></label>
+            <p
+              class="mt-1 text-sm leading-6 text-slate-500"
+            >
+              {{
+                esEdicion()
+                  ? 'Actualiza los datos, roles y plazas del producto.'
+                  : 'Registra el producto y define dónde estará disponible.'
+              }}
+            </p>
 
-          <div class="field-grid">
-            <label>Categoría
-              <select [(ngModel)]="form.categoriaId">
-                <option [ngValue]="null">Selecciona una categoría</option>
-                @for (c of categorias; track c.id) { <option [ngValue]="c.id">{{ c.nombre }}</option> }
-              </select>
-            </label>
-            <label>Ámbito
-              <select [(ngModel)]="form.ambitoId">
-                <option [ngValue]="null">Selecciona un ámbito</option>
-                @for (a of ambitos; track a.id) { <option [ngValue]="a.id">{{ a.nombre }}</option> }
-              </select>
-            </label>
-          </div>
-
-          <label>Unidad de medida<input placeholder="Ej. Unidad" [(ngModel)]="form.unidadMedida"></label>
-
-          <div class="form-section">
-            <h3>Quién puede verlo</h3>
-            <p>Define qué roles encontrarán este producto al realizar un inventario.</p>
-            <div class="check-grid">
-              @for (r of roles; track r.id) {
-                @if (!(esControlador() && r.codigo === 'SUPERVISOR')) {
-                  <label class="check-card" [class.selected]="form.roles.includes(r.codigo)">
-                    <input type="checkbox" [checked]="form.roles.includes(r.codigo)" (change)="toggleRol(r.codigo || '')">
-                    <span>{{ r.nombre }}</span>
-                  </label>
-                }
-              }
-            </div>
           </div>
 
-          <div class="form-section">
-            <h3>Plazas y stock mínimo</h3>
-            <p>El stock mínimo se usará para identificar productos con nivel bajo.</p>
 
-            @if (esControlador()) {
-              <div class="controller-plaza">
-                <div><strong>{{ auth.usuario()?.plaza }}</strong><span>Tu plaza asignada</span></div>
-                @if (auth.usuario()?.plazaId; as plazaId) {
-                  @if (plazaSeleccionada(plazaId); as seleccion) {
-                    <input type="number" min="0" [(ngModel)]="seleccion.stockMinimo" placeholder="Stock mínimo">
-                  }
-                }
-              </div>
-            } @else {
-              <div class="plazas-grid">
-                @for (p of plazas; track p.id) {
-                  <div class="plaza-card" [class.selected]="!!plazaSeleccionada(p.id)">
-                    <label class="check-inline">
-                      <input type="checkbox" [checked]="!!plazaSeleccionada(p.id)" (change)="togglePlaza(p.id)">
-                      <strong>{{ p.codigo }}</strong>
-                    </label>
-                    @if (plazaSeleccionada(p.id); as seleccion) {
-                      <input type="number" min="0" [(ngModel)]="seleccion.stockMinimo" placeholder="Stock mínimo">
-                    }
-                  </div>
-                }
-              </div>
-            }
-          </div>
-        </div>
+          <button
+            type="button"
+            (click)="cerrarModal()"
+            [disabled]="guardando"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 disabled:opacity-50"
+            aria-label="Cerrar"
+          >
 
-        <div class="modal-footer">
-          <button type="button" class="secondary" (click)="cerrarModal()" [disabled]="guardando">Cancelar</button>
-          <button type="button" class="primary" (click)="solicitarGuardado()" [disabled]="guardando">
-            {{ esEdicion() ? 'Guardar cambios' : 'Crear producto' }}
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5 fill-current"
+            >
+              <path
+                d="m7.4 6 4.6 4.6L16.6 6 18 7.4 13.4 12l4.6 4.6-1.4 1.4-4.6-4.6L7.4 18 6 16.6l4.6-4.6L6 7.4 7.4 6Z"
+              />
+            </svg>
+
           </button>
+
+        </header>
+
+
+        <!-- BODY -->
+
+        <div
+          class="custom-scrollbar min-h-0 flex-1 overflow-y-auto"
+        >
+
+          <div
+            class="space-y-6 p-5 sm:p-6"
+          >
+
+            @if (error) {
+
+              <div
+                class="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+              >
+                <span
+                  class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 font-black"
+                >
+                  !
+                </span>
+
+                {{ error }}
+              </div>
+
+            }
+
+
+            <!-- DATOS PRINCIPALES -->
+
+            <section>
+
+              <div class="mb-4">
+
+                <span
+                  class="text-xs font-bold uppercase tracking-[0.12em] text-slate-400"
+                >
+                  Información general
+                </span>
+
+                <h3
+                  class="mt-1 text-base font-extrabold text-slate-900"
+                >
+                  Datos del producto
+                </h3>
+
+              </div>
+
+
+              <div
+                class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+              >
+
+                <label class="block">
+
+                  <span
+                    class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+                  >
+                    Código *
+                  </span>
+
+                  <input
+                    [(ngModel)]="form.codigo"
+                    placeholder="Ej. CONO001"
+                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                  >
+
+                </label>
+
+
+                <label class="block">
+
+                  <span
+                    class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+                  >
+                    Nombre *
+                  </span>
+
+                  <input
+                    [(ngModel)]="form.nombre"
+                    placeholder="Nombre del producto"
+                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                  >
+
+                </label>
+
+              </div>
+
+
+              <label
+                class="mt-4 block"
+              >
+
+                <span
+                  class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+                >
+                  Descripción
+                </span>
+
+                <textarea
+                  [(ngModel)]="form.descripcion"
+                  rows="3"
+                  placeholder="Descripción opcional"
+                  class="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                ></textarea>
+
+              </label>
+
+
+              <div
+                class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
+              >
+
+                <label>
+
+                  <span
+                    class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+                  >
+                    Categoría *
+                  </span>
+
+                  <select
+                    [(ngModel)]="form.categoriaId"
+                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                  >
+
+                    <option [ngValue]="null">
+                      Selecciona una categoría
+                    </option>
+
+                    @for (
+                      c of categorias;
+                      track c.id
+                    ) {
+
+                      <option
+                        [ngValue]="c.id"
+                      >
+                        {{ c.nombre }}
+                      </option>
+
+                    }
+
+                  </select>
+
+                </label>
+
+
+                <label>
+
+                  <span
+                    class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+                  >
+                    Ámbito *
+                  </span>
+
+                  <select
+                    [(ngModel)]="form.ambitoId"
+                    class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                  >
+
+                    <option [ngValue]="null">
+                      Selecciona un ámbito
+                    </option>
+
+                    @for (
+                      a of ambitos;
+                      track a.id
+                    ) {
+
+                      <option
+                        [ngValue]="a.id"
+                      >
+                        {{ a.nombre }}
+                      </option>
+
+                    }
+
+                  </select>
+
+                </label>
+
+              </div>
+
+
+              <label
+                class="mt-4 block"
+              >
+
+                <span
+                  class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+                >
+                  Unidad de medida *
+                </span>
+
+                <input
+                  [(ngModel)]="form.unidadMedida"
+                  placeholder="Ej. Unidad"
+                  class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                >
+
+              </label>
+
+            </section>
+
+
+            <!-- ROLES -->
+
+            <section
+              class="border-t border-slate-200 pt-6"
+            >
+
+              <div>
+
+                <span
+                  class="text-xs font-bold uppercase tracking-[0.12em] text-slate-400"
+                >
+                  Visibilidad
+                </span>
+
+                <h3
+                  class="mt-1 text-base font-extrabold text-slate-900"
+                >
+                  Quién puede verlo
+                </h3>
+
+                <p
+                  class="mt-1 text-sm leading-6 text-slate-500"
+                >
+                  Selecciona los roles que podrán encontrar este producto al
+                  realizar un inventario.
+                </p>
+
+              </div>
+
+
+              <div
+                class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"
+              >
+
+                @for (
+                  r of roles;
+                  track r.id
+                ) {
+
+                  @if (
+                    !(
+                      esControlador() &&
+                      r.codigo === 'SUPERVISOR'
+                    )
+                  ) {
+
+                    <label
+                      class="flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition"
+                      [class.border-blue-300]="form.roles.includes(r.codigo)"
+                      [class.bg-blue-50]="form.roles.includes(r.codigo)"
+                      [class.border-slate-200]="!form.roles.includes(r.codigo)"
+                      [class.bg-white]="!form.roles.includes(r.codigo)"
+                    >
+
+                      <input
+                        type="checkbox"
+                        [checked]="form.roles.includes(r.codigo)"
+                        (change)="toggleRol(r.codigo || '')"
+                        class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      >
+
+                      <div class="min-w-0">
+
+                        <strong
+                          class="block text-sm font-extrabold text-slate-800"
+                        >
+                          {{ r.nombre }}
+                        </strong>
+
+                        <span
+                          class="mt-0.5 block text-xs font-medium text-slate-500"
+                        >
+                          {{ r.codigo }}
+                        </span>
+
+                      </div>
+
+                    </label>
+
+                  }
+
+                }
+
+              </div>
+
+            </section>
+
+
+            <!-- PLAZAS -->
+
+            <section
+              class="border-t border-slate-200 pt-6"
+            >
+
+              <span
+                class="text-xs font-bold uppercase tracking-[0.12em] text-slate-400"
+              >
+                Disponibilidad
+              </span>
+
+              <h3
+                class="mt-1 text-base font-extrabold text-slate-900"
+              >
+                Plazas y stock mínimo
+              </h3>
+
+              <p
+                class="mt-1 text-sm leading-6 text-slate-500"
+              >
+                Selecciona dónde estará disponible el producto y define el nivel
+                mínimo para generar alertas de stock bajo.
+              </p>
+
+
+              @if (esControlador()) {
+
+                <div
+                  class="mt-4 grid gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-center"
+                >
+
+                  <div>
+
+                    <span
+                      class="text-xs font-bold uppercase tracking-wide text-blue-500"
+                    >
+                      Plaza asignada
+                    </span>
+
+                    <strong
+                      class="mt-1 block text-base font-extrabold text-slate-900"
+                    >
+                      {{ auth.usuario()?.plaza }}
+                    </strong>
+
+                  </div>
+
+
+                  @if (
+                    auth.usuario()?.plazaId;
+                    as plazaId
+                  ) {
+
+                    @if (
+                      plazaSeleccionada(plazaId);
+                      as seleccion
+                    ) {
+
+                      <label>
+
+                        <span
+                          class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+                        >
+                          Stock mínimo
+                        </span>
+
+                        <input
+                          type="number"
+                          min="0"
+                          [(ngModel)]="seleccion.stockMinimo"
+                          placeholder="0"
+                          class="h-11 w-full rounded-xl border border-blue-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        >
+
+                      </label>
+
+                    }
+
+                  }
+
+                </div>
+
+              }
+
+              @else {
+
+                <div
+                  class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                >
+
+                  @for (
+                    p of plazas;
+                    track p.id
+                  ) {
+
+                    <article
+                      class="rounded-2xl border p-4 transition"
+                      [class.border-blue-300]="!!plazaSeleccionada(p.id)"
+                      [class.bg-blue-50]="!!plazaSeleccionada(p.id)"
+                      [class.border-slate-200]="!plazaSeleccionada(p.id)"
+                      [class.bg-white]="!plazaSeleccionada(p.id)"
+                    >
+
+                      <label
+                        class="flex cursor-pointer items-center gap-3"
+                      >
+
+                        <input
+                          type="checkbox"
+                          [checked]="!!plazaSeleccionada(p.id)"
+                          (change)="togglePlaza(p.id)"
+                          class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        >
+
+                        <strong
+                          class="text-sm font-extrabold text-slate-800"
+                        >
+                          {{ p.codigo }}
+                        </strong>
+
+                      </label>
+
+
+                      @if (
+                        plazaSeleccionada(p.id);
+                        as seleccion
+                      ) {
+
+                        <label
+                          class="mt-4 block"
+                        >
+
+                          <span
+                            class="mb-2 block text-[11px] font-bold uppercase tracking-wide text-slate-500"
+                          >
+                            Stock mínimo
+                          </span>
+
+                          <input
+                            type="number"
+                            min="0"
+                            [(ngModel)]="seleccion.stockMinimo"
+                            placeholder="0"
+                            class="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          >
+
+                        </label>
+
+                      }
+
+                    </article>
+
+                  }
+
+                </div>
+
+              }
+
+            </section>
+
+          </div>
+
         </div>
+
+
+        <!-- FOOTER -->
+
+        <footer
+          class="grid shrink-0 grid-cols-2 gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex sm:justify-end sm:px-6"
+        >
+
+          <button
+            type="button"
+            (click)="cerrarModal()"
+            [disabled]="guardando"
+            class="h-11 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+
+
+          <button
+            type="button"
+            (click)="solicitarGuardado()"
+            [disabled]="guardando"
+            class="h-11 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+          >
+            {{
+              esEdicion()
+                ? 'Guardar cambios'
+                : 'Crear producto'
+            }}
+          </button>
+
+        </footer>
+
       </section>
+
     </div>
+
   }
+
+
+  <!-- ======================================================= -->
+  <!-- CONFIRMACIÓN -->
+  <!-- ======================================================= -->
 
   @if (confirmarGuardado) {
-    <div class="confirm-backdrop" (click)="cancelarConfirmacion()">
-      <section class="confirm-dialog" role="alertdialog" aria-modal="true" (click)="$event.stopPropagation()">
-        <div class="confirm-icon">!</div>
-        <p class="eyebrow">Confirmación</p>
-        <h2>{{ esEdicion() ? '¿Guardar cambios del producto?' : '¿Crear este producto?' }}</h2>
-        <p>
-          @if (esEdicion()) {
-            Se actualizará <strong>{{ form.nombre }}</strong> con la nueva configuración de roles, plazas y stock mínimo.
-          } @else {
-            Se creará el producto <strong>{{ form.nombre }}</strong> con la configuración seleccionada.
-          }
-        </p>
-        <div class="confirm-actions">
-          <button type="button" class="secondary" (click)="cancelarConfirmacion()" [disabled]="guardando">Volver</button>
-          <button type="button" class="primary" (click)="guardar()" [disabled]="guardando">
-            {{ guardando ? 'Procesando...' : (esEdicion() ? 'Sí, guardar cambios' : 'Sí, crear producto') }}
-          </button>
+
+    <div
+      class="fixed inset-0 z-[120] grid place-items-center bg-slate-950/70 p-4 backdrop-blur-sm"
+      (click)="cancelarConfirmacion()"
+    >
+
+      <section
+        role="alertdialog"
+        aria-modal="true"
+        (click)="$event.stopPropagation()"
+        class="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"
+      >
+
+        <div
+          class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-xl font-black text-amber-700"
+        >
+          !
         </div>
+
+
+        <span
+          class="mt-4 block text-xs font-bold uppercase tracking-[0.12em] text-blue-600"
+        >
+          Confirmación
+        </span>
+
+
+        <h2
+          class="mt-1 text-xl font-extrabold text-slate-900"
+        >
+          {{
+            esEdicion()
+              ? '¿Guardar cambios del producto?'
+              : '¿Crear este producto?'
+          }}
+        </h2>
+
+
+        <p
+          class="mt-3 text-sm leading-6 text-slate-500"
+        >
+
+          @if (esEdicion()) {
+
+            Se actualizará
+            <strong class="text-slate-700">
+              {{ form.nombre }}
+            </strong>
+            con la nueva configuración de roles, plazas y stock mínimo.
+
+          } @else {
+
+            Se creará el producto
+            <strong class="text-slate-700">
+              {{ form.nombre }}
+            </strong>
+            con la configuración seleccionada.
+
+          }
+
+        </p>
+
+
+        <div
+          class="mt-6 grid grid-cols-2 gap-3"
+        >
+
+          <button
+            type="button"
+            (click)="cancelarConfirmacion()"
+            [disabled]="guardando"
+            class="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+          >
+            Volver
+          </button>
+
+
+          <button
+            type="button"
+            (click)="guardar()"
+            [disabled]="guardando"
+            class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
+          >
+
+            @if (guardando) {
+
+              <span
+                class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+              ></span>
+
+              Procesando...
+
+            } @else {
+
+              {{
+                esEdicion()
+                  ? 'Sí, guardar'
+                  : 'Sí, crear'
+              }}
+
+            }
+
+          </button>
+
+        </div>
+
       </section>
+
     </div>
+
   }
+
 </div>

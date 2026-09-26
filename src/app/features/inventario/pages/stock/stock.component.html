@@ -1,197 +1,1027 @@
-<section class="stock-page">
-  <header class="stock-hero">
-    <div class="hero-copy">
-      <span class="section-kicker">Inventario · Control de existencias</span>
-      <h1>Stock actual</h1>
-      <p>Consulta el último conteo finalizado por producto y plaza. Los productos bajo mínimo aparecen primero para facilitar la revisión.</p>
-    </div>
+<div class="min-h-full bg-slate-50 px-4 py-5 sm:px-6 lg:px-8">
 
-    <div class="hero-actions">
-      <div class="hero-context">
-        <span>Vista actual</span>
-        <strong>{{ esSupervisor() ? 'Todas las plazas' : (auth.usuario()?.plaza || 'Plaza asignada') }}</strong>
-      </div>
-      <button class="btn btn-primary" type="button" (click)="aplicarFiltros()" [disabled]="cargando">
-        {{ cargando ? 'Actualizando...' : 'Actualizar' }}
-      </button>
-    </div>
-  </header>
+  <div class="mx-auto max-w-7xl space-y-6">
 
-  <section class="kpi-grid" aria-label="Resumen de stock">
-    <article class="kpi-card kpi-card--main">
-      <div class="kpi-icon">ST</div>
-      <div>
-        <span class="kpi-label">Registros visibles</span>
-        <strong>{{ totalProductos() }}</strong>
-        <small>Productos con stock registrado</small>
-      </div>
-    </article>
+    <!-- ===================================================== -->
+    <!-- HEADER -->
+    <!-- ===================================================== -->
 
-    <article class="kpi-card" [class.kpi-card--danger]="totalBajoMinimo() > 0">
-      <div class="kpi-icon">BM</div>
-      <div>
-        <span class="kpi-label">Bajo mínimo</span>
-        <strong>{{ totalBajoMinimo() }}</strong>
-        <small>{{ totalBajoMinimo() === 1 ? 'Producto por revisar' : 'Productos por revisar' }}</small>
-      </div>
-    </article>
+    <section
+      class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
+    >
 
-    <article class="kpi-card">
-      <div class="kpi-icon">OK</div>
-      <div>
-        <span class="kpi-label">Stock adecuado</span>
-        <strong>{{ totalSaludable() }}</strong>
-        <small>Sin alerta de mínimo</small>
-      </div>
-    </article>
+      <div
+        class="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between"
+      >
 
-    <article class="kpi-card">
-      <div class="kpi-icon">PL</div>
-      <div>
-        <span class="kpi-label">Plazas visibles</span>
-        <strong>{{ totalPlazas() }}</strong>
-        <small>{{ esSupervisor() ? 'Según los filtros' : (auth.usuario()?.plaza || 'Plaza asignada') }}</small>
-      </div>
-    </article>
-  </section>
+        <div class="min-w-0">
 
-  <section class="control-panel">
-    <div class="control-panel__head">
-      <div>
-        <span class="section-kicker">Filtros</span>
-        <h2>Buscar en stock</h2>
-      </div>
-      <button class="link-button" type="button" (click)="limpiarFiltros()" [disabled]="cargando">Limpiar filtros</button>
-    </div>
-
-    <div class="filters-grid">
-      <div class="field field--search">
-        <label for="stock-search">Producto</label>
-        <div class="search-input">
-          <input
-            id="stock-search"
-            type="search"
-            [(ngModel)]="busqueda"
-            (keyup.enter)="aplicarFiltros()"
-            placeholder="Ej. alcohol, conos, papel..."
-            autocomplete="off">
-          <button type="button" (click)="aplicarFiltros()" [disabled]="cargando">Buscar</button>
-        </div>
-      </div>
-
-      @if (esSupervisor()) {
-        <div class="field">
-          <label for="stock-plaza">Plaza</label>
-          <select id="stock-plaza" [(ngModel)]="plazaId" (change)="aplicarFiltros()">
-            <option [ngValue]="null">Todas las plazas</option>
-            @for (plaza of plazas; track plaza.id) {
-              <option [ngValue]="plaza.id">{{ plaza.codigo || plaza.nombre }}</option>
-            }
-          </select>
-        </div>
-      } @else {
-        <div class="field">
-          <label>Plaza</label>
-          <div class="readonly-field">{{ auth.usuario()?.plaza || 'Sin plaza asignada' }}</div>
-        </div>
-      }
-
-      <div class="field">
-        <label for="stock-status">Estado</label>
-        <select id="stock-status" [(ngModel)]="estado">
-          <option value="TODOS">Todos los estados</option>
-          <option value="BAJO">Bajo mínimo</option>
-          <option value="OK">Stock adecuado</option>
-        </select>
-      </div>
-
-      <div class="field field--button">
-        <label>&nbsp;</label>
-        <button class="btn btn-secondary" type="button" (click)="aplicarFiltros()" [disabled]="cargando">Aplicar filtros</button>
-      </div>
-    </div>
-  </section>
-
-  @if (error) {
-    <div class="feedback feedback--error">
-      <strong>No se pudo cargar el stock</strong>
-      <span>{{ error }}</span>
-    </div>
-  }
-
-  @if (cargando) {
-    <section class="state-panel">
-      <div class="loader"></div>
-      <strong>Cargando stock actual</strong>
-      <span>Consultando el último inventario finalizado.</span>
-    </section>
-  } @else {
-    <section class="results-section">
-      <header class="results-header">
-        <div>
-          <span class="section-kicker">Resultados</span>
-          <h2>{{ itemsVisibles().length }} {{ itemsVisibles().length === 1 ? 'producto' : 'productos' }}</h2>
-        </div>
-        @if (totalBajoMinimo() > 0) {
-          <div class="alert-summary">
-            <strong>{{ totalBajoMinimo() }}</strong>
-            <span>{{ totalBajoMinimo() === 1 ? 'alerta activa' : 'alertas activas' }}</span>
+          <div
+            class="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-blue-700"
+          >
+            <span class="h-2 w-2 rounded-full bg-blue-600"></span>
+            SIGO · Inventario
           </div>
-        }
-      </header>
 
-      @if (itemsVisibles().length === 0) {
-        <div class="state-panel state-panel--empty">
-          <div class="empty-icon">0</div>
-          <strong>No hay registros para mostrar</strong>
-          <span>No encontramos stock con los filtros seleccionados.</span>
-          <button class="btn btn-secondary" type="button" (click)="limpiarFiltros()">Restablecer filtros</button>
+          <h1
+            class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl"
+          >
+            Stock actual
+          </h1>
+
+          <p
+            class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base"
+          >
+            Consulta las existencias registradas en los últimos inventarios
+            finalizados y detecta rápidamente productos con stock bajo.
+          </p>
+
         </div>
-      } @else {
-        <div class="stock-list">
-          @for (s of itemsVisibles(); track trackStock($index, s)) {
-            <article class="stock-item" [class.stock-item--low]="s.bajoMinimo">
-              <div class="stock-item__identity">
-                <div class="identity-topline">
-                  <span class="plaza-pill">{{ s.plaza }}</span>
-                  <span class="inventory-id">#{{ s.inventarioId }}</span>
-                </div>
-                <h3>{{ s.producto }}</h3>
-                <span class="updated-copy">Actualizado {{ formatearFecha(s.actualizadoEn) }}</span>
-              </div>
 
-              <div class="stock-item__quantity">
-                <span class="data-label">Stock actual</span>
-                <div class="main-quantity">
-                  <strong>{{ s.cantidadActual }}</strong>
-                  <span>{{ s.unidadMedida }}</span>
-                </div>
-              </div>
 
-              <div class="stock-item__minimum">
-                <span class="data-label">Stock mínimo</span>
-                <strong>{{ s.stockMinimo }} {{ s.unidadMedida }}</strong>
-                <div class="level-meter">
-                  <div class="level-meter__head">
-                    <span>Nivel</span>
-                    <strong>{{ porcentajeStock(s) | number:'1.0-0' }}%</strong>
-                  </div>
-                  <div class="meter-track">
-                    <div class="meter-fill" [class.meter-fill--low]="s.bajoMinimo" [style.width.%]="porcentajeStock(s)"></div>
-                  </div>
-                </div>
-              </div>
+        <div
+          class="flex flex-col gap-3 sm:flex-row sm:items-center"
+        >
 
-              <div class="stock-item__status">
-                <span class="status-pill" [class.status-pill--low]="s.bajoMinimo" [class.status-pill--ok]="!s.bajoMinimo">
-                  {{ s.bajoMinimo ? 'Bajo mínimo' : 'Stock adecuado' }}
-                </span>
-                <small>{{ s.bajoMinimo ? 'Requiere revisión' : 'Sin observaciones' }}</small>
-              </div>
-            </article>
-          }
+          <!-- CONTEXTO -->
+
+          <div
+            class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 sm:min-w-[180px]"
+          >
+
+            <span
+              class="block text-[11px] font-bold uppercase tracking-wide text-slate-400"
+            >
+              Vista actual
+            </span>
+
+            <strong
+              class="mt-1 block text-sm font-extrabold text-slate-800"
+            >
+              {{
+                esSupervisor()
+                  ? (plazaId ? 'Plaza seleccionada' : 'Todas las plazas')
+                  : (auth.usuario()?.plaza || 'Plaza asignada')
+              }}
+            </strong>
+
+          </div>
+
+
+          <!-- ACTUALIZAR -->
+
+          <button
+            type="button"
+            (click)="aplicarFiltros()"
+            [disabled]="cargando"
+            class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+
+            @if (cargando) {
+
+              <span
+                class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+              ></span>
+
+              Actualizando...
+
+            } @else {
+
+              <svg
+                viewBox="0 0 24 24"
+                class="h-4 w-4 fill-current"
+              >
+                <path
+                  d="M12 4a8 8 0 1 1-7.45 5H2l3.5-3.5L9 10H6.6A6 6 0 1 0 12 6V4Z"
+                />
+              </svg>
+
+              Actualizar
+
+            }
+
+          </button>
+
         </div>
-      }
+
+      </div>
+
     </section>
-  }
-</section>
+
+
+    <!-- ===================================================== -->
+    <!-- KPI -->
+    <!-- ===================================================== -->
+
+    <section
+      class="grid grid-cols-2 gap-3 lg:grid-cols-4"
+      aria-label="Resumen de stock"
+    >
+
+      <!-- TOTAL -->
+
+      <article
+        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      >
+
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+
+          <div>
+
+            <span
+              class="text-[11px] font-bold uppercase tracking-wide text-slate-400"
+            >
+              Productos
+            </span>
+
+            <strong
+              class="mt-2 block text-3xl font-black tracking-tight text-slate-900"
+            >
+              {{ totalProductos() }}
+            </strong>
+
+          </div>
+
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5 fill-current"
+            >
+              <path
+                d="m12 2 9 4.5v11L12 22l-9-4.5v-11L12 2Zm0 2.2L6.4 7 12 9.8 17.6 7 12 4.2Z"
+              />
+            </svg>
+          </div>
+
+        </div>
+
+        <p
+          class="mt-3 text-xs font-medium text-slate-500"
+        >
+          Con stock registrado
+        </p>
+
+      </article>
+
+
+      <!-- BAJO MÍNIMO -->
+
+      <article
+        class="rounded-2xl border p-4 shadow-sm transition sm:p-5"
+        [class.border-red-200]="totalBajoMinimo() > 0"
+        [class.bg-red-50]="totalBajoMinimo() > 0"
+        [class.border-slate-200]="totalBajoMinimo() === 0"
+        [class.bg-white]="totalBajoMinimo() === 0"
+      >
+
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+
+          <div>
+
+            <span
+              class="text-[11px] font-bold uppercase tracking-wide"
+              [class.text-red-500]="totalBajoMinimo() > 0"
+              [class.text-slate-400]="totalBajoMinimo() === 0"
+            >
+              Bajo mínimo
+            </span>
+
+            <strong
+              class="mt-2 block text-3xl font-black tracking-tight"
+              [class.text-red-700]="totalBajoMinimo() > 0"
+              [class.text-slate-900]="totalBajoMinimo() === 0"
+            >
+              {{ totalBajoMinimo() }}
+            </strong>
+
+          </div>
+
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-xl"
+            [class.bg-red-100]="totalBajoMinimo() > 0"
+            [class.text-red-600]="totalBajoMinimo() > 0"
+            [class.bg-slate-100]="totalBajoMinimo() === 0"
+            [class.text-slate-400]="totalBajoMinimo() === 0"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5 fill-current"
+            >
+              <path
+                d="M11 3h2v8h-2V3Zm0 10h2v2h-2v-2Zm1-11a10 10 0 1 1-7.1 2.9A9.94 9.94 0 0 1 12 2Z"
+              />
+            </svg>
+          </div>
+
+        </div>
+
+        <p
+          class="mt-3 text-xs font-medium"
+          [class.text-red-600]="totalBajoMinimo() > 0"
+          [class.text-slate-500]="totalBajoMinimo() === 0"
+        >
+          {{
+            totalBajoMinimo() === 1
+              ? 'Producto por revisar'
+              : 'Productos por revisar'
+          }}
+        </p>
+
+      </article>
+
+
+      <!-- SALUDABLE -->
+
+      <article
+        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      >
+
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+
+          <div>
+
+            <span
+              class="text-[11px] font-bold uppercase tracking-wide text-slate-400"
+            >
+              Stock adecuado
+            </span>
+
+            <strong
+              class="mt-2 block text-3xl font-black tracking-tight text-emerald-700"
+            >
+              {{ totalSaludable() }}
+            </strong>
+
+          </div>
+
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5 fill-current"
+            >
+              <path
+                d="m9.5 17.5-5-5L6 11l3.5 3.5L18 6l1.5 1.5-10 10Z"
+              />
+            </svg>
+          </div>
+
+        </div>
+
+        <p
+          class="mt-3 text-xs font-medium text-slate-500"
+        >
+          Sin alerta de mínimo
+        </p>
+
+      </article>
+
+
+      <!-- PLAZAS -->
+
+      <article
+        class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      >
+
+        <div
+          class="flex items-start justify-between gap-3"
+        >
+
+          <div>
+
+            <span
+              class="text-[11px] font-bold uppercase tracking-wide text-slate-400"
+            >
+              Plazas
+            </span>
+
+            <strong
+              class="mt-2 block text-3xl font-black tracking-tight text-slate-900"
+            >
+              {{ totalPlazas() }}
+            </strong>
+
+          </div>
+
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5 fill-current"
+            >
+              <path
+                d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"
+              />
+            </svg>
+          </div>
+
+        </div>
+
+        <p
+          class="mt-3 truncate text-xs font-medium text-slate-500"
+        >
+          {{
+            esSupervisor()
+              ? 'Incluidas en la consulta'
+              : (auth.usuario()?.plaza || 'Plaza asignada')
+          }}
+        </p>
+
+      </article>
+
+    </section>
+
+
+    <!-- ===================================================== -->
+    <!-- FILTROS -->
+    <!-- ===================================================== -->
+
+    <section
+      class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+    >
+
+      <div
+        class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      >
+
+        <div>
+
+          <h2
+            class="text-base font-extrabold text-slate-900"
+          >
+            Buscar en stock
+          </h2>
+
+          <p
+            class="mt-1 text-sm text-slate-500"
+          >
+            Filtra productos por nombre, plaza o nivel de stock.
+          </p>
+
+        </div>
+
+
+        @if (
+          busqueda ||
+          estado !== 'TODOS' ||
+          (esSupervisor() && plazaId)
+        ) {
+
+          <button
+            type="button"
+            (click)="limpiarFiltros()"
+            [disabled]="cargando"
+            class="text-sm font-bold text-blue-600 transition hover:text-blue-700 disabled:opacity-50"
+          >
+            Limpiar filtros
+          </button>
+
+        }
+
+      </div>
+
+
+      <div
+        class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4"
+      >
+
+        <!-- PRODUCTO -->
+
+        <div
+          class="md:col-span-2"
+        >
+
+          <label
+            for="stock-search"
+            class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+          >
+            Producto
+          </label>
+
+          <div class="relative">
+
+            <span
+              class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                class="h-5 w-5 fill-current"
+              >
+                <path
+                  d="m21 19.6-5.2-5.2a7 7 0 1 0-1.4 1.4l5.2 5.2L21 19.6ZM5 10a5 5 0 1 1 10 0A5 5 0 0 1 5 10Z"
+                />
+              </svg>
+            </span>
+
+            <input
+              id="stock-search"
+              type="search"
+              [(ngModel)]="busqueda"
+              (keyup.enter)="aplicarFiltros()"
+              placeholder="Alcohol, conos, papel..."
+              autocomplete="off"
+              class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+            >
+
+          </div>
+
+        </div>
+
+
+        <!-- PLAZA -->
+
+        @if (esSupervisor()) {
+
+          <div>
+
+            <label
+              for="stock-plaza"
+              class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+            >
+              Plaza
+            </label>
+
+            <select
+              id="stock-plaza"
+              [(ngModel)]="plazaId"
+              class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+            >
+
+              <option [ngValue]="null">
+                Todas las plazas
+              </option>
+
+              @for (
+                plaza of plazas;
+                track plaza.id
+              ) {
+
+                <option
+                  [ngValue]="plaza.id"
+                >
+                  {{ plaza.codigo || plaza.nombre }}
+                </option>
+
+              }
+
+            </select>
+
+          </div>
+
+        } @else {
+
+          <div>
+
+            <span
+              class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+            >
+              Plaza
+            </span>
+
+            <div
+              class="flex h-11 items-center rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm font-bold text-slate-600"
+            >
+              {{ auth.usuario()?.plaza || 'Sin plaza asignada' }}
+            </div>
+
+          </div>
+
+        }
+
+
+        <!-- ESTADO -->
+
+        <div>
+
+          <label
+            for="stock-status"
+            class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+          >
+            Estado
+          </label>
+
+          <select
+            id="stock-status"
+            [(ngModel)]="estado"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+          >
+
+            <option value="TODOS">
+              Todos
+            </option>
+
+            <option value="BAJO">
+              Bajo mínimo
+            </option>
+
+            <option value="OK">
+              Stock adecuado
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div
+        class="mt-5 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end"
+      >
+
+        <button
+          type="button"
+          (click)="limpiarFiltros()"
+          [disabled]="cargando"
+          class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+        >
+          Limpiar
+        </button>
+
+
+        <button
+          type="button"
+          (click)="aplicarFiltros()"
+          [disabled]="cargando"
+          class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+
+          <svg
+            viewBox="0 0 24 24"
+            class="h-4 w-4 fill-current"
+          >
+            <path
+              d="m21 19.6-5.2-5.2a7 7 0 1 0-1.4 1.4l5.2 5.2L21 19.6ZM5 10a5 5 0 1 1 10 0A5 5 0 0 1 5 10Z"
+            />
+          </svg>
+
+          Aplicar filtros
+
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================== -->
+    <!-- ERROR -->
+    <!-- ===================================================== -->
+
+    @if (error) {
+
+      <div
+        class="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+      >
+
+        <div
+          class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-100 font-black"
+        >
+          !
+        </div>
+
+        <div>
+
+          <strong class="block">
+            No se pudo cargar el stock
+          </strong>
+
+          <span class="mt-1 block">
+            {{ error }}
+          </span>
+
+        </div>
+
+      </div>
+
+    }
+
+
+    <!-- ===================================================== -->
+    <!-- LOADING -->
+    <!-- ===================================================== -->
+
+    @if (cargando) {
+
+      <section class="space-y-3">
+
+        @for (
+          _ of [1, 2, 3, 4];
+          track $index
+        ) {
+
+          <article
+            class="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+          >
+
+            <div
+              class="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_180px_220px_160px]"
+            >
+
+              <div class="space-y-3">
+                <div class="h-4 w-20 rounded bg-slate-200"></div>
+                <div class="h-5 w-2/3 rounded bg-slate-200"></div>
+                <div class="h-3 w-1/2 rounded bg-slate-100"></div>
+              </div>
+
+              <div class="space-y-2">
+                <div class="h-3 w-20 rounded bg-slate-100"></div>
+                <div class="h-8 w-24 rounded bg-slate-200"></div>
+              </div>
+
+              <div class="space-y-2">
+                <div class="h-3 w-20 rounded bg-slate-100"></div>
+                <div class="h-4 w-28 rounded bg-slate-200"></div>
+                <div class="h-2 w-full rounded bg-slate-100"></div>
+              </div>
+
+              <div class="h-8 rounded-full bg-slate-100"></div>
+
+            </div>
+
+          </article>
+
+        }
+
+      </section>
+
+    }
+
+
+    <!-- ===================================================== -->
+    <!-- RESULTADOS -->
+    <!-- ===================================================== -->
+
+    @else {
+
+      <section class="space-y-4">
+
+        <!-- HEADER RESULTADOS -->
+
+        <div
+          class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+
+          <div>
+
+            <span
+              class="text-xs font-bold uppercase tracking-[0.12em] text-slate-400"
+            >
+              Resultados
+            </span>
+
+            <h2
+              class="mt-1 text-lg font-extrabold text-slate-900"
+            >
+              {{ itemsVisibles().length }}
+              {{
+                itemsVisibles().length === 1
+                  ? 'producto'
+                  : 'productos'
+              }}
+            </h2>
+
+          </div>
+
+
+          @if (totalBajoMinimo() > 0) {
+
+            <div
+              class="inline-flex w-fit items-center gap-2 rounded-full bg-red-50 px-3 py-2 text-red-700"
+            >
+
+              <span
+                class="flex h-6 min-w-6 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-black text-white"
+              >
+                {{ totalBajoMinimo() }}
+              </span>
+
+              <span class="text-xs font-bold">
+                {{
+                  totalBajoMinimo() === 1
+                    ? 'alerta activa'
+                    : 'alertas activas'
+                }}
+              </span>
+
+            </div>
+
+          }
+
+        </div>
+
+
+        <!-- VACÍO -->
+
+        @if (itemsVisibles().length === 0) {
+
+          <div
+            class="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center"
+          >
+
+            <div
+              class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                class="h-7 w-7 fill-current"
+              >
+                <path
+                  d="m12 2 9 4.5v11L12 22l-9-4.5v-11L12 2Z"
+                />
+              </svg>
+            </div>
+
+            <h3
+              class="mt-4 text-lg font-extrabold text-slate-900"
+            >
+              No hay productos para mostrar
+            </h3>
+
+            <p
+              class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500"
+            >
+              No encontramos registros de stock que coincidan con los filtros
+              seleccionados.
+            </p>
+
+            <button
+              type="button"
+              (click)="limpiarFiltros()"
+              class="mt-5 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
+            >
+              Restablecer filtros
+            </button>
+
+          </div>
+
+        }
+
+        @else {
+
+          <!-- ================================================= -->
+          <!-- LISTADO -->
+          <!-- ================================================= -->
+
+          <div class="space-y-3">
+
+            @for (
+              s of itemsVisibles();
+              track trackStock($index, s)
+            ) {
+
+              <article
+                class="group overflow-hidden rounded-2xl border bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                [class.border-red-200]="s.bajoMinimo"
+                [class.border-slate-200]="!s.bajoMinimo"
+              >
+
+                <!-- ALERTA SUPERIOR -->
+
+                @if (s.bajoMinimo) {
+
+                  <div
+                    class="flex items-center gap-2 border-b border-red-100 bg-red-50 px-5 py-2 text-xs font-bold text-red-700"
+                  >
+
+                    <svg
+                      viewBox="0 0 24 24"
+                      class="h-4 w-4 fill-current"
+                    >
+                      <path
+                        d="M11 3h2v8h-2V3Zm0 10h2v2h-2v-2Zm1-11a10 10 0 1 1-7.1 2.9A9.94 9.94 0 0 1 12 2Z"
+                      />
+                    </svg>
+
+                    Producto por debajo del stock mínimo
+
+                  </div>
+
+                }
+
+
+                <div
+                  class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1.5fr)_180px_230px_170px] lg:items-center"
+                >
+
+                  <!-- IDENTIDAD -->
+
+                  <div class="min-w-0">
+
+                    <div
+                      class="mb-2 flex flex-wrap items-center gap-2"
+                    >
+
+                      <span
+                        class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-extrabold text-slate-600"
+                      >
+                        {{ s.plaza }}
+                      </span>
+
+                      <span
+                        class="text-xs font-bold text-slate-400"
+                      >
+                        Inventario #{{ s.inventarioId }}
+                      </span>
+
+                    </div>
+
+
+                    <h3
+                      class="text-base font-extrabold leading-snug text-slate-900 sm:text-lg"
+                    >
+                      {{ s.producto }}
+                    </h3>
+
+
+                    <div
+                      class="mt-2 flex items-center gap-1.5 text-xs font-medium text-slate-400"
+                    >
+
+                      <svg
+                        viewBox="0 0 24 24"
+                        class="h-3.5 w-3.5 fill-current"
+                      >
+                        <path
+                          d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 5v4.6l3.2 1.9-1 1.7L11 12.7V7h2Z"
+                        />
+                      </svg>
+
+                      Actualizado
+                      {{ formatearFecha(s.actualizadoEn) }}
+
+                    </div>
+
+                  </div>
+
+
+                  <!-- STOCK ACTUAL -->
+
+                  <div
+                    class="rounded-2xl border border-slate-100 bg-slate-50 p-4 lg:border-0 lg:bg-transparent lg:p-0"
+                  >
+
+                    <span
+                      class="block text-[11px] font-bold uppercase tracking-wide text-slate-400"
+                    >
+                      Stock actual
+                    </span>
+
+
+                    <div
+                      class="mt-1 flex items-end gap-1.5"
+                    >
+
+                      <strong
+                        class="text-3xl font-black tracking-tight"
+                        [class.text-red-700]="s.bajoMinimo"
+                        [class.text-slate-900]="!s.bajoMinimo"
+                      >
+                        {{ s.cantidadActual }}
+                      </strong>
+
+                      <span
+                        class="mb-1 text-xs font-bold uppercase text-slate-500"
+                      >
+                        {{ s.unidadMedida }}
+                      </span>
+
+                    </div>
+
+                  </div>
+
+
+                  <!-- STOCK MÍNIMO -->
+
+                  <div>
+
+                    <div
+                      class="flex items-end justify-between gap-3"
+                    >
+
+                      <div>
+
+                        <span
+                          class="block text-[11px] font-bold uppercase tracking-wide text-slate-400"
+                        >
+                          Stock mínimo
+                        </span>
+
+                        <strong
+                          class="mt-1 block text-sm font-extrabold text-slate-700"
+                        >
+                          {{ s.stockMinimo }}
+                          {{ s.unidadMedida }}
+                        </strong>
+
+                      </div>
+
+
+                      <span
+                        class="text-sm font-black"
+                        [class.text-red-600]="s.bajoMinimo"
+                        [class.text-emerald-600]="!s.bajoMinimo"
+                      >
+                        {{
+                          porcentajeStock(s)
+                            | number:'1.0-0'
+                        }}%
+                      </span>
+
+                    </div>
+
+
+                    <!-- BARRA -->
+
+                    <div
+                      class="mt-3 h-2 overflow-hidden rounded-full bg-slate-200"
+                    >
+
+                      <div
+                        class="h-full rounded-full transition-all duration-300"
+                        [class.bg-red-500]="s.bajoMinimo"
+                        [class.bg-emerald-500]="!s.bajoMinimo"
+                        [style.width.%]="porcentajeStock(s)"
+                      ></div>
+
+                    </div>
+
+
+                    <div
+                      class="mt-1.5 flex justify-between text-[10px] font-semibold text-slate-400"
+                    >
+                      <span>0%</span>
+                      <span>Objetivo 100%</span>
+                    </div>
+
+                  </div>
+
+
+                  <!-- ESTADO -->
+
+                  <div
+                    class="flex flex-col items-start gap-2 lg:items-end"
+                  >
+
+                    <span
+                      class="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-extrabold"
+                      [class.bg-red-50]="s.bajoMinimo"
+                      [class.text-red-700]="s.bajoMinimo"
+                      [class.bg-emerald-50]="!s.bajoMinimo"
+                      [class.text-emerald-700]="!s.bajoMinimo"
+                    >
+
+                      <span
+                        class="h-2 w-2 rounded-full"
+                        [class.bg-red-500]="s.bajoMinimo"
+                        [class.bg-emerald-500]="!s.bajoMinimo"
+                      ></span>
+
+                      {{
+                        s.bajoMinimo
+                          ? 'Bajo mínimo'
+                          : 'Stock adecuado'
+                      }}
+
+                    </span>
+
+
+                    <span
+                      class="text-xs font-medium text-slate-400"
+                    >
+                      {{
+                        s.bajoMinimo
+                          ? 'Requiere revisión'
+                          : 'Sin observaciones'
+                      }}
+                    </span>
+
+                  </div>
+
+                </div>
+
+              </article>
+
+            }
+
+          </div>
+
+        }
+
+      </section>
+
+    }
+
+  </div>
+
+</div>

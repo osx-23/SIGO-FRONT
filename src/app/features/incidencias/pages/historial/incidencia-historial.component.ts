@@ -425,6 +425,7 @@ export class IncidenciaHistorialComponent implements OnInit {
     if (!file) return;
 
     const item =
+      this.editando() ??
       this.detalle();
 
     if (
@@ -496,7 +497,7 @@ export class IncidenciaHistorialComponent implements OnInit {
         this.guardandoEvidencia.set(false);
         this.cerrarCropper();
 
-        this.recargarDetalle(
+        this.recargarIncidencia(
           target.incidenciaId
         );
       },
@@ -551,7 +552,7 @@ export class IncidenciaHistorialComponent implements OnInit {
         next: () => {
           this.eliminandoEvidenciaId.set(null);
 
-          this.recargarDetalle(
+          this.recargarIncidencia(
             incidenciaId
           );
         },
@@ -645,17 +646,33 @@ export class IncidenciaHistorialComponent implements OnInit {
       });
   }
 
-  private recargarDetalle(
+  private recargarIncidencia(
     id: number
   ): void {
-    this.cargandoDetalle.set(true);
+    const detalleAbierto =
+      this.detalle()?.id === id;
+
+    const edicionAbierta =
+      this.editando()?.id === id;
+
+    if (detalleAbierto) {
+      this.cargandoDetalle.set(true);
+    }
 
     this.api.obtener(id)
       .subscribe({
         next: incidencia => {
-          this.detalle.set(
-            incidencia
-          );
+          if (detalleAbierto) {
+            this.detalle.set(
+              incidencia
+            );
+          }
+
+          if (edicionAbierta) {
+            this.editando.set(
+              incidencia
+            );
+          }
 
           this.actualizarItemLocal(
             incidencia
@@ -668,7 +685,7 @@ export class IncidenciaHistorialComponent implements OnInit {
 
           this.error.set(
             err?.error?.message ??
-            'No se pudo actualizar el detalle de la incidencia.'
+            'No se pudo actualizar la incidencia.'
           );
         }
       });

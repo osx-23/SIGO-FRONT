@@ -5,6 +5,7 @@ import { ASISTENCIA_ROUTES } from './features/asistencia/asistencia.routes';
 import { INVENTARIO_ROUTES } from './features/inventario/inventario.routes';
 import { PROGRAMACION_ROUTES } from './features/programacion/programacion.routes';
 import { RELEVOS_ROUTES } from './features/relevos/relevos.routes';
+import { INCIDENCIAS_ROUTES } from './features/incidencias/incidencias.routes';
 import { USUARIOS_ROUTES } from './features/usuarios/usuarios.routes';
 
 export const routes: Routes = [
@@ -50,6 +51,7 @@ export const routes: Routes = [
       ...PROGRAMACION_ROUTES,
       ...ASISTENCIA_ROUTES,
       ...RELEVOS_ROUTES,
+      ...INCIDENCIAS_ROUTES,
       ...INVENTARIO_ROUTES,
       ...USUARIOS_ROUTES
     ]

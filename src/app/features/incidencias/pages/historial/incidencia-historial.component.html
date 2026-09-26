@@ -197,24 +197,11 @@
           </section>
 
           <section class="rounded-2xl border border-slate-200 p-4 sm:p-5">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 class="font-bold text-slate-950">Evidencias</h3>
-                <p class="mt-1 text-xs text-slate-400">
-                  {{ item.evidencias.length }}/5 fotografías · puedes agregar, cambiar o eliminar.
-                </p>
-              </div>
-
-              @if (item.evidencias.length < 5) {
-                <label class="cursor-pointer rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white">
-                  Agregar foto
-                  <input
-                    type="file"
-                    class="hidden"
-                    accept="image/jpeg,image/png,image/webp"
-                    (change)="seleccionarEvidencia(item.id, null, $event)">
-                </label>
-              }
+            <div>
+              <h3 class="font-bold text-slate-950">Evidencias</h3>
+              <p class="mt-1 text-xs text-slate-400">
+                {{ item.evidencias.length }} {{ item.evidencias.length === 1 ? 'fotografía' : 'fotografías' }}
+              </p>
             </div>
 
             @if (!item.evidencias.length) {
@@ -229,25 +216,6 @@
                       [src]="evidencia.urlArchivo"
                       alt="Evidencia de incidencia"
                       class="aspect-[4/3] w-full bg-slate-100 object-contain">
-
-                    <div class="flex gap-2 p-3">
-                      <label class="flex-1 cursor-pointer rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center text-xs font-semibold text-blue-700">
-                        Cambiar
-                        <input
-                          type="file"
-                          class="hidden"
-                          accept="image/jpeg,image/png,image/webp"
-                          (change)="seleccionarEvidencia(item.id, evidencia.id, $event)">
-                      </label>
-
-                      <button
-                        type="button"
-                        (click)="eliminarEvidencia(item.id, evidencia.id)"
-                        [disabled]="eliminandoEvidenciaId() !== null || guardandoEvidencia()"
-                        class="flex-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 disabled:opacity-60">
-                        {{ eliminandoEvidenciaId() === evidencia.id ? 'Eliminando...' : 'Eliminar' }}
-                      </button>
-                    </div>
                   </article>
                 }
               </div>
@@ -291,7 +259,7 @@
           </h2>
 
           <p class="mt-1 text-sm text-slate-500">
-            Modifica los datos generales. Las evidencias se administran desde Ver detalle.
+            Modifica los datos generales y administra las evidencias de la incidencia.
           </p>
         </div>
 
@@ -394,6 +362,64 @@
             class="w-full rounded-xl border border-slate-300 px-3 py-3 font-normal"
             placeholder="Describe la incidencia"></textarea>
         </label>
+
+        <section class="rounded-2xl border border-slate-200 p-4 sm:p-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="font-bold text-slate-950">Evidencias</h3>
+              <p class="mt-1 text-xs text-slate-400">
+                {{ itemEditar.evidencias.length }}/5 fotografías · puedes agregar, cambiar o eliminar.
+              </p>
+            </div>
+
+            @if (itemEditar.evidencias.length < 5) {
+              <label class="cursor-pointer rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white">
+                Agregar foto
+                <input
+                  type="file"
+                  class="hidden"
+                  accept="image/jpeg,image/png,image/webp"
+                  (change)="seleccionarEvidencia(itemEditar.id, null, $event)">
+              </label>
+            }
+          </div>
+
+          @if (!itemEditar.evidencias.length) {
+            <div class="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+              Esta incidencia no tiene evidencias.
+            </div>
+          } @else {
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              @for (evidencia of itemEditar.evidencias; track evidencia.id) {
+                <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  <img
+                    [src]="evidencia.urlArchivo"
+                    alt="Evidencia de incidencia"
+                    class="aspect-[4/3] w-full bg-slate-100 object-contain">
+
+                  <div class="flex gap-2 p-3">
+                    <label class="flex-1 cursor-pointer rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-center text-xs font-semibold text-blue-700">
+                      Cambiar
+                      <input
+                        type="file"
+                        class="hidden"
+                        accept="image/jpeg,image/png,image/webp"
+                        (change)="seleccionarEvidencia(itemEditar.id, evidencia.id, $event)">
+                    </label>
+
+                    <button
+                      type="button"
+                      (click)="eliminarEvidencia(itemEditar.id, evidencia.id)"
+                      [disabled]="eliminandoEvidenciaId() !== null || guardandoEvidencia()"
+                      class="flex-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 disabled:opacity-60">
+                      {{ eliminandoEvidenciaId() === evidencia.id ? 'Eliminando...' : 'Eliminar' }}
+                    </button>
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        </section>
 
         <div class="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-5">
           <button

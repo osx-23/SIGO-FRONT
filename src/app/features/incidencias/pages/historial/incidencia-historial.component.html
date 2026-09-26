@@ -98,6 +98,21 @@
                 Ver detalle
               </button>
 
+              <button
+                type="button"
+                (click)="abrirEditar(item)"
+                class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">
+                Editar
+              </button>
+
+              <button
+                type="button"
+                (click)="generarPdf(item)"
+                [disabled]="generandoPdfId() !== null"
+                class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+                {{ generandoPdfId() === item.id ? 'Generando...' : 'Generar PDF' }}
+              </button>
+
               @if (puedeAtender && item.estado === 'OBSERVACION') {
                 <button
                   type="button"
@@ -251,6 +266,152 @@
             </div>
           }
         }
+      </div>
+    </section>
+  </div>
+}
+
+@if (editando(); as itemEditar) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
+    (click)="cerrarEditar()">
+
+    <section
+      class="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl"
+      (click)="$event.stopPropagation()">
+
+      <header class="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">
+            Incidencia #{{ itemEditar.id }}
+          </p>
+
+          <h2 class="mt-1 text-xl font-bold text-slate-950">
+            Editar incidencia
+          </h2>
+
+          <p class="mt-1 text-sm text-slate-500">
+            Modifica los datos generales. Las evidencias se administran desde Ver detalle.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          (click)="cerrarEditar()"
+          class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600">
+          Cerrar
+        </button>
+      </header>
+
+      <div class="space-y-5 p-5 sm:p-6">
+        <div class="grid gap-4 sm:grid-cols-2">
+          @if (esOperador) {
+            <div class="space-y-2">
+              <span class="text-sm font-semibold text-slate-700">Plaza</span>
+              <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-900">
+                {{ auth.usuario()?.plaza || itemEditar.plazaCodigo }}
+              </div>
+            </div>
+          } @else {
+            <label class="space-y-2 text-sm font-semibold text-slate-700">
+              Plaza
+              <select
+                [(ngModel)]="editarForm.plazaId"
+                (ngModelChange)="onPlazaEdicionChange()"
+                class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5">
+                <option [ngValue]="null">Selecciona una plaza</option>
+                @for (plaza of plazas; track plaza.id) {
+                  <option [ngValue]="plaza.id">
+                    {{ plaza.codigo }}{{ plaza.descripcion ? ' · ' + plaza.descripcion : '' }}
+                  </option>
+                }
+              </select>
+            </label>
+          }
+
+          <label class="space-y-2 text-sm font-semibold text-slate-700">
+            Turno
+            <select
+              [(ngModel)]="editarForm.turnoId"
+              class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5">
+              <option [ngValue]="null">Selecciona un turno</option>
+              @for (turno of turnos; track turno.id) {
+                <option [ngValue]="turno.id">
+                  Turno {{ turno.codigo }}{{ turno.nombre ? ' · ' + turno.nombre : '' }}
+                </option>
+              }
+            </select>
+          </label>
+
+          <label class="space-y-2 text-sm font-semibold text-slate-700">
+            Tipo
+            <select
+              [(ngModel)]="editarForm.tipoId"
+              class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5">
+              <option [ngValue]="null">Selecciona el tipo</option>
+              @for (tipo of tipos; track tipo.id) {
+                <option [ngValue]="tipo.id">{{ tipo.nombre }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="space-y-2 text-sm font-semibold text-slate-700">
+            Vía
+            <select
+              [(ngModel)]="editarForm.viaId"
+              class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5">
+              <option [ngValue]="null">No aplica / Plaza general</option>
+              @for (via of viasEdicion; track via.id) {
+                <option [ngValue]="via.id">
+                  Vía {{ via.numero }}{{ via.nombre ? ' · ' + via.nombre : '' }}
+                </option>
+              }
+            </select>
+          </label>
+
+          <label class="space-y-2 text-sm font-semibold text-slate-700">
+            Fecha
+            <input
+              type="date"
+              [(ngModel)]="editarForm.fecha"
+              class="w-full rounded-xl border border-slate-300 px-3 py-2.5">
+          </label>
+
+          <label class="space-y-2 text-sm font-semibold text-slate-700">
+            Hora
+            <input
+              type="time"
+              [(ngModel)]="editarForm.hora"
+              class="w-full rounded-xl border border-slate-300 px-3 py-2.5">
+          </label>
+        </div>
+
+        <label class="block space-y-2 text-sm font-semibold text-slate-700">
+          Detalle
+          <textarea
+            rows="5"
+            [(ngModel)]="editarForm.descripcion"
+            class="w-full rounded-xl border border-slate-300 px-3 py-3 font-normal"
+            placeholder="Describe la incidencia"></textarea>
+        </label>
+
+        <div class="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-5">
+          <button
+            type="button"
+            (click)="cerrarEditar()"
+            [disabled]="guardandoEdicion()"
+            class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 disabled:opacity-60">
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            (click)="guardarEdicion()"
+            [disabled]="guardandoEdicion()"
+            class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+            {{ guardandoEdicion() ? 'Guardando...' : 'Guardar cambios' }}
+          </button>
+        </div>
       </div>
     </section>
   </div>

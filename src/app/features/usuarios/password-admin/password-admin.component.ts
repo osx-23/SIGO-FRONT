@@ -18,6 +18,11 @@ interface PlazaAdmin {
   activo: boolean;
 }
 
+interface PuestoAgenteAdmin {
+  id: number;
+  nombre: string;
+}
+
 interface TrabajadorAdmin {
   id: number;
   codigo: number;
@@ -55,6 +60,7 @@ export class PasswordAdminComponent implements OnInit {
 
   trabajadores: TrabajadorAdmin[] = [];
   plazas: PlazaAdmin[] = [];
+  puestosAgente: PuestoAgenteAdmin[] = [];
 
   filtro = '';
   filtroEstado: FiltroEstado = 'TODOS';
@@ -68,6 +74,7 @@ export class PasswordAdminComponent implements OnInit {
 
   modalPassword = false;
   modalUsuario = false;
+  modalNuevoAgente = false;
   modalExito = false;
 
   seleccionado: TrabajadorAdmin | null = null;
@@ -78,6 +85,13 @@ export class PasswordAdminComponent implements OnInit {
 
   plazaSeleccionada: number | null = null;
   activoSeleccionado = true;
+
+  nuevoCodigo: number | null = null;
+  nuevoNombre = '';
+  nuevoPuestoId: number | null = null;
+  nuevaPlazaId: number | null = null;
+  nuevaPassword = '12345';
+  nuevaPasswordConfirmacion = '12345';
 
   async ngOnInit(): Promise<void> {
     await this.cargarInicial();
@@ -168,11 +182,15 @@ export class PasswordAdminComponent implements OnInit {
           ),
           plazas: this.http.get<PlazaAdmin[]>(
             `${this.api}/plazas`
+          ),
+          puestos: this.http.get<PuestoAgenteAdmin[]>(
+            `${this.api}/trabajadores/admin/puestos-agente`
           )
         })
       );
 
       this.trabajadores = data.trabajadores ?? [];
+      this.puestosAgente = data.puestos ?? [];
 
       this.plazas = (data.plazas ?? [])
         .filter(p => p.activo)
@@ -273,6 +291,160 @@ export class PasswordAdminComponent implements OnInit {
 
   /*
    * ============================================================
+   * NUEVO AGENTE
+   * ============================================================
+   */
+
+  abrirNuevoAgente(): void {
+
+    this.nuevoCodigo = null;
+    this.nuevoNombre = '';
+    this.nuevoPuestoId =
+      this.puestosAgente.length === 1
+        ? this.puestosAgente[0].id
+        : null;
+    this.nuevaPlazaId =
+      this.filtroPlaza === 'TODAS'
+        ? null
+        : this.filtroPlaza;
+    this.nuevaPassword = '12345';
+    this.nuevaPasswordConfirmacion = '12345';
+
+    this.error = '';
+    this.modalNuevoAgente = true;
+    this.modalUsuario = false;
+    this.modalPassword = false;
+
+    this.cdr.markForCheck();
+  }
+
+  cerrarNuevoAgente(): void {
+
+    if (this.guardando) {
+      return;
+    }
+
+    this.modalNuevoAgente = false;
+    this.error = '';
+
+    this.cdr.markForCheck();
+  }
+
+  async crearAgente(): Promise<void> {
+
+    if (this.guardando) {
+      return;
+    }
+
+    if (
+      !this.nuevoCodigo ||
+      this.nuevoCodigo <= 0
+    ) {
+      this.error =
+        'Ingresa un código válido.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    if (
+      this.nuevoNombre.trim().length < 3
+    ) {
+      this.error =
+        'Ingresa el nombre completo del agente.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    if (this.nuevoPuestoId === null) {
+      this.error =
+        'Selecciona el puesto del agente.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    if (this.nuevaPlazaId === null) {
+      this.error =
+        'Selecciona la plaza del agente.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    if (
+      this.nuevaPassword.trim().length < 5
+    ) {
+      this.error =
+        'La contraseña inicial debe tener al menos 5 caracteres.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    if (
+      this.nuevaPassword !==
+      this.nuevaPasswordConfirmacion
+    ) {
+      this.error =
+        'Las contraseñas no coinciden.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.guardando = true;
+    this.error = '';
+
+    try {
+
+      const creado =
+        await firstValueFrom(
+          this.http.post<TrabajadorAdmin>(
+            `${this.api}/trabajadores/admin/agentes`,
+            {
+              codigo: this.nuevoCodigo,
+              nombreCompleto:
+                this.nuevoNombre.trim(),
+              puestoId:
+                this.nuevoPuestoId,
+              plazaId:
+                this.nuevaPlazaId,
+              passwordInicial:
+                this.nuevaPassword
+            }
+          )
+        );
+
+      if (
+        this.filtroPlaza === 'TODAS' ||
+        creado.plaza?.id ===
+          this.filtroPlaza
+      ) {
+        this.trabajadores = [
+          creado,
+          ...this.trabajadores
+        ];
+      }
+
+      this.modalNuevoAgente = false;
+
+      this.exito =
+        `${creado.nombreCompleto} fue registrado como agente en ${creado.plaza?.codigo ?? 'la plaza seleccionada'}.`;
+
+      this.modalExito = true;
+
+    } catch (e: any) {
+
+      this.error = this.obtenerMensajeError(
+        e,
+        'No se pudo registrar el nuevo agente.'
+      );
+
+    } finally {
+
+      this.guardando = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /*
+   * ============================================================
    * MODAL CONTRASEÑA
    * ============================================================
    */
@@ -335,6 +507,7 @@ export class PasswordAdminComponent implements OnInit {
 
     this.modalPassword = false;
     this.modalUsuario = false;
+    this.modalNuevoAgente = false;
 
     this.seleccionado = null;
 

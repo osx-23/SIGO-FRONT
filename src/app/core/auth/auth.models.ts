@@ -9,6 +9,7 @@ export type RolSistema = typeof ROLES_SIGO[number];
 export const MODULOS_SIGO = [
   'DASHBOARD',
   'RELEVOS',
+  'INCIDENCIAS',
   'ASISTENCIA',
   'INVENTARIO',
   'ADMIN_PRODUCTOS',

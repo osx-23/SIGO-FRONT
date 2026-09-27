@@ -270,12 +270,21 @@
                           >
                             <option [ngValue]="null">-</option>
 
-                            @for(ubicacion of ubicaciones; track ubicacion.id){
+                            @for(ubicacion of ubicacionesParaTurno(p.estado, p.programacionId); track ubicacion.id){
                               <option
                                 [ngValue]="ubicacion.id"
-                                [disabled]="!ubicacion.activo"
+                                [disabled]="
+                                  !ubicacion.activo ||
+                                  !ubicacionHabilitadaParaTurno(ubicacion, p.estado)
+                                "
                               >
-                                {{ ubicacion.codigo }}{{ !ubicacion.activo ? ' · Inactiva' : '' }}
+                                {{ ubicacion.codigo }}
+                                @if(!ubicacion.activo){
+                                  · Inactiva
+                                }
+                                @else if(!ubicacionHabilitadaParaTurno(ubicacion, p.estado)){
+                                  · No habilitada para {{ p.estado }}
+                                }
                               </option>
                             }
                           </select>
@@ -327,19 +336,59 @@
         </p>
       </div>
 
-      <div class="coverage-legend">
-        <span><i class="legend-dot complete"></i> Completa</span>
-        <span><i class="legend-dot partial"></i> Parcial</span>
-        <span><i class="legend-dot missing"></i> Sin asignar</span>
-        <span><i class="legend-dot inactive"></i> Sin operación</span>
+      <div class="coverage-head-actions">
+        <div class="coverage-filter">
+          <span>Turno</span>
+
+          <div class="coverage-filter-buttons">
+            <button
+              type="button"
+              [class.active]="filtroTurnoCobertura === 'TODOS'"
+              (click)="cambiarFiltroTurnoCobertura('TODOS')"
+            >
+              Todos
+            </button>
+
+            <button
+              type="button"
+              [class.active]="filtroTurnoCobertura === 'A'"
+              (click)="cambiarFiltroTurnoCobertura('A')"
+            >
+              A
+            </button>
+
+            <button
+              type="button"
+              [class.active]="filtroTurnoCobertura === 'B'"
+              (click)="cambiarFiltroTurnoCobertura('B')"
+            >
+              B
+            </button>
+
+            <button
+              type="button"
+              [class.active]="filtroTurnoCobertura === 'C'"
+              (click)="cambiarFiltroTurnoCobertura('C')"
+            >
+              C
+            </button>
+          </div>
+        </div>
+
+        <div class="coverage-legend">
+          <span><i class="legend-dot complete"></i> Completa</span>
+          <span><i class="legend-dot partial"></i> Parcial</span>
+          <span><i class="legend-dot missing"></i> Sin asignar</span>
+          <span><i class="legend-dot inactive"></i> Sin operación</span>
+        </div>
       </div>
     </div>
 
     @if(cargandoCobertura){
       <div class="empty">Cargando cobertura...</div>
     }
-    @else if(ubicaciones.length === 0){
-      <div class="empty">No existen casetas configuradas para esta plaza.</div>
+    @else if(ubicacionesCobertura.length === 0){
+      <div class="empty">No existen casetas habilitadas para el turno seleccionado.</div>
     }
     @else{
       <div
@@ -365,7 +414,7 @@
           </thead>
 
           <tbody>
-            @for(ubicacion of ubicaciones; track ubicacion.id){
+            @for(ubicacion of ubicacionesCobertura; track ubicacion.id){
               <tr>
                 <td class="sticky-code coverage-code">
                   {{ ubicacion.codigo }}
@@ -718,6 +767,12 @@
                         <span>
                           {{ ubicacion.tipo }} · Orden {{ ubicacion.orden }}
                         </span>
+
+                        <div class="location-turns">
+                          <span [class.enabled]="ubicacion.permiteTurnoA">A</span>
+                          <span [class.enabled]="ubicacion.permiteTurnoB">B</span>
+                          <span [class.enabled]="ubicacion.permiteTurnoC">C</span>
+                        </div>
                       </div>
                     </div>
 
@@ -810,8 +865,39 @@
                 </label>
               </div>
 
+              <div class="turn-config">
+                <span class="turn-config-title">Turnos habilitados</span>
+
+                <label class="turn-check">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="ubicacionPermiteTurnoA"
+                  >
+                  <span>Turno A</span>
+                </label>
+
+                <label class="turn-check">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="ubicacionPermiteTurnoB"
+                  >
+                  <span>Turno B</span>
+                </label>
+
+                <label class="turn-check">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="ubicacionPermiteTurnoC"
+                  >
+                  <span>Turno C</span>
+                </label>
+              </div>
+
               <div class="location-form-note">
                 Si dejas el orden vacío al crear una ubicación, se colocará al final.
+                Para AUXILIAR y APOYO el orden también define la secuencia obligatoria:
+                no se puede usar una ubicación posterior si falta una anterior habilitada
+                para ese mismo turno.
               </div>
 
               <div class="location-form-actions">

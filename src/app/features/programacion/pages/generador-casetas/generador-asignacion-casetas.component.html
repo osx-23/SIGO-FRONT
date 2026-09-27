@@ -1,0 +1,652 @@
+<div class="generator-page">
+
+  <header class="hero-card">
+    <div>
+      <span class="eyebrow">
+        Programación · Supervisor
+      </span>
+
+      <h1>
+        Generador de asignación de casetas
+      </h1>
+
+      <p>
+        Distribuye automáticamente las casetas respetando restricciones,
+        máximos de uso y equilibrio entre casetas de alto y bajo flujo.
+      </p>
+    </div>
+
+    <div class="hero-badge">
+      <span>Modo</span>
+      <strong>Propuesta antes de guardar</strong>
+    </div>
+  </header>
+
+  @if (error) {
+    <div class="alert error">
+      {{ error }}
+    </div>
+  }
+
+  @if (mensaje) {
+    <div class="alert success">
+      {{ mensaje }}
+    </div>
+  }
+
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <span class="eyebrow">
+          Generación
+        </span>
+
+        <h2>
+          Periodo de trabajo
+        </h2>
+      </div>
+    </div>
+
+    <div class="filters-grid">
+
+      <label class="field">
+        <span>Plaza</span>
+
+        <select
+          [(ngModel)]="plazaId"
+          (ngModelChange)="cambiarPlaza()"
+          [disabled]="cargando"
+        >
+          @for (
+            plaza of plazas;
+            track plaza.id
+          ) {
+            <option
+              [ngValue]="plaza.id"
+            >
+              {{ plaza.codigo }}
+            </option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Mes</span>
+
+        <input
+          type="month"
+          [(ngModel)]="periodoMes"
+          (ngModelChange)="propuesta = null"
+        >
+      </label>
+
+      <div class="field">
+        <span>Periodo</span>
+
+        <div class="segmented">
+          <button
+            type="button"
+            [class.active]="tipoPeriodo === 'SEMANA'"
+            (click)="cambiarPeriodo('SEMANA')"
+          >
+            Semana
+          </button>
+
+          <button
+            type="button"
+            [class.active]="tipoPeriodo === 'MES'"
+            (click)="cambiarPeriodo('MES')"
+          >
+            Mes completo
+          </button>
+        </div>
+      </div>
+
+      @if (tipoPeriodo === 'SEMANA') {
+        <label class="field">
+          <span>Semana</span>
+
+          <select
+            [(ngModel)]="semana"
+            (ngModelChange)="propuesta = null"
+          >
+            <option [ngValue]="1">Semana 1 · 01-07</option>
+            <option [ngValue]="2">Semana 2 · 08-14</option>
+            <option [ngValue]="3">Semana 3 · 15-21</option>
+            <option [ngValue]="4">Semana 4 · 22-28</option>
+            <option [ngValue]="5">Semana 5 · 29-fin</option>
+          </select>
+        </label>
+      }
+
+    </div>
+
+    <div class="metrics">
+      <article>
+        <span>Agentes</span>
+        <strong>{{ agentes.length }}</strong>
+      </article>
+
+      <article class="high">
+        <span>Alto flujo</span>
+        <strong>{{ totalAltoFlujo() }}</strong>
+      </article>
+
+      <article class="low">
+        <span>Bajo flujo</span>
+        <strong>{{ totalBajoFlujo() }}</strong>
+      </article>
+
+      <article
+        [class.warning]="totalSinClasificar() > 0"
+      >
+        <span>Sin clasificar</span>
+        <strong>{{ totalSinClasificar() }}</strong>
+      </article>
+
+      <article>
+        <span>Restricciones</span>
+        <strong>{{ restricciones.length }}</strong>
+      </article>
+    </div>
+
+    <div class="generation-actions">
+      <button
+        type="button"
+        class="primary"
+        (click)="generar()"
+        [disabled]="generando || cargando || !plazaId"
+      >
+        {{
+          generando
+            ? 'Generando...'
+            : 'Generar distribución'
+        }}
+      </button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <span class="eyebrow">
+          Reglas generales
+        </span>
+
+        <h2>
+          Límites de la plaza
+        </h2>
+
+        <p>
+          Se aplican como valor predeterminado. Una caseta puede tener
+          límites propios.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="secondary"
+        (click)="guardarConfiguracion()"
+        [disabled]="guardandoConfiguracion || !plazaId"
+      >
+        {{
+          guardandoConfiguracion
+            ? 'Guardando...'
+            : 'Guardar reglas'
+        }}
+      </button>
+    </div>
+
+    <div class="rules-grid">
+
+      <label class="field">
+        <span>Máx. misma caseta / semana</span>
+
+        <input
+          type="number"
+          min="1"
+          [(ngModel)]="
+            configuracion.maxMismaCasetaSemana
+          "
+        >
+      </label>
+
+      <label class="field">
+        <span>Máx. misma caseta / mes</span>
+
+        <input
+          type="number"
+          min="1"
+          [(ngModel)]="
+            configuracion.maxMismaCasetaMes
+          "
+        >
+      </label>
+
+      <label class="field">
+        <span>Máx. días consecutivos</span>
+
+        <input
+          type="number"
+          min="1"
+          [(ngModel)]="
+            configuracion.maxConsecutivos
+          "
+        >
+      </label>
+
+      <label class="toggle-card">
+        <input
+          type="checkbox"
+          [(ngModel)]="
+            configuracion.balancearFlujo
+          "
+        >
+
+        <span>
+          <strong>
+            Balancear alto / bajo flujo
+          </strong>
+
+          <small>
+            Evita que un agente permanezca siempre en el mismo nivel de carga.
+          </small>
+        </span>
+      </label>
+
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <span class="eyebrow">
+          Clasificación
+        </span>
+
+        <h2>
+          Casetas por nivel de flujo
+        </h2>
+
+        <p>
+          Configura el grupo y, si es necesario, un máximo diferente para
+          una caseta específica.
+        </p>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="config-table">
+        <thead>
+          <tr>
+            <th>Caseta</th>
+            <th>Grupo</th>
+            <th>Máx. semana</th>
+            <th>Máx. mes</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (
+            caseta of casetas;
+            track caseta.ubicacionId
+          ) {
+            <tr
+              [class.inactive]="!caseta.activo"
+            >
+              <td>
+                <strong>
+                  {{ caseta.codigo }}
+                </strong>
+
+                <small>
+                  {{ caseta.nombre }}
+                </small>
+              </td>
+
+              <td>
+                <select
+                  [(ngModel)]="
+                    caseta.grupoFlujo
+                  "
+                >
+                  <option value="ALTO_FLUJO">
+                    Alto flujo
+                  </option>
+
+                  <option value="BAJO_FLUJO">
+                    Bajo flujo
+                  </option>
+
+                  <option value="SIN_CLASIFICAR">
+                    Sin clasificar
+                  </option>
+                </select>
+              </td>
+
+              <td>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="General"
+                  [(ngModel)]="
+                    caseta.maxSemana
+                  "
+                >
+              </td>
+
+              <td>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="General"
+                  [(ngModel)]="
+                    caseta.maxMes
+                  "
+                >
+              </td>
+
+              <td>
+                <button
+                  type="button"
+                  class="secondary compact"
+                  (click)="guardarCaseta(caseta)"
+                >
+                  Guardar
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <span class="eyebrow">
+          Excepciones
+        </span>
+
+        <h2>
+          Restricciones por agente
+        </h2>
+
+        <p>
+          Por defecto todos pueden usar todas las casetas. Registra únicamente
+          las casetas a las que un agente no puede ingresar.
+        </p>
+      </div>
+    </div>
+
+    <div class="restriction-form">
+      <label class="field">
+        <span>Agente</span>
+
+        <select
+          [(ngModel)]="
+            nuevaRestriccionAgenteId
+          "
+        >
+          <option [ngValue]="null">
+            Seleccionar agente
+          </option>
+
+          @for (
+            agente of agentes;
+            track agente.id
+          ) {
+            <option
+              [ngValue]="agente.id"
+            >
+              {{ agente.codigo }} ·
+              {{ agente.nombreCompleto }}
+            </option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Caseta restringida</span>
+
+        <select
+          [(ngModel)]="
+            nuevaRestriccionUbicacionId
+          "
+        >
+          <option [ngValue]="null">
+            Seleccionar caseta
+          </option>
+
+          @for (
+            caseta of casetas;
+            track caseta.ubicacionId
+          ) {
+            @if (caseta.activo) {
+              <option
+                [ngValue]="caseta.ubicacionId"
+              >
+                {{ caseta.codigo }} ·
+                {{ caseta.nombre }}
+              </option>
+            }
+          }
+        </select>
+      </label>
+
+      <label class="field reason">
+        <span>Motivo</span>
+
+        <input
+          type="text"
+          maxlength="250"
+          placeholder="Opcional"
+          [(ngModel)]="
+            nuevaRestriccionMotivo
+          "
+        >
+      </label>
+
+      <button
+        type="button"
+        class="primary"
+        (click)="agregarRestriccion()"
+        [disabled]="
+          guardandoRestriccion ||
+          !nuevaRestriccionAgenteId ||
+          !nuevaRestriccionUbicacionId
+        "
+      >
+        Agregar
+      </button>
+    </div>
+
+    @if (!restricciones.length) {
+      <div class="empty-state">
+        No hay restricciones configuradas para esta plaza.
+      </div>
+    } @else {
+      <div class="restriction-list">
+        @for (
+          restriccion of restricciones;
+          track restriccion.id
+        ) {
+          <article>
+            <div>
+              <strong>
+                {{ restriccion.codigoTrabajador }} ·
+                {{ restriccion.trabajador }}
+              </strong>
+
+              <span>
+                No puede usar
+                <b>
+                  {{ restriccion.ubicacionCodigo }}
+                </b>
+              </span>
+
+              @if (restriccion.motivo) {
+                <small>
+                  {{ restriccion.motivo }}
+                </small>
+              }
+            </div>
+
+            <button
+              type="button"
+              class="danger-link"
+              (click)="
+                eliminarRestriccion(
+                  restriccion
+                )
+              "
+            >
+              Quitar
+            </button>
+          </article>
+        }
+      </div>
+    }
+  </section>
+
+  @if (propuesta) {
+    <section class="panel proposal-panel">
+      <div class="panel-title">
+        <div>
+          <span class="eyebrow">
+            Vista previa
+          </span>
+
+          <h2>
+            Distribución propuesta
+          </h2>
+
+          <p>
+            {{ fechaCorta(propuesta.desde) }}
+            —
+            {{ fechaCorta(propuesta.hasta) }}
+            ·
+            {{ propuesta.asignaciones.length }}
+            asignaciones
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="primary"
+          (click)="guardarPropuesta()"
+          [disabled]="
+            guardandoPropuesta ||
+            !propuesta.asignaciones.length
+          "
+        >
+          {{
+            guardandoPropuesta
+              ? 'Guardando...'
+              : 'Guardar distribución'
+          }}
+        </button>
+      </div>
+
+      @if (propuesta.conflictos.length) {
+        <div class="conflict-box">
+          <strong>
+            {{
+              propuesta.conflictos.length
+            }}
+            observación(es)
+          </strong>
+
+          @for (
+            conflicto of propuesta.conflictos;
+            track conflicto.programacionTurnoId
+          ) {
+            <p>
+              {{ fechaCorta(conflicto.fecha) }}
+              ·
+              {{ conflicto.trabajador }}
+              · Turno {{ conflicto.turno }}:
+              {{ conflicto.mensaje }}
+            </p>
+          }
+        </div>
+      }
+
+      <div class="table-scroll preview-scroll">
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Turno</th>
+              <th>Agente</th>
+              <th>Caseta</th>
+              <th>Flujo</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (
+              item of propuesta.asignaciones;
+              track item.programacionTurnoId
+            ) {
+              <tr>
+                <td>
+                  {{ fechaCorta(item.fecha) }}
+                </td>
+
+                <td>
+                  <span
+                    class="turn-badge"
+                    [attr.data-turno]="item.turno"
+                  >
+                    {{ item.turno }}
+                  </span>
+                </td>
+
+                <td>
+                  <strong>
+                    {{ item.codigoTrabajador }}
+                  </strong>
+                  ·
+                  {{ item.trabajador }}
+                </td>
+
+                <td>
+                  <strong>
+                    {{ item.ubicacionCodigo }}
+                  </strong>
+                  <small>
+                    {{ item.ubicacionNombre }}
+                  </small>
+                </td>
+
+                <td>
+                  <span
+                    class="flow-chip"
+                    [class.high]="
+                      item.grupoFlujo ===
+                      'ALTO_FLUJO'
+                    "
+                    [class.low]="
+                      item.grupoFlujo ===
+                      'BAJO_FLUJO'
+                    "
+                  >
+                    {{
+                      grupoTexto(
+                        item.grupoFlujo
+                      )
+                    }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+</div>

@@ -5,6 +5,14 @@ import { environment } from '../../../../environments/environment';
 import {
   AgenteProgramacionExcepcion,
   AgenteProgramacionExcepcionRequest,
+  CasetaConfiguracion,
+  ConfiguracionAsignacionCaseta,
+  GeneradorCasetasPropuesta,
+  GenerarCasetasRequest,
+  GuardarCasetaConfiguracionRequest,
+  GuardarConfiguracionAsignacionCasetaRequest,
+  GuardarRestriccionCasetaRequest,
+  RestriccionCaseta,
   AsignarSecuenciaRequest,
   CoberturaUbicacion,
   DistribucionDia,
@@ -284,5 +292,77 @@ export class ProgramacionApiService {
     return this.http.delete<void>(`${this.api}/programacion/excepciones/agente/${trabajadorId}`, {
       params: new HttpParams().set('plazaId', plazaId)
     });
+  }
+
+  getConfiguracionGeneradorCasetas(
+    plazaId: number
+  ): Observable<ConfiguracionAsignacionCaseta> {
+    return this.http.get<ConfiguracionAsignacionCaseta>(
+      `${this.api}/distribucion/generador/configuracion`,
+      { params: new HttpParams().set('plazaId', plazaId) }
+    );
+  }
+
+  guardarConfiguracionGeneradorCasetas(
+    request: GuardarConfiguracionAsignacionCasetaRequest
+  ): Observable<ConfiguracionAsignacionCaseta> {
+    return this.http.put<ConfiguracionAsignacionCaseta>(
+      `${this.api}/distribucion/generador/configuracion`,
+      request
+    );
+  }
+
+  getCasetasGenerador(
+    plazaId: number
+  ): Observable<CasetaConfiguracion[]> {
+    return this.http.get<CasetaConfiguracion[]>(
+      `${this.api}/distribucion/generador/casetas`,
+      { params: new HttpParams().set('plazaId', plazaId) }
+    );
+  }
+
+  guardarCasetaGenerador(
+    ubicacionId: number,
+    request: GuardarCasetaConfiguracionRequest
+  ): Observable<CasetaConfiguracion> {
+    return this.http.put<CasetaConfiguracion>(
+      `${this.api}/distribucion/generador/casetas/${ubicacionId}`,
+      request
+    );
+  }
+
+  getRestriccionesCasetas(
+    plazaId: number
+  ): Observable<RestriccionCaseta[]> {
+    return this.http.get<RestriccionCaseta[]>(
+      `${this.api}/distribucion/generador/restricciones`,
+      { params: new HttpParams().set('plazaId', plazaId) }
+    );
+  }
+
+  guardarRestriccionCaseta(
+    request: GuardarRestriccionCasetaRequest
+  ): Observable<RestriccionCaseta> {
+    return this.http.put<RestriccionCaseta>(
+      `${this.api}/distribucion/generador/restricciones`,
+      request
+    );
+  }
+
+  eliminarRestriccionCaseta(
+    restriccionId: number
+  ): Observable<void> {
+    return this.http.delete<void>(
+      `${this.api}/distribucion/generador/restricciones/${restriccionId}`
+    );
+  }
+
+  generarPropuestaCasetas(
+    request: GenerarCasetasRequest
+  ): Observable<GeneradorCasetasPropuesta> {
+    return this.http.post<GeneradorCasetasPropuesta>(
+      `${this.api}/distribucion/generador/propuesta`,
+      request
+    );
   }
 }

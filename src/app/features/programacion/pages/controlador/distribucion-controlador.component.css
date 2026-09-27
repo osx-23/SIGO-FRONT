@@ -2185,3 +2185,135 @@ th.sticky-name{
     max-height:360px;
   }
 }
+
+
+/* =========================================================
+   Búsqueda de agentes para nuevas restricciones
+   ========================================================= */
+
+.restriction-new-body{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:16px;
+  overflow:auto;
+}
+
+.restriction-agent-results{
+  display:grid;
+  gap:7px;
+  max-height:220px;
+  overflow-y:auto;
+  padding-right:2px;
+  scrollbar-gutter:stable;
+}
+
+.restriction-agent-option{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  width:100%;
+  padding:10px 12px;
+  border:1px solid #dbe3ec;
+  border-radius:9px;
+  background:#fff;
+  color:#334155;
+  text-align:left;
+  cursor:pointer;
+}
+
+.restriction-agent-option:hover{
+  border-color:#93c5fd;
+  background:#eff6ff;
+}
+
+.restriction-agent-option.selected{
+  border-color:#60a5fa;
+  background:#dbeafe;
+}
+
+.restriction-agent-option strong{
+  min-width:0;
+  overflow:hidden;
+  color:#1e293b;
+  font-size:.7rem;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.restriction-agent-option span{
+  flex:0 0 auto;
+  color:#2563eb;
+  font-size:.62rem;
+  font-weight:800;
+}
+
+.restriction-search-hint{
+  padding:16px;
+  border:1px dashed #cbd5e1;
+  border-radius:9px;
+  color:#64748b;
+  font-size:.68rem;
+  text-align:center;
+}
+
+.restriction-selected-agent{
+  display:grid;
+  gap:4px;
+  padding:10px 12px;
+  border:1px solid #bfdbfe;
+  border-radius:9px;
+  background:#eff6ff;
+}
+
+.restriction-selected-agent span{
+  color:#64748b;
+  font-size:.6rem;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+
+.restriction-selected-agent strong{
+  color:#1d4ed8;
+  font-size:.72rem;
+}
+
+.restriction-field{
+  display:grid;
+  gap:6px;
+  color:#475569;
+  font-size:.66rem;
+  font-weight:800;
+}
+
+.restriction-field select,
+.restriction-field input{
+  width:100%;
+  min-height:40px;
+  padding:8px 10px;
+  border:1px solid #cbd5e1;
+  border-radius:9px;
+  background:#fff;
+  color:#172033;
+  font:inherit;
+  font-size:.74rem;
+}
+
+.restriction-field select:disabled,
+.restriction-field input:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+@media(max-width:560px){
+  .restriction-agent-option{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .restriction-agent-option strong{
+    white-space:normal;
+  }
+}

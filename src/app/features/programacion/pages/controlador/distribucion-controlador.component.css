@@ -1113,9 +1113,10 @@ th.sticky-name{
 }
 
 .locations-modal{
-  width:min(1040px,100%);
-  max-height:min(88vh,820px);
-  overflow:hidden;
+  width:min(1180px,calc(100vw - 32px));
+  max-height:min(92vh,900px);
+  overflow-x:hidden;
+  overflow-y:auto;
   border:1px solid #e2e8f0;
   border-radius:18px;
   background:#fff;
@@ -1238,11 +1239,10 @@ th.sticky-name{
 
 .locations-grid{
   display:grid;
-  grid-template-columns:minmax(0,1.3fr) minmax(300px,.7fr);
+  grid-template-columns:minmax(0,1.45fr) minmax(320px,.55fr);
   gap:0;
   min-height:430px;
-  max-height:610px;
-  overflow:hidden;
+  overflow:visible;
 }
 
 .locations-list-panel,
@@ -1294,14 +1294,17 @@ th.sticky-name{
 
 .locations-list{
   flex:1;
-  overflow:auto;
+  max-height:480px;
+  overflow-x:hidden;
+  overflow-y:auto;
   padding:8px;
   background:#f8fafc;
+  scrollbar-gutter:stable;
 }
 
 .location-item{
   display:grid;
-  grid-template-columns:minmax(0,1fr) auto auto;
+  grid-template-columns:minmax(0,1fr) minmax(118px,150px) auto auto;
   align-items:center;
   gap:10px;
   margin-bottom:7px;
@@ -1819,6 +1822,201 @@ th.sticky-name{
 @media (max-width: 900px){
   .coverage-head-actions{
     align-items:flex-start;
+    width:100%;
+  }
+}
+
+
+/* =========================================================
+   Configuración avanzada de casetas dentro del modal
+   ========================================================= */
+
+.location-flow{
+  min-width:118px;
+}
+
+.location-flow label{
+  display:grid;
+  gap:4px;
+  color:#64748b;
+  font-size:.58rem;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+
+.location-flow select{
+  width:100%;
+  min-height:32px;
+  padding:5px 8px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  background:#fff;
+  color:#334155;
+  font:inherit;
+  font-size:.66rem;
+  font-weight:750;
+}
+
+.location-flow small{
+  display:block;
+  margin-top:3px;
+  color:#2563eb;
+  font-size:.58rem;
+  font-weight:800;
+}
+
+.modal-restrictions-section{
+  border-top:1px solid #e2e8f0;
+  background:#fff;
+}
+
+.restrictions-head{
+  position:relative;
+}
+
+.restriction-config-form{
+  display:grid;
+  grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) minmax(220px,1.35fr) auto;
+  gap:10px;
+  align-items:end;
+  padding:14px 16px;
+  border-bottom:1px solid #edf2f7;
+  background:#f8fafc;
+}
+
+.restriction-config-form label{
+  display:grid;
+  gap:6px;
+  color:#475569;
+  font-size:.66rem;
+  font-weight:800;
+}
+
+.restriction-config-form select,
+.restriction-config-form input{
+  width:100%;
+  min-height:38px;
+  padding:7px 9px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  background:#fff;
+  color:#172033;
+  font:inherit;
+  font-size:.72rem;
+}
+
+.restriction-add{
+  min-height:38px;
+  white-space:nowrap;
+}
+
+.modal-restrictions-list{
+  display:grid;
+  gap:7px;
+  max-height:260px;
+  overflow-y:auto;
+  padding:10px 16px 16px;
+  scrollbar-gutter:stable;
+}
+
+.modal-restrictions-list article{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:10px 12px;
+  border:1px solid #e2e8f0;
+  border-radius:9px;
+  background:#fff;
+}
+
+.modal-restrictions-list article > div{
+  min-width:0;
+  display:grid;
+  gap:3px;
+}
+
+.modal-restrictions-list strong{
+  color:#1e293b;
+  font-size:.7rem;
+}
+
+.modal-restrictions-list span,
+.modal-restrictions-list small{
+  color:#64748b;
+  font-size:.64rem;
+}
+
+.restrictions-empty{
+  min-height:90px;
+}
+
+@media(max-width:980px){
+  .location-item{
+    grid-template-columns:minmax(0,1fr) minmax(110px,140px);
+  }
+
+  .location-status,
+  .location-actions{
+    justify-self:start;
+  }
+
+  .restriction-config-form{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .restriction-reason{
+    grid-column:1 / -1;
+  }
+
+  .restriction-add{
+    justify-self:start;
+  }
+}
+
+@media(max-width:800px){
+  .locations-modal{
+    width:min(100%,calc(100vw - 16px));
+    max-height:94vh;
+  }
+
+  .locations-grid{
+    max-height:none;
+  }
+
+  .locations-list{
+    max-height:360px;
+  }
+
+  .restriction-config-form{
+    grid-template-columns:1fr;
+  }
+
+  .restriction-reason{
+    grid-column:auto;
+  }
+
+  .restriction-add{
+    width:100%;
+  }
+}
+
+@media(max-width:560px){
+  .location-item{
+    grid-template-columns:1fr;
+  }
+
+  .location-flow{
+    width:100%;
+  }
+
+  .modal-restrictions-list article{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .modal-restrictions-list article button{
     width:100%;
   }
 }

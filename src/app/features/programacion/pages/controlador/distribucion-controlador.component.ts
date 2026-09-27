@@ -29,7 +29,10 @@ import {
   TrabajadorResumen,
   Ubicacion,
   GeneradorCasetasPropuesta,
-  TipoPeriodoCaseta
+  TipoPeriodoCaseta,
+  CasetaConfiguracion,
+  GrupoFlujoCaseta,
+  RestriccionCaseta
 } from '../../models/programacion.models';
 
 import {
@@ -137,7 +140,33 @@ export class DistribucionControladorComponent
 
   ubicacionesConfiguracion: Ubicacion[] = [];
 
+  casetasGeneradorConfiguracion:
+    CasetaConfiguracion[] = [];
+
+  restriccionesCasetaConfiguracion:
+    RestriccionCaseta[] = [];
+
+  agentesRestriccionConfiguracion:
+    TrabajadorResumen[] = [];
+
+  nuevaRestriccionAgenteId:
+    number | null = null;
+
+  nuevaRestriccionUbicacionId:
+    number | null = null;
+
+  nuevaRestriccionMotivo = '';
+
   cargandoConfiguracion = false;
+
+  guardandoFlujoUbicacionId:
+    number | null = null;
+
+  guardandoRestriccionConfiguracion =
+    false;
+
+  eliminandoRestriccionId:
+    number | null = null;
 
   guardandoUbicacion = false;
 
@@ -1528,6 +1557,7 @@ export class DistribucionControladorComponent
       '';
 
     this.resetFormularioUbicacion();
+    this.resetFormularioRestriccionConfiguracion();
 
     this.cdr.detectChanges();
 
@@ -1554,6 +1584,7 @@ export class DistribucionControladorComponent
       '';
 
     this.resetFormularioUbicacion();
+    this.resetFormularioRestriccionConfiguracion();
 
     this.cdr.detectChanges();
   }
@@ -1576,6 +1607,7 @@ export class DistribucionControladorComponent
       '';
 
     this.resetFormularioUbicacion();
+    this.resetFormularioRestriccionConfiguracion();
 
     this.cargarConfiguracionUbicaciones();
   }
@@ -1587,18 +1619,34 @@ export class DistribucionControladorComponent
       !this.configPlazaId ||
       !this.modalUbicacionesAbierto
     ) {
-      this.ubicacionesConfiguracion =
-        [];
+      this.ubicacionesConfiguracion = [];
+      this.casetasGeneradorConfiguracion = [];
+      this.restriccionesCasetaConfiguracion = [];
+      this.agentesRestriccionConfiguracion = [];
       return;
     }
 
     this.cargandoConfiguracion =
       true;
 
-    this.api
-      .getUbicacionesConfiguracion(
-        this.configPlazaId
-      )
+    forkJoin({
+      ubicaciones:
+        this.api.getUbicacionesConfiguracion(
+          this.configPlazaId
+        ),
+      casetas:
+        this.api.getCasetasGenerador(
+          this.configPlazaId
+        ),
+      restricciones:
+        this.api.getRestriccionesCasetas(
+          this.configPlazaId
+        ),
+      agentes:
+        this.api.getAgentes(
+          this.configPlazaId
+        )
+    })
       .pipe(
         finalize(() => {
           this.cargandoConfiguracion =
@@ -1607,22 +1655,288 @@ export class DistribucionControladorComponent
         })
       )
       .subscribe({
-        next: (ubicaciones) => {
+        next: (resultado) => {
           this.ubicacionesConfiguracion =
-            [...ubicaciones];
+            [...resultado.ubicaciones];
+
+          this.casetasGeneradorConfiguracion =
+            [...resultado.casetas];
+
+          this.restriccionesCasetaConfiguracion =
+            [...resultado.restricciones];
+
+          this.agentesRestriccionConfiguracion =
+            [...resultado.agentes];
+
           this.cdr.detectChanges();
         },
         error: (e) => {
-          this.ubicacionesConfiguracion =
-            [];
+          this.ubicacionesConfiguracion = [];
+          this.casetasGeneradorConfiguracion = [];
+          this.restriccionesCasetaConfiguracion = [];
+          this.agentesRestriccionConfiguracion = [];
+
           this.errorConfiguracion =
             this.mensajeError(
               e,
-              'No se pudieron cargar las casetas de la plaza.'
+              'No se pudo cargar la configuración completa de casetas.'
             );
+
           this.cdr.detectChanges();
         }
       });
+  }
+
+
+  configuracionFlujoUbicacion(
+    ubicacionId: number
+  ): CasetaConfiguracion | null {
+
+    return (
+      this.casetasGeneradorConfiguracion
+        .find(
+          item =>
+            item.ubicacionId === ubicacionId
+        ) ??
+      null
+    );
+  }
+
+
+  guardarGrupoFlujoUbicacion(
+    ubicacionId: number,
+    grupoFlujo: GrupoFlujoCaseta
+  ): void {
+
+    if (
+      !this.configPlazaId ||
+      this.guardandoFlujoUbicacionId !== null
+    ) {
+      return;
+    }
+
+    const actual =
+      this.configuracionFlujoUbicacion(
+        ubicacionId
+      );
+
+    this.guardandoFlujoUbicacionId =
+      ubicacionId;
+
+    this.errorConfiguracion = '';
+    this.mensajeConfiguracion = '';
+
+    this.api
+      .guardarCasetaGenerador(
+        ubicacionId,
+        {
+          plazaId: this.configPlazaId,
+          grupoFlujo,
+          maxSemana:
+            actual?.maxSemana ?? null,
+          maxMes:
+            actual?.maxMes ?? null
+        }
+      )
+      .pipe(
+        finalize(() => {
+          this.guardandoFlujoUbicacionId =
+            null;
+          this.cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: (guardada) => {
+
+          const index =
+            this.casetasGeneradorConfiguracion
+              .findIndex(
+                item =>
+                  item.ubicacionId ===
+                  guardada.ubicacionId
+              );
+
+          if (index >= 0) {
+            this.casetasGeneradorConfiguracion = [
+              ...this.casetasGeneradorConfiguracion
+                .slice(0, index),
+              guardada,
+              ...this.casetasGeneradorConfiguracion
+                .slice(index + 1)
+            ];
+          }
+          else {
+            this.casetasGeneradorConfiguracion = [
+              ...this.casetasGeneradorConfiguracion,
+              guardada
+            ];
+          }
+
+          this.mensajeConfiguracion =
+            `Flujo de ${guardada.codigo} actualizado.`;
+
+          this.cdr.detectChanges();
+        },
+        error: (e) => {
+          this.errorConfiguracion =
+            this.mensajeError(
+              e,
+              'No se pudo actualizar el nivel de flujo.'
+            );
+
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+
+  agregarRestriccionCasetaConfiguracion(): void {
+
+    if (
+      !this.configPlazaId ||
+      !this.nuevaRestriccionAgenteId ||
+      !this.nuevaRestriccionUbicacionId
+    ) {
+      this.errorConfiguracion =
+        'Selecciona un agente y una caseta restringida.';
+      return;
+    }
+
+    this.guardandoRestriccionConfiguracion =
+      true;
+
+    this.errorConfiguracion = '';
+    this.mensajeConfiguracion = '';
+
+    this.api
+      .guardarRestriccionCaseta({
+        plazaId:
+          this.configPlazaId,
+        trabajadorId:
+          this.nuevaRestriccionAgenteId,
+        ubicacionId:
+          this.nuevaRestriccionUbicacionId,
+        motivo:
+          this.nuevaRestriccionMotivo
+            .trim() || null,
+        activo:
+          true
+      })
+      .pipe(
+        finalize(() => {
+          this.guardandoRestriccionConfiguracion =
+            false;
+          this.cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: () => {
+
+          this.api
+            .getRestriccionesCasetas(
+              this.configPlazaId!
+            )
+            .subscribe({
+              next: (restricciones) => {
+                this.restriccionesCasetaConfiguracion =
+                  [...restricciones];
+
+                this.resetFormularioRestriccionConfiguracion();
+
+                this.mensajeConfiguracion =
+                  'Restricción agregada correctamente.';
+
+                this.cdr.detectChanges();
+              },
+              error: (e) => {
+                this.errorConfiguracion =
+                  this.mensajeError(
+                    e,
+                    'La restricción se guardó, pero no se pudo refrescar la lista.'
+                  );
+
+                this.cdr.detectChanges();
+              }
+            });
+        },
+        error: (e) => {
+          this.errorConfiguracion =
+            this.mensajeError(
+              e,
+              'No se pudo guardar la restricción.'
+            );
+
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+
+  eliminarRestriccionCasetaConfiguracion(
+    restriccion: RestriccionCaseta
+  ): void {
+
+    if (
+      this.eliminandoRestriccionId !== null
+    ) {
+      return;
+    }
+
+    this.eliminandoRestriccionId =
+      restriccion.id;
+
+    this.errorConfiguracion = '';
+    this.mensajeConfiguracion = '';
+
+    this.api
+      .eliminarRestriccionCaseta(
+        restriccion.id
+      )
+      .pipe(
+        finalize(() => {
+          this.eliminandoRestriccionId =
+            null;
+          this.cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.restriccionesCasetaConfiguracion =
+            this.restriccionesCasetaConfiguracion
+              .filter(
+                item =>
+                  item.id !==
+                  restriccion.id
+              );
+
+          this.mensajeConfiguracion =
+            'Restricción eliminada.';
+
+          this.cdr.detectChanges();
+        },
+        error: (e) => {
+          this.errorConfiguracion =
+            this.mensajeError(
+              e,
+              'No se pudo eliminar la restricción.'
+            );
+
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+
+  private resetFormularioRestriccionConfiguracion(): void {
+
+    this.nuevaRestriccionAgenteId =
+      null;
+
+    this.nuevaRestriccionUbicacionId =
+      null;
+
+    this.nuevaRestriccionMotivo =
+      '';
   }
 
 

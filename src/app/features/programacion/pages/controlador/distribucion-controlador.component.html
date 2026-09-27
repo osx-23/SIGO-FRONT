@@ -2,11 +2,11 @@
 
   <header class="page-head">
     <div>
-      <span class="eyebrow">DISTRIBUCIÓN</span>
+      <span class="eyebrow">CONTROLADOR · DISTRIBUCIÓN</span>
       <h1>Asignación diaria de casetas</h1>
       <p>
-        Los turnos son definidos por el Supervisor.
-        Aquí se asigna únicamente la ubicación diaria de cada agente.
+        Asigna casetas por día y turno. La tabla de agentes y la cobertura
+        se desplazan juntas para mantener siempre los mismos días visibles.
       </p>
     </div>
 
@@ -36,7 +36,7 @@
         (click)="guardar()"
         [disabled]="guardando || cambios.size === 0"
       >
-        {{ guardando ? 'Guardando...' : 'Guardar distribución' }}
+        {{ guardando ? 'Guardando...' : 'Guardar cambios' }}
 
         @if(cambios.size > 0){
           <span class="badge">{{ cambios.size }}</span>
@@ -46,54 +46,92 @@
   </header>
 
 
-  <!-- FILTROS -->
-  <section class="filters">
+  <!-- ===================================================== -->
+  <!-- FILTROS PRINCIPALES -->
+  <!-- ===================================================== -->
 
-    @if(esSupervisor){
-      <label>
-        Plaza
-        <select
-          [(ngModel)]="plazaId"
-          (ngModelChange)="cargar()"
-        >
-          @for(plaza of plazas; track plaza.id){
-            <option [ngValue]="plaza.id">
-              {{ plaza.codigo }}
-              @if(plaza.descripcion){
-                · {{ plaza.descripcion }}
-              }
-            </option>
-          }
-        </select>
-      </label>
-    }
-    @else{
-      <label>
-        Plaza
+  <section class="filters-card">
+    <div class="filters-grid">
+
+      @if(esSupervisor){
+        <label class="field">
+          <span>Plaza</span>
+          <select
+            [(ngModel)]="plazaId"
+            (ngModelChange)="cargar()"
+          >
+            @for(plaza of plazas; track plaza.id){
+              <option [ngValue]="plaza.id">
+                {{ plaza.codigo }}
+                @if(plaza.descripcion){
+                  · {{ plaza.descripcion }}
+                }
+              </option>
+            }
+          </select>
+        </label>
+      }
+      @else{
+        <label class="field">
+          <span>Plaza</span>
+          <input
+            [value]="auth.usuario()?.plaza || 'Sin plaza'"
+            disabled
+          >
+        </label>
+      }
+
+      <label class="field">
+        <span>Mes</span>
         <input
-          [value]="auth.usuario()?.plaza || 'Sin plaza'"
-          disabled
+          type="month"
+          [ngModel]="mesInput"
+          (ngModelChange)="cambiarMes($event)"
         >
       </label>
-    }
 
-    <label>
-      Mes
-      <input
-        type="month"
-        [ngModel]="mesInput"
-        (ngModelChange)="cambiarMes($event)"
-      >
-    </label>
+      <label class="field search-field">
+        <span>Buscar agente</span>
+        <input
+          [(ngModel)]="busqueda"
+          placeholder="Código o nombre del agente"
+        >
+      </label>
 
-    <label class="search">
-      Buscar agente
-      <input
-        [(ngModel)]="busqueda"
-        placeholder="Código o nombre"
-      >
-    </label>
 
+
+    </div>
+
+    <div class="week-row">
+      <div>
+        <span class="week-label">Semana</span>
+
+        <div class="segmented week-segmented">
+          @for(semana of semanasDisponibles; track semana){
+            <button
+              type="button"
+              [class.active]="filtroSemana === semana"
+              (click)="cambiarSemana(semana)"
+            >
+              Semana {{ semana }}
+            </button>
+          }
+
+          <button
+            type="button"
+            [class.active]="filtroSemana === 0"
+            (click)="cambiarSemana(0)"
+          >
+            Mes completo
+          </button>
+        </div>
+      </div>
+
+      <div class="current-range">
+        <span>Rango visible</span>
+        <strong>{{ rangoSemanaTexto }}</strong>
+      </div>
+    </div>
   </section>
 
 
@@ -106,243 +144,284 @@
   }
 
 
-  <!-- TABLA ÚNICA + RESUMEN LATERAL -->
-  <div class="main-grid">
+  <!-- ===================================================== -->
+  <!-- RESUMEN -->
+  <!-- ===================================================== -->
 
-    <section class="card distribution-card">
+  <section class="summary-grid">
+    <article class="summary-card">
+      <span>Agentes visibles</span>
+      <strong>{{ agentesFiltrados.length }}</strong>
+      <small>Todos los agentes de la plaza</small>
+    </article>
 
-      <div class="card-head distribution-head">
-        <div>
-          <span class="eyebrow">DISTRIBUCIÓN MENSUAL</span>
-          <h2>Ubicación diaria y cobertura por caseta</h2>
-          <p>
-            Arriba se asigna la caseta de cada agente y al final de la misma tabla
-            se muestra la cobertura diaria de cada ubicación.
-          </p>
-        </div>
+    <article class="summary-card">
+      <span>Días visibles</span>
+      <strong>{{ diasVisibles.length }}</strong>
+      <small>{{ rangoSemanaTexto }}</small>
+    </article>
 
-        <span class="table-note">
-          A, B y C permiten asignar caseta
-        </span>
-      </div>
+    <article class="summary-card">
+      <span>Ubicaciones</span>
+      <strong>{{ ubicaciones.length }}</strong>
+      <small>Casetas y apoyos configurados</small>
+    </article>
 
-      @if(cargando){
-        <div class="empty">Cargando distribución...</div>
-      }
-      @else if(agentes.length === 0){
-        <div class="empty">No existen agentes activos en esta plaza.</div>
-      }
-      @else{
-        <div class="table-wrap unified-wrap">
-          <table class="unified-table">
-            <thead>
-              <tr>
-                <th class="sticky-code">Cód.</th>
-                <th class="sticky-name">Nombre</th>
-
-                @for(dia of dias; track dia){
-                  <th class="day-column">
-                    <div class="day-header">
-                      <span class="day-name">{{ diaSemana(dia) }}</span>
-                      <strong class="day-number">{{ dia }}</strong>
-                    </div>
-                  </th>
-                }
-              </tr>
-            </thead>
-
-            <!-- AGENTES EN EL MISMO ORDEN DE PROGRAMACIÓN SUPERVISOR -->
-            <tbody class="agents-body">
-              @for(agente of agentesFiltrados; track agente.id){
-                <tr [class.selected-row]="seleccionado === agente.id">
-
-                  <td class="sticky-code">
-                    {{ agente.codigo }}
-                  </td>
-
-                  <td class="sticky-name">
-                    <button
-                      class="agent-button"
-                      type="button"
-                      (click)="seleccionar(agente.id)"
-                    >
-                      {{ agente.nombreCompleto }}
-                    </button>
-                  </td>
-
-                  @for(dia of dias; track dia){
-                    @let p = programacion(agente.id, dia);
-
-                    <td class="cell">
-                      @if(p){
-                        @let ubicacionActual = asignacion(p.programacionId);
-
-                        <div class="distribution-cell">
-                          <span
-                            [class]="'shift-state ' + claseEstado(p.estado)"
-                          >
-                            {{ p.estado }}
-                          </span>
-
-                          @if(esOperativo(p.estado)){
-                            <select
-                              class="location-select"
-                              [ngModel]="ubicacionActual"
-                              (ngModelChange)="cambiar(p.programacionId, $event)"
-                              title="Asignar caseta"
-                            >
-                              <option [ngValue]="null">-</option>
-
-                              @for(ubicacion of ubicaciones; track ubicacion.id){
-                                <option
-                                  [ngValue]="ubicacion.id"
-                                  [disabled]="!ubicacion.activo"
-                                >
-                                  {{ ubicacion.codigo }}{{ !ubicacion.activo ? ' · Inactiva' : '' }}
-                                </option>
-                              }
-                            </select>
-                          }
-                          @else{
-                            <span class="blocked-location">—</span>
-                          }
-                        </div>
-                      }
-                      @else{
-                        <span class="no-program">—</span>
-                      }
-                    </td>
-                  }
-
-                </tr>
-              }
-            </tbody>
-
-            <!-- COBERTURA EN LA MISMA TABLA -->
-            <tbody class="coverage-body">
-
-              <tr class="coverage-divider-row">
-                <td
-                  class="coverage-divider-title"
-                  colspan="2"
-                >
-                  <span class="eyebrow">COBERTURA</span>
-                  <strong>Cobertura por caseta / día</strong>
-                </td>
-
-                @for(dia of dias; track dia){
-                  <td class="coverage-divider-day"></td>
-                }
-              </tr>
-
-              @if(cargandoCobertura){
-                <tr>
-                  <td class="coverage-loading" [attr.colspan]="dias.length + 2">
-                    Cargando cobertura...
-                  </td>
-                </tr>
-              }
-              @else if(cobertura.length === 0){
-                <tr>
-                  <td class="coverage-loading" [attr.colspan]="dias.length + 2">
-                    Aún no existen datos de cobertura para este mes.
-                  </td>
-                </tr>
-              }
-              @else{
-                @for(ubicacion of cobertura; track ubicacion.ubicacionId){
-                  <tr class="coverage-row">
-                    <td class="sticky-code coverage-code">
-                      {{ ubicacion.codigo }}
-                    </td>
-
-                    <td class="sticky-name coverage-location">
-                      <strong>{{ ubicacion.nombre }}</strong>
-                      <small>{{ ubicacion.codigo }}</small>
-                    </td>
-
-                    @for(dia of dias; track dia){
-                      @let cantidad = count(ubicacion, dia);
-
-                      <td class="coverage-cell">
-                        <span
-                          class="coverage-number"
-                          [class.hot]="cantidad >= 2"
-                          [class.zero]="cantidad === 0"
-                        >
-                          {{ cantidad }}
-                        </span>
-                      </td>
-                    }
-                  </tr>
-                }
-              }
-
-            </tbody>
-          </table>
-        </div>
-      }
-
-    </section>
+    <article class="summary-card accent">
+      <span>Cambios pendientes</span>
+      <strong>{{ cambios.size }}</strong>
+      <small>{{ cambios.size === 0 ? 'Todo guardado' : 'Pendientes de guardar' }}</small>
+    </article>
+  </section>
 
 
-    <!-- RESUMEN LATERAL DEL AGENTE -->
-    <aside class="card side-summary">
-      <div class="side-summary-head">
-        <span class="eyebrow">RESUMEN MENSUAL</span>
-        <h2>Casetas por agente</h2>
+  <!-- ===================================================== -->
+  <!-- TABLA SUPERIOR: AGENTES -->
+  <!-- ===================================================== -->
+
+  <section class="card agents-card">
+
+    <div class="card-head table-card-head">
+      <div>
+        <span class="eyebrow">AGENTES</span>
+        <h2>Distribución</h2>
         <p>
-          Selecciona un agente para ver cuántas veces le tocó cada caseta.
+          Se muestran aproximadamente 10 agentes por vista. Usa el scroll vertical
+          para continuar con los demás.
         </p>
       </div>
 
-      @if(cargandoResumen){
-        <div class="empty small">Cargando resumen...</div>
-      }
-      @else if(resumen){
-        <div class="side-agent">
-          <span>Agente seleccionado</span>
-          <strong>{{ resumen.nombre }}</strong>
-          <small>Código {{ resumen.codigo }}</small>
-        </div>
+      <div class="table-head-meta">
+        <strong>{{ agentesFiltrados.length }}</strong>
+        <span>agentes encontrados</span>
+      </div>
+    </div>
 
-        @if(resumen.ubicaciones.length){
-          <div class="side-summary-list">
-            @for(ubicacion of resumen.ubicaciones; track ubicacion.codigo){
-              <div class="side-summary-row">
-                <span>
-                  <i></i>
-                  {{ ubicacion.codigo }}
-                </span>
+    @if(cargando){
+      <div class="empty">Cargando distribución...</div>
+    }
+    @else if(agentesFiltrados.length === 0){
+      <div class="empty">
+        No existen agentes que coincidan con los filtros seleccionados.
+      </div>
+    }
+    @else{
+      <div
+        #tablaSuperior
+        class="table-scroll agents-scroll synced-scroll"
+        (scroll)="sincronizarScroll('superior')"
+      >
+        <table class="distribution-table">
+          <thead>
+            <tr>
+              <th class="sticky-code">Cód.</th>
+              <th class="sticky-name">Nombre del agente</th>
 
-                <strong>{{ ubicacion.veces }}</strong>
-              </div>
+              @for(dia of diasVisibles; track dia){
+                <th class="day-column">
+                  <div class="day-header">
+                    <strong>{{ diaSemana(dia) }}</strong>
+                    <span>{{ dia < 10 ? '0' + dia : dia }}</span>
+                  </div>
+                </th>
+              }
+            </tr>
+          </thead>
+
+          <tbody>
+            @for(agente of agentesFiltrados; track agente.id){
+              <tr [class.selected-row]="seleccionado === agente.id">
+
+                <td class="sticky-code">
+                  {{ agente.codigo }}
+                </td>
+
+                <td class="sticky-name">
+                  <button
+                    class="agent-button"
+                    type="button"
+                    (click)="seleccionar(agente.id)"
+                    [title]="agente.nombreCompleto"
+                  >
+                    {{ agente.nombreCompleto }}
+                  </button>
+                </td>
+
+                @for(dia of diasVisibles; track dia){
+                  @let p = programacion(agente.id, dia);
+
+                  <td class="distribution-cell-wrap">
+                    @if(p){
+                      @let ubicacionActual = asignacion(p.programacionId);
+
+                      <div class="assignment-cell">
+                        <span
+                          [class]="'shift-state ' + claseEstado(p.estado)"
+                        >
+                          {{ p.estado }}
+                        </span>
+
+                        @if(esOperativo(p.estado)){
+                          <select
+                            class="location-select"
+                            [ngModel]="ubicacionActual"
+                            (ngModelChange)="cambiar(p.programacionId, $event)"
+                            [title]="'Asignar caseta · Turno ' + p.estado"
+                          >
+                            <option [ngValue]="null">-</option>
+
+                            @for(ubicacion of ubicaciones; track ubicacion.id){
+                              <option
+                                [ngValue]="ubicacion.id"
+                                [disabled]="!ubicacion.activo"
+                              >
+                                {{ ubicacion.codigo }}{{ !ubicacion.activo ? ' · Inactiva' : '' }}
+                              </option>
+                            }
+                          </select>
+                        }
+                        @else{
+                          <span class="blocked-location">—</span>
+                        }
+                      </div>
+                    }
+                    @else{
+                      <span class="no-program">—</span>
+                    }
+                  </td>
+                }
+
+              </tr>
             }
-          </div>
-        }
-        @else{
-          <div class="summary-empty">
-            Sin asignaciones guardadas.
-          </div>
-        }
-      }
-      @else{
-        <div class="empty small">
-          Selecciona un agente de la tabla.
-        </div>
-      }
-    </aside>
+          </tbody>
+        </table>
+      </div>
+    }
 
+  </section>
+
+
+  <!-- SINCRONIZACIÓN -->
+  <div class="sync-message">
+    <span class="sync-icon">↔</span>
+    <span>
+      Las dos tablas están sincronizadas horizontalmente.
+      Al mover los días arriba o abajo, ambas avanzan juntas.
+    </span>
   </div>
 
 
-  <!-- LEYENDA -->
-  <section class="card legend-card">
-    <div class="card-head">
+  <!-- ===================================================== -->
+  <!-- TABLA INFERIOR: COBERTURA -->
+  <!-- ===================================================== -->
+
+  <section class="card coverage-card">
+
+    <div class="card-head table-card-head">
       <div>
-        <h2>Estados de turno</h2>
-        <p>Leyenda utilizada en la programación mensual.</p>
+        <span class="eyebrow">COBERTURA</span>
+        <h2>Casetas asignadas y pendientes</h2>
+        <p>
+          Revisa qué casetas ya cuentan con agente y cuáles todavía necesitan
+          asignación para los mismos días mostrados arriba.
+        </p>
       </div>
+
+      <div class="coverage-legend">
+        <span><i class="legend-dot complete"></i> Completa</span>
+        <span><i class="legend-dot partial"></i> Parcial</span>
+        <span><i class="legend-dot missing"></i> Sin asignar</span>
+        <span><i class="legend-dot inactive"></i> Sin operación</span>
+      </div>
+    </div>
+
+    @if(cargandoCobertura){
+      <div class="empty">Cargando cobertura...</div>
+    }
+    @else if(ubicaciones.length === 0){
+      <div class="empty">No existen casetas configuradas para esta plaza.</div>
+    }
+    @else{
+      <div
+        #tablaCasetas
+        class="table-scroll coverage-scroll synced-scroll"
+        (scroll)="sincronizarScroll('casetas')"
+      >
+        <table class="coverage-table">
+          <thead>
+            <tr>
+              <th class="sticky-code">ID</th>
+              <th class="sticky-name">Caseta / ubicación</th>
+
+              @for(dia of diasVisibles; track dia){
+                <th class="day-column">
+                  <div class="day-header">
+                    <strong>{{ diaSemana(dia) }}</strong>
+                    <span>{{ dia < 10 ? '0' + dia : dia }}</span>
+                  </div>
+                </th>
+              }
+            </tr>
+          </thead>
+
+          <tbody>
+            @for(ubicacion of ubicaciones; track ubicacion.id){
+              <tr>
+                <td class="sticky-code coverage-code">
+                  {{ ubicacion.codigo }}
+                </td>
+
+                <td class="sticky-name coverage-location">
+                  <strong>{{ ubicacion.nombre }}</strong>
+                  <small>{{ ubicacion.tipo }}</small>
+                </td>
+
+                @for(dia of diasVisibles; track dia){
+                  @let cantidad = coberturaCantidad(ubicacion.id, dia);
+                  @let estadoCobertura = coberturaEstado(ubicacion.id, dia);
+
+                  <td class="coverage-cell">
+                    <span
+                      class="coverage-number"
+                      [class.complete]="estadoCobertura === 'complete'"
+                      [class.partial]="estadoCobertura === 'partial'"
+                      [class.missing]="estadoCobertura === 'missing'"
+                      [class.inactive]="estadoCobertura === 'inactive'"
+                      [title]="
+                        estadoCobertura === 'complete'
+                          ? 'Asignación completa'
+                          : estadoCobertura === 'partial'
+                            ? 'Asignación parcial'
+                            : estadoCobertura === 'missing'
+                              ? 'Sin agente asignado'
+                              : 'Sin operación'
+                      "
+                    >
+                      {{ estadoCobertura === 'inactive' ? '—' : cantidad }}
+                    </span>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+  </section>
+
+
+  <!-- ===================================================== -->
+  <!-- INFORMACIÓN DE ESTADOS -->
+  <!-- ===================================================== -->
+
+  <section class="status-help">
+    <div>
+      <strong>Estados de programación</strong>
+      <p>
+        Solo A, B y C permiten asignar caseta. Los demás estados bloquean
+        la selección porque no corresponden a un turno operativo.
+      </p>
     </div>
 
     <div class="legend">
@@ -356,175 +435,6 @@
       <span class="estado-lic">LIC · Licencia</span>
     </div>
   </section>
-
-
-  <!-- MODAL GENERADOR DE DISTRIBUCIÓN -->
-  @if(generadorAbierto){
-    <div
-      class="modal-backdrop"
-      (click)="cerrarGeneradorDistribucion()"
-    >
-      <section
-        class="generator-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="generator-title"
-        (click)="$event.stopPropagation()"
-      >
-        <div class="locations-accent"></div>
-
-        <div class="locations-header">
-          <div>
-            <span class="eyebrow">GENERADOR AUTOMÁTICO</span>
-            <h2 id="generator-title">Generar asignación de casetas</h2>
-            <p>
-              El sistema usará los turnos A, B y C ya programados por el Supervisor
-              para cargar automáticamente las casetas en esta misma tabla.
-            </p>
-          </div>
-
-          <button
-            class="modal-close"
-            type="button"
-            (click)="cerrarGeneradorDistribucion()"
-            [disabled]="generandoDistribucion"
-          >
-            Cerrar
-          </button>
-        </div>
-
-        <div class="generator-context">
-          <div>
-            <span>Plaza</span>
-            <strong>
-              @for(plaza of plazas; track plaza.id){
-                @if(plaza.id === plazaId){
-                  {{ plaza.codigo }}
-                }
-              }
-            </strong>
-          </div>
-
-          <div>
-            <span>Mes</span>
-            <strong>{{ mesInput }}</strong>
-          </div>
-
-          <div>
-            <span>Turnos utilizados</span>
-            <strong>A · B · C</strong>
-          </div>
-        </div>
-
-        <div class="generator-period">
-          <label>Periodo de generación</label>
-
-          <div class="segmented-generator">
-            <button
-              type="button"
-              [class.active]="generadorPeriodo === 'SEMANA'"
-              (click)="cambiarPeriodoGenerador('SEMANA')"
-            >
-              Semana
-            </button>
-
-            <button
-              type="button"
-              [class.active]="generadorPeriodo === 'MES'"
-              (click)="cambiarPeriodoGenerador('MES')"
-            >
-              Mes completo
-            </button>
-          </div>
-        </div>
-
-        @if(generadorPeriodo === 'SEMANA'){
-          <label class="generator-week">
-            Semana
-            <select [(ngModel)]="generadorSemana">
-              <option [ngValue]="1">Semana 1 · 01 al 07</option>
-              <option [ngValue]="2">Semana 2 · 08 al 14</option>
-              <option [ngValue]="3">Semana 3 · 15 al 21</option>
-              <option [ngValue]="4">Semana 4 · 22 al 28</option>
-              <option [ngValue]="5">Semana 5 · 29 al fin de mes</option>
-            </select>
-          </label>
-        }
-
-        <div class="generator-info">
-          <strong>¿Qué hará el generador?</strong>
-          <p>
-            Solo asignará casetas a los agentes que tengan turno operativo.
-            Aplicará las restricciones por agente, los grupos de alto y bajo flujo
-            y los máximos configurados para la plaza.
-          </p>
-          <p>
-            El resultado se cargará como cambios pendientes en la tabla.
-            No se guardará hasta que pulses <b>Guardar distribución</b>.
-          </p>
-        </div>
-
-        @if(errorGenerador){
-          <div class="config-alert error">
-            {{ errorGenerador }}
-          </div>
-        }
-
-        @if(mensajeGenerador){
-          <div class="config-alert success">
-            {{ mensajeGenerador }}
-          </div>
-        }
-
-        @if(propuestaGenerador?.conflictos?.length){
-          <div class="generator-conflicts">
-            <strong>
-              Observaciones: {{ propuestaGenerador?.conflictos?.length }}
-            </strong>
-
-            <div class="generator-conflict-list">
-              @for(
-                conflicto of propuestaGenerador?.conflictos || [];
-                track conflicto.programacionTurnoId
-              ){
-                <div>
-                  <span>
-                    {{ conflicto.fecha }} · Turno {{ conflicto.turno }}
-                  </span>
-                  <strong>{{ conflicto.trabajador }}</strong>
-                  <small>{{ conflicto.mensaje }}</small>
-                </div>
-              }
-            </div>
-          </div>
-        }
-
-        <div class="generator-actions">
-          <button
-            class="secondary"
-            type="button"
-            (click)="abrirConfiguracionGenerador()"
-            [disabled]="generandoDistribucion"
-          >
-            Configurar reglas
-          </button>
-
-          <button
-            class="primary"
-            type="button"
-            (click)="generarYCargarDistribucion()"
-            [disabled]="generandoDistribucion || !plazaId"
-          >
-            {{
-              generandoDistribucion
-                ? 'Generando...'
-                : 'Generar y cargar en tabla'
-            }}
-          </button>
-        </div>
-      </section>
-    </div>
-  }
 
 
   <!-- MODAL CONFIGURACIÓN DE CASETAS -->

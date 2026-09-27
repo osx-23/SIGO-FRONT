@@ -117,6 +117,8 @@ export class DistribucionControladorComponent
 
   busqueda = '';
 
+  filtroSemana = 1;
+
   cargando = false;
 
   cargandoCobertura = false;
@@ -319,11 +321,156 @@ export class DistribucionControladorComponent
     this.mes =
       mes;
 
+    this.filtroSemana = 1;
+
     this.cargar();
   }
 
-  get agentesFiltrados():
-    TrabajadorResumen[] {
+  get agentesFiltrados(): TrabajadorResumen[] {
+    return this.agentesFiltradosBase();
+  }
+
+
+  get semanasDisponibles(): number[] {
+
+    const totalSemanas =
+      Math.ceil(
+        this.dias.length / 7
+      );
+
+    return Array.from(
+      { length: totalSemanas },
+      (_, index) => index + 1
+    );
+  }
+
+  get diasVisibles(): number[] {
+
+    if (this.filtroSemana === 0) {
+      return this.dias;
+    }
+
+    const inicio =
+      (this.filtroSemana - 1) * 7;
+
+    return this.dias.slice(
+      inicio,
+      inicio + 7
+    );
+  }
+
+  get rangoSemanaTexto(): string {
+
+    if (!this.diasVisibles.length) {
+      return '';
+    }
+
+    const primero =
+      this.diasVisibles[0];
+
+    const ultimo =
+      this.diasVisibles[
+        this.diasVisibles.length - 1
+      ];
+
+    const formato =
+      new Intl.DateTimeFormat(
+        'es-PE',
+        {
+          day: '2-digit',
+          month: 'short'
+        }
+      );
+
+    return (
+      `${formato.format(new Date(this.anio, this.mes - 1, primero))} - ` +
+      `${formato.format(new Date(this.anio, this.mes - 1, ultimo))}`
+    );
+  }
+
+  cambiarSemana(semana: number): void {
+
+    this.filtroSemana =
+      semana;
+
+    this.ajustarSeleccionVisible();
+
+    queueMicrotask(() => {
+      if (this.tablaSuperior?.nativeElement) {
+        this.tablaSuperior.nativeElement.scrollLeft = 0;
+      }
+      if (this.tablaCasetas?.nativeElement) {
+        this.tablaCasetas.nativeElement.scrollLeft = 0;
+      }
+    });
+
+    this.cdr.detectChanges();
+  }
+
+  coberturaCantidad(
+    ubicacionId: number,
+    dia: number
+  ): number {
+
+    const fecha =
+      this.fecha(dia);
+
+    return this.programaciones
+      .filter(
+        p =>
+          p.fecha === fecha &&
+          this.esOperativo(p.estado)
+      )
+      .filter(
+        p =>
+          this.asignacion(p.programacionId) === ubicacionId
+      )
+      .length;
+  }
+
+  coberturaEstado(
+    ubicacionId: number,
+    dia: number
+  ): 'complete' | 'partial' | 'missing' | 'inactive' {
+
+    const cantidad =
+      this.coberturaCantidad(
+        ubicacionId,
+        dia
+      );
+
+    const fecha =
+      this.fecha(dia);
+
+    const turnosOperativos =
+      new Set(
+        this.programaciones
+          .filter(
+            p =>
+              p.fecha === fecha &&
+              this.esOperativo(p.estado)
+          )
+          .map(p => p.estado)
+      );
+
+    if (turnosOperativos.size === 0) {
+      return 'inactive';
+    }
+
+    const esperado = turnosOperativos.size;
+
+    if (cantidad <= 0) {
+      return 'missing';
+    }
+
+    if (cantidad >= esperado) {
+      return 'complete';
+    }
+
+    return 'partial';
+  }
+
+  private agentesFiltradosBase(): TrabajadorResumen[] {
 
     const query =
       this.busqueda
@@ -333,65 +480,41 @@ export class DistribucionControladorComponent
     const agentePorId =
       new Map<number, TrabajadorResumen>(
         this.agentes.map(
-          agente => [
-            agente.id,
-            agente
-          ]
+          agente => [agente.id, agente]
         )
       );
 
-    const resultado:
-      TrabajadorResumen[] = [];
+    const resultado: TrabajadorResumen[] = [];
 
-    for (
-      const grupo
-      of this.gruposProgramacion
-    ) {
+    for (const grupo of this.gruposProgramacion) {
 
       const registros =
         this.secuencias
           .filter(
             secuencia =>
-              secuencia.grupo ===
-                grupo
+              secuencia.grupo === grupo
           )
           .sort(
-            (
-              a,
-              b
-            ) =>
-              (
-                a.orden ??
-                Number.MAX_SAFE_INTEGER
-              )
-              -
-              (
-                b.orden ??
-                Number.MAX_SAFE_INTEGER
-              )
+            (a, b) =>
+              (a.orden ?? Number.MAX_SAFE_INTEGER) -
+              (b.orden ?? Number.MAX_SAFE_INTEGER)
           );
 
-      for (
-        const registro
-        of registros
-      ) {
+      for (const registro of registros) {
 
         const agente =
           agentePorId.get(
             registro.agenteId
           );
 
-        if (
-          !agente
-        ) {
+        if (!agente) {
           continue;
         }
 
         if (
           query &&
           !(
-            `${agente.codigo} ` +
-            `${agente.nombreCompleto}`
+            `${agente.codigo} ${agente.nombreCompleto}`
           )
             .toLowerCase()
             .includes(query)
@@ -399,13 +522,30 @@ export class DistribucionControladorComponent
           continue;
         }
 
-        resultado.push(
-          agente
-        );
+        resultado.push(agente);
       }
     }
 
     return resultado;
+  }
+
+  private ajustarSeleccionVisible(): void {
+
+    const visibles =
+      this.agentesFiltrados;
+
+    if (!visibles.length) {
+      this.seleccionado = null;
+      this.resumen = null;
+      return;
+    }
+
+    if (
+      !this.seleccionado ||
+      !visibles.some(a => a.id === this.seleccionado)
+    ) {
+      this.seleccionar(visibles[0].id);
+    }
   }
 
   cargar(): void {

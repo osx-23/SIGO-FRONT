@@ -1114,6 +1114,52 @@ export class DistribucionControladorComponent
         programacionActual.fecha
       );
 
+    const programacionCualquierTurnoDiaAnterior =
+      this.programaciones
+        .find(
+          otra =>
+            otra.trabajadorId ===
+              programacionActual.trabajadorId &&
+            otra.fecha ===
+              fechaAnterior
+        );
+
+    if (
+      programacionCualquierTurnoDiaAnterior
+    ) {
+      const ubicacionAnteriorId =
+        this.asignacion(
+          programacionCualquierTurnoDiaAnterior
+            .programacionId
+        );
+
+      const ubicacionAnterior =
+        this.ubicaciones
+          .find(
+            ubicacion =>
+              ubicacion.id ===
+                ubicacionAnteriorId
+          );
+
+      const actualEsApoyoOAuxiliar =
+        ubicacionNueva.tipo === 'APOYO' ||
+        ubicacionNueva.tipo === 'AUXILIAR';
+
+      const anteriorEsApoyoOAuxiliar =
+        ubicacionAnterior?.tipo === 'APOYO' ||
+        ubicacionAnterior?.tipo === 'AUXILIAR';
+
+      if (
+        actualEsApoyoOAuxiliar &&
+        anteriorEsApoyoOAuxiliar
+      ) {
+        this.error =
+          'El agente no puede estar dos días seguidos en una caseta de tipo apoyo o auxiliar.';
+        this.cdr.detectChanges();
+        return;
+      }
+    }
+
     const programacionDiaAnterior =
       this.programaciones
         .find(

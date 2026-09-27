@@ -27,12 +27,18 @@ import {
   SecuenciaAgente,
   TipoUbicacion,
   TrabajadorResumen,
-  Ubicacion
+  Ubicacion,
+  GeneradorCasetasPropuesta,
+  TipoPeriodoCaseta
 } from '../../models/programacion.models';
 
 import {
   ProgramacionApiService
 } from '../../data-access/programacion-api.service';
+
+import {
+  Router
+} from '@angular/router';
 
 @Component({
   selector: 'app-distribucion-controlador',
@@ -63,6 +69,9 @@ export class DistribucionControladorComponent
 
   private readonly cdr =
     inject(ChangeDetectorRef);
+
+  private readonly router =
+    inject(Router);
 
   plazas: Plaza[] = [];
 
@@ -147,6 +156,23 @@ export class DistribucionControladorComponent
   mensajeConfiguracion = '';
 
   conflictoVisible = false;
+
+  generadorAbierto = false;
+
+  generadorPeriodo: TipoPeriodoCaseta =
+    'SEMANA';
+
+  generadorSemana = 1;
+
+  generandoDistribucion = false;
+
+  errorGenerador = '';
+
+  mensajeGenerador = '';
+
+  propuestaGenerador:
+    GeneradorCasetasPropuesta | null =
+    null;
 
   conflictoInfo: {
     ubicacion: string;
@@ -1017,6 +1043,212 @@ export class DistribucionControladorComponent
 
       });
   }
+
+  abrirGeneradorDistribucion(): void {
+
+    if (
+      !this.esSupervisor ||
+      !this.plazaId
+    ) {
+      return;
+    }
+
+    this.generadorAbierto =
+      true;
+
+    this.errorGenerador =
+      '';
+
+    this.mensajeGenerador =
+      '';
+
+    this.propuestaGenerador =
+      null;
+
+    this.cdr.detectChanges();
+  }
+
+
+  cerrarGeneradorDistribucion(): void {
+
+    if (
+      this.generandoDistribucion
+    ) {
+      return;
+    }
+
+    this.generadorAbierto =
+      false;
+
+    this.errorGenerador =
+      '';
+
+    this.mensajeGenerador =
+      '';
+
+    this.propuestaGenerador =
+      null;
+
+    this.cdr.detectChanges();
+  }
+
+
+  cambiarPeriodoGenerador(
+    periodo: TipoPeriodoCaseta
+  ): void {
+
+    this.generadorPeriodo =
+      periodo;
+
+    this.propuestaGenerador =
+      null;
+
+    this.errorGenerador =
+      '';
+
+    this.mensajeGenerador =
+      '';
+
+    this.cdr.detectChanges();
+  }
+
+
+  generarYCargarDistribucion(): void {
+
+    if (
+      !this.esSupervisor ||
+      !this.plazaId
+    ) {
+      return;
+    }
+
+    this.generandoDistribucion =
+      true;
+
+    this.errorGenerador =
+      '';
+
+    this.mensajeGenerador =
+      '';
+
+    this.propuestaGenerador =
+      null;
+
+    this.api
+      .generarPropuestaCasetas({
+        plazaId:
+          this.plazaId,
+
+        anio:
+          this.anio,
+
+        mes:
+          this.mes,
+
+        periodo:
+          this.generadorPeriodo,
+
+        semana:
+          this.generadorPeriodo ===
+            'SEMANA'
+              ? this.generadorSemana
+              : null
+      })
+      .pipe(
+
+        finalize(() => {
+
+          this.generandoDistribucion =
+            false;
+
+          this.cdr.detectChanges();
+
+        })
+
+      )
+      .subscribe({
+
+        next: (
+          propuesta
+        ) => {
+
+          this.propuestaGenerador =
+            propuesta;
+
+          for (
+            const item
+            of propuesta.asignaciones
+          ) {
+
+            this.asignaciones
+              .set(
+                item.programacionTurnoId,
+                item.ubicacionId
+              );
+
+            this.cambios
+              .set(
+                item.programacionTurnoId,
+                item.ubicacionId
+              );
+
+          }
+
+          const total =
+            propuesta.asignaciones
+              .length;
+
+          if (
+            propuesta.conflictos.length
+          ) {
+
+            this.mensajeGenerador =
+              `Se cargaron ${total} asignaciones en la tabla y quedaron ${propuesta.conflictos.length} observación(es).`;
+
+          }
+          else {
+
+            this.mensajeGenerador =
+              `Se cargaron ${total} asignaciones en la tabla. Revisa el resultado y pulsa Guardar distribución.`;
+
+          }
+
+          this.mensaje =
+            'Distribución generada y cargada en la tabla. Aún no se ha guardado.';
+
+          this.cdr.detectChanges();
+
+        },
+
+        error: (
+          e
+        ) => {
+
+          this.errorGenerador =
+            this.mensajeError(
+              e,
+              'No se pudo generar la distribución.'
+            );
+
+          this.cdr.detectChanges();
+
+        }
+
+      });
+  }
+
+
+  abrirConfiguracionGenerador(): void {
+
+    this.generadorAbierto =
+      false;
+
+    this.router
+      .navigate([
+        '/programacion/generador-casetas'
+      ]);
+  }
+
 
   abrirConfiguracionUbicaciones(): void {
 

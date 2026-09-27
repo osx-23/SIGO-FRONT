@@ -156,37 +156,6 @@
 
 
               @if (
-                has('PROGRAMACION') &&
-                auth.tieneRol('SUPERVISOR')
-              ) {
-
-                <a
-                  routerLink="/programacion/generador-casetas"
-                  routerLinkActive="active"
-                  (click)="close()"
-                  data-tooltip="Generador de casetas"
-                >
-
-                  <span class="nav-icon">
-
-                    <svg viewBox="0 0 24 24">
-                      <path
-                        d="M3 4h18v5H3V4Zm1 7h6v9H4v-9Zm8 0h8v4h-8v-4Zm0 6h8v3h-8v-3ZM6 13h2v5H6v-5Z"
-                      />
-                    </svg>
-
-                  </span>
-
-                  <span class="nav-label">
-                    Generador de casetas
-                  </span>
-
-                </a>
-
-              }
-
-
-              @if (
                 has('DISTRIBUCION') &&
                 auth.tieneRol(
                   'SUPERVISOR',

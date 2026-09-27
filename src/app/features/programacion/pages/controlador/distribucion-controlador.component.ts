@@ -138,6 +138,8 @@ export class DistribucionControladorComponent
 
   modalRestriccionesAbierto = false;
 
+  cargandoRestriccionesModal = false;
+
   busquedaAgenteRestriccion = '';
 
   configPlazaId: number | null = null;
@@ -255,27 +257,6 @@ export class DistribucionControladorComponent
       .filter(
         agente =>
           `${agente.codigo} ${agente.nombreCompleto}`
-            .toLowerCase()
-            .includes(query)
-      );
-  }
-
-
-  get restriccionesCasetaFiltradas(): RestriccionCaseta[] {
-
-    const query =
-      this.busquedaAgenteRestriccion
-        .trim()
-        .toLowerCase();
-
-    if (!query) {
-      return this.restriccionesCasetaConfiguracion;
-    }
-
-    return this.restriccionesCasetaConfiguracion
-      .filter(
-        restriccion =>
-          `${restriccion.codigoTrabajador} ${restriccion.trabajador} ${restriccion.ubicacionCodigo}`
             .toLowerCase()
             .includes(query)
       );
@@ -1840,13 +1821,13 @@ export class DistribucionControladorComponent
 
     if (
       !this.esSupervisor ||
-      !this.configPlazaId
+      !this.plazaId
     ) {
       return;
     }
 
-    this.modalUbicacionesAbierto =
-      false;
+    this.configPlazaId =
+      this.plazaId;
 
     this.modalRestriccionesAbierto =
       true;
@@ -1854,9 +1835,76 @@ export class DistribucionControladorComponent
     this.busquedaAgenteRestriccion =
       '';
 
+    this.errorConfiguracion =
+      '';
+
+    this.mensajeConfiguracion =
+      '';
+
     this.resetFormularioRestriccionConfiguracion();
 
+    this.cargarContextoRestricciones();
+
     this.cdr.detectChanges();
+  }
+
+
+  private cargarContextoRestricciones(): void {
+
+    if (
+      !this.configPlazaId
+    ) {
+      return;
+    }
+
+    this.cargandoRestriccionesModal =
+      true;
+
+    forkJoin({
+      ubicaciones:
+        this.api.getUbicacionesConfiguracion(
+          this.configPlazaId
+        ),
+      restricciones:
+        this.api.getRestriccionesCasetas(
+          this.configPlazaId
+        ),
+      agentes:
+        this.api.getAgentes(
+          this.configPlazaId
+        )
+    })
+      .pipe(
+        finalize(() => {
+          this.cargandoRestriccionesModal =
+            false;
+          this.cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: (resultado) => {
+
+          this.ubicacionesConfiguracion =
+            [...resultado.ubicaciones];
+
+          this.restriccionesCasetaConfiguracion =
+            [...resultado.restricciones];
+
+          this.agentesRestriccionConfiguracion =
+            [...resultado.agentes];
+
+          this.cdr.detectChanges();
+        },
+        error: (e) => {
+          this.errorConfiguracion =
+            this.mensajeError(
+              e,
+              'No se pudieron cargar los datos para las restricciones.'
+            );
+
+          this.cdr.detectChanges();
+        }
+      });
   }
 
 
@@ -1871,30 +1919,6 @@ export class DistribucionControladorComponent
 
     this.modalRestriccionesAbierto =
       false;
-
-    this.busquedaAgenteRestriccion =
-      '';
-
-    this.resetFormularioRestriccionConfiguracion();
-
-    this.cdr.detectChanges();
-  }
-
-
-  volverConfiguracionCasetas(): void {
-
-    if (
-      this.guardandoRestriccionConfiguracion ||
-      this.eliminandoRestriccionId !== null
-    ) {
-      return;
-    }
-
-    this.modalRestriccionesAbierto =
-      false;
-
-    this.modalUbicacionesAbierto =
-      true;
 
     this.busquedaAgenteRestriccion =
       '';

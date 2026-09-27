@@ -1109,6 +1109,35 @@ export class DistribucionControladorComponent
       return;
     }
 
+    const fechaAnterior =
+      this.fechaAnterior(
+        programacionActual.fecha
+      );
+
+    const programacionDiaAnterior =
+      this.programaciones
+        .find(
+          otra =>
+            otra.trabajadorId ===
+              programacionActual.trabajadorId &&
+            otra.fecha ===
+              fechaAnterior &&
+            otra.estado ===
+              programacionActual.estado
+        );
+
+    if (
+      programacionDiaAnterior &&
+      this.asignacion(
+        programacionDiaAnterior.programacionId
+      ) === nuevaUbicacionId
+    ) {
+      this.error =
+        `No se puede repetir ${ubicacionNueva.codigo}. El agente ya tuvo esa caseta el día anterior en el mismo turno ${programacionActual.estado}.`;
+      this.cdr.detectChanges();
+      return;
+    }
+
     /*
      * Buscamos si existe otro agente
      * con la misma fecha,
@@ -2648,6 +2677,44 @@ export class DistribucionControladorComponent
     return nombres[
       fecha.getDay()
     ];
+  }
+
+
+  private fechaAnterior(
+    fecha: string
+  ): string {
+
+    const [
+      anio,
+      mes,
+      dia
+    ] =
+      fecha
+        .split('-')
+        .map(Number);
+
+    const anterior =
+      new Date(
+        anio,
+        mes - 1,
+        dia - 1
+      );
+
+    return (
+      `${anterior.getFullYear()}-` +
+      `${String(
+        anterior.getMonth() + 1
+      ).padStart(
+        2,
+        '0'
+      )}-` +
+      `${String(
+        anterior.getDate()
+      ).padStart(
+        2,
+        '0'
+      )}`
+    );
   }
 
 

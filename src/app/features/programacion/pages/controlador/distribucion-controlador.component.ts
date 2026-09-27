@@ -153,6 +153,16 @@ export class DistribucionControladorComponent
 
   ubicacionOrden: number | null = null;
 
+  ubicacionPermiteTurnoA = true;
+
+  ubicacionPermiteTurnoB = true;
+
+  ubicacionPermiteTurnoC = true;
+
+  filtroTurnoCobertura:
+    'TODOS' | 'A' | 'B' | 'C' =
+    'TODOS';
+
   errorConfiguracion = '';
 
   mensajeConfiguracion = '';
@@ -407,6 +417,29 @@ export class DistribucionControladorComponent
     this.cdr.detectChanges();
   }
 
+  get ubicacionesCobertura(): Ubicacion[] {
+
+    return this.ubicaciones
+      .filter(
+        ubicacion =>
+          this.filtroTurnoCobertura === 'TODOS' ||
+          this.ubicacionHabilitadaParaTurno(
+            ubicacion,
+            this.filtroTurnoCobertura
+          )
+      );
+  }
+
+  cambiarFiltroTurnoCobertura(
+    turno: 'TODOS' | 'A' | 'B' | 'C'
+  ): void {
+
+    this.filtroTurnoCobertura =
+      turno;
+
+    this.cdr.detectChanges();
+  }
+
   coberturaCantidad(
     ubicacionId: number,
     dia: number
@@ -415,11 +448,34 @@ export class DistribucionControladorComponent
     const fecha =
       this.fecha(dia);
 
+    const ubicacion =
+      this.ubicaciones
+        .find(
+          item =>
+            item.id === ubicacionId
+        );
+
+    if (!ubicacion) {
+      return 0;
+    }
+
     return this.programaciones
       .filter(
         p =>
           p.fecha === fecha &&
           this.esOperativo(p.estado)
+      )
+      .filter(
+        p =>
+          this.filtroTurnoCobertura === 'TODOS' ||
+          p.estado === this.filtroTurnoCobertura
+      )
+      .filter(
+        p =>
+          this.ubicacionHabilitadaParaTurno(
+            ubicacion,
+            p.estado
+          )
       )
       .filter(
         p =>
@@ -442,6 +498,17 @@ export class DistribucionControladorComponent
     const fecha =
       this.fecha(dia);
 
+    const ubicacion =
+      this.ubicaciones
+        .find(
+          item =>
+            item.id === ubicacionId
+        );
+
+    if (!ubicacion) {
+      return 'inactive';
+    }
+
     const turnosOperativos =
       new Set(
         this.programaciones
@@ -450,6 +517,18 @@ export class DistribucionControladorComponent
               p.fecha === fecha &&
               this.esOperativo(p.estado)
           )
+          .filter(
+            p =>
+              this.filtroTurnoCobertura === 'TODOS' ||
+              p.estado === this.filtroTurnoCobertura
+          )
+          .filter(
+            p =>
+              this.ubicacionHabilitadaParaTurno(
+                ubicacion,
+                p.estado
+              )
+          )
           .map(p => p.estado)
       );
 
@@ -457,7 +536,8 @@ export class DistribucionControladorComponent
       return 'inactive';
     }
 
-    const esperado = turnosOperativos.size;
+    const esperado =
+      turnosOperativos.size;
 
     if (cantidad <= 0) {
       return 'missing';
@@ -938,6 +1018,39 @@ export class DistribucionControladorComponent
       return;
     }
 
+    const ubicacionNueva =
+      this.ubicaciones
+        .find(
+          ubicacion =>
+            ubicacion.id ===
+            nuevaUbicacionId
+        );
+
+    if (
+      !ubicacionNueva ||
+      !this.ubicacionHabilitadaParaTurno(
+        ubicacionNueva,
+        programacionActual.estado
+      )
+    ) {
+      this.error =
+        'La caseta seleccionada no está habilitada para este turno.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    if (
+      !this.cumpleOrdenSecuencial(
+        ubicacionNueva,
+        programacionActual
+      )
+    ) {
+      this.error =
+        `No se puede asignar ${ubicacionNueva.codigo}. Primero deben asignarse las ubicaciones auxiliares/apoyo anteriores para el turno ${programacionActual.estado}.`;
+      this.cdr.detectChanges();
+      return;
+    }
+
     /*
      * Buscamos si existe otro agente
      * con la misma fecha,
@@ -1027,6 +1140,8 @@ export class DistribucionControladorComponent
 
       return;
     }
+
+    this.error = '';
 
     this.asignaciones
       .set(
@@ -1530,6 +1645,15 @@ export class DistribucionControladorComponent
     this.ubicacionOrden =
       ubicacion.orden;
 
+    this.ubicacionPermiteTurnoA =
+      ubicacion.permiteTurnoA !== false;
+
+    this.ubicacionPermiteTurnoB =
+      ubicacion.permiteTurnoB !== false;
+
+    this.ubicacionPermiteTurnoC =
+      ubicacion.permiteTurnoC !== false;
+
     this.errorConfiguracion =
       '';
 
@@ -1587,7 +1711,13 @@ export class DistribucionControladorComponent
       codigo,
       nombre,
       tipo: this.ubicacionTipo,
-      orden
+      orden,
+      permiteTurnoA:
+        this.ubicacionPermiteTurnoA,
+      permiteTurnoB:
+        this.ubicacionPermiteTurnoB,
+      permiteTurnoC:
+        this.ubicacionPermiteTurnoC
     };
 
     this.guardandoUbicacion =
@@ -1733,6 +1863,15 @@ export class DistribucionControladorComponent
 
     this.ubicacionOrden =
       null;
+
+    this.ubicacionPermiteTurnoA =
+      true;
+
+    this.ubicacionPermiteTurnoB =
+      true;
+
+    this.ubicacionPermiteTurnoC =
+      true;
   }
 
 
@@ -1841,6 +1980,85 @@ export class DistribucionControladorComponent
           )
         ] ??
       0
+    );
+  }
+
+  ubicacionesParaTurno(
+    estado: EstadoProgramacion | null,
+    programacionId: number
+  ): Ubicacion[] {
+
+    const actual =
+      this.asignacion(programacionId);
+
+    return this.ubicaciones
+      .filter(
+        ubicacion =>
+          this.ubicacionHabilitadaParaTurno(
+            ubicacion,
+            estado
+          ) ||
+          ubicacion.id === actual
+      );
+  }
+
+  ubicacionHabilitadaParaTurno(
+    ubicacion: Ubicacion,
+    estado: EstadoProgramacion | null
+  ): boolean {
+
+    if (estado === 'A') {
+      return ubicacion.permiteTurnoA !== false;
+    }
+
+    if (estado === 'B') {
+      return ubicacion.permiteTurnoB !== false;
+    }
+
+    if (estado === 'C') {
+      return ubicacion.permiteTurnoC !== false;
+    }
+
+    return false;
+  }
+
+  private cumpleOrdenSecuencial(
+    ubicacion: Ubicacion,
+    programacion: ProgramacionDia
+  ): boolean {
+
+    if (ubicacion.tipo === 'VIA') {
+      return true;
+    }
+
+    const anteriores =
+      this.ubicaciones
+        .filter(
+          item =>
+            item.activo &&
+            item.tipo !== 'VIA' &&
+            item.orden < ubicacion.orden &&
+            this.ubicacionHabilitadaParaTurno(
+              item,
+              programacion.estado
+            )
+        )
+        .sort(
+          (a, b) =>
+            a.orden - b.orden
+        );
+
+    return anteriores.every(
+      anterior =>
+        this.programaciones
+          .some(
+            otra =>
+              otra.fecha === programacion.fecha &&
+              otra.estado === programacion.estado &&
+              this.asignacion(
+                otra.programacionId
+              ) === anterior.id
+          )
     );
   }
 

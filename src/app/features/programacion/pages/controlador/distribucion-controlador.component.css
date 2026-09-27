@@ -1711,3 +1711,114 @@ th.sticky-name{
     width: 100%;
   }
 }
+
+
+/* =========================================================
+   Cobertura por turno y configuración de disponibilidad
+   ========================================================= */
+
+.coverage-head-actions{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:12px;
+}
+
+.coverage-filter{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.coverage-filter > span{
+  font-size:12px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  opacity:.7;
+}
+
+.coverage-filter-buttons{
+  display:inline-flex;
+  gap:4px;
+  padding:4px;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:10px;
+  background:rgba(0,0,0,.03);
+}
+
+.coverage-filter-buttons button{
+  min-width:48px;
+  border:0;
+  border-radius:8px;
+  padding:8px 12px;
+  background:transparent;
+  cursor:pointer;
+  font:inherit;
+  font-weight:700;
+}
+
+.coverage-filter-buttons button.active{
+  background:#fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.12);
+}
+
+.location-turns{
+  display:flex;
+  gap:5px;
+  margin-top:6px;
+}
+
+.location-turns span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:24px;
+  height:24px;
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,.12);
+  font-size:11px;
+  font-weight:800;
+  opacity:.35;
+}
+
+.location-turns span.enabled{
+  opacity:1;
+  background:rgba(0,0,0,.06);
+}
+
+.turn-config{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+  padding:12px;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:10px;
+}
+
+.turn-config-title{
+  font-size:12px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+.turn-check{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  cursor:pointer;
+}
+
+.turn-check input{
+  width:16px;
+  height:16px;
+}
+
+@media (max-width: 900px){
+  .coverage-head-actions{
+    align-items:flex-start;
+    width:100%;
+  }
+}

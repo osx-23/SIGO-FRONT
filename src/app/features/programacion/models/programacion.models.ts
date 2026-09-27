@@ -18,9 +18,11 @@ export interface GuardarProgramacionRequest{ plazaId:number; programaciones:Turn
 export interface Ubicacion{
   id:number; plazaId:number; codigo:string; nombre:string; tipo:TipoUbicacion;
   viaId:number|null; activo:boolean; orden:number;
+  permiteTurnoA:boolean; permiteTurnoB:boolean; permiteTurnoC:boolean;
 }
 export interface GuardarUbicacionRequest{
   plazaId:number; codigo:string; nombre:string; tipo:TipoUbicacion; orden:number|null;
+  permiteTurnoA:boolean; permiteTurnoB:boolean; permiteTurnoC:boolean;
 }
 export interface DistribucionDia{
   distribucionId:number; programacionTurnoId:number; trabajadorId:number; codigoTrabajador:number;

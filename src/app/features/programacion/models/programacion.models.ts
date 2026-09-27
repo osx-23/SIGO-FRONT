@@ -106,3 +106,112 @@ export interface AgenteProgramacionExcepcionRequest {
   color: string;
   activo: boolean;
 }
+
+
+/* ============================================================
+ * GENERADOR DE ASIGNACIÓN DE CASETAS
+ * ============================================================ */
+
+export type GrupoFlujoCaseta =
+  | 'ALTO_FLUJO'
+  | 'BAJO_FLUJO'
+  | 'SIN_CLASIFICAR';
+
+export type TipoPeriodoCaseta =
+  | 'SEMANA'
+  | 'MES';
+
+export interface ConfiguracionAsignacionCaseta {
+  plazaId: number;
+  maxMismaCasetaSemana: number;
+  maxMismaCasetaMes: number;
+  maxConsecutivos: number;
+  balancearFlujo: boolean;
+}
+
+export interface GuardarConfiguracionAsignacionCasetaRequest {
+  plazaId: number;
+  maxMismaCasetaSemana: number;
+  maxMismaCasetaMes: number;
+  maxConsecutivos: number;
+  balancearFlujo: boolean;
+}
+
+export interface CasetaConfiguracion {
+  ubicacionId: number;
+  codigo: string;
+  nombre: string;
+  grupoFlujo: GrupoFlujoCaseta;
+  maxSemana: number | null;
+  maxMes: number | null;
+  activo: boolean;
+}
+
+export interface GuardarCasetaConfiguracionRequest {
+  plazaId: number;
+  grupoFlujo: GrupoFlujoCaseta;
+  maxSemana: number | null;
+  maxMes: number | null;
+}
+
+export interface RestriccionCaseta {
+  id: number;
+  trabajadorId: number;
+  codigoTrabajador: number;
+  trabajador: string;
+  ubicacionId: number;
+  ubicacionCodigo: string;
+  motivo: string | null;
+  activo: boolean;
+}
+
+export interface GuardarRestriccionCasetaRequest {
+  plazaId: number;
+  trabajadorId: number;
+  ubicacionId: number;
+  motivo: string | null;
+  activo: boolean;
+}
+
+export interface GenerarCasetasRequest {
+  plazaId: number;
+  anio: number;
+  mes: number;
+  periodo: TipoPeriodoCaseta;
+  semana: number | null;
+}
+
+export interface AsignacionCasetaPropuesta {
+  programacionTurnoId: number;
+  trabajadorId: number;
+  codigoTrabajador: number;
+  trabajador: string;
+  fecha: string;
+  turno: 'A' | 'B' | 'C';
+  ubicacionId: number;
+  ubicacionCodigo: string;
+  ubicacionNombre: string;
+  grupoFlujo: GrupoFlujoCaseta;
+  puntaje: number;
+}
+
+export interface ConflictoCasetaPropuesta {
+  programacionTurnoId: number;
+  trabajadorId: number;
+  trabajador: string;
+  fecha: string;
+  turno: 'A' | 'B' | 'C';
+  mensaje: string;
+}
+
+export interface GeneradorCasetasPropuesta {
+  plazaId: number;
+  anio: number;
+  mes: number;
+  periodo: TipoPeriodoCaseta;
+  semana: number | null;
+  desde: string;
+  hasta: string;
+  asignaciones: AsignacionCasetaPropuesta[];
+  conflictos: ConflictoCasetaPropuesta[];
+}

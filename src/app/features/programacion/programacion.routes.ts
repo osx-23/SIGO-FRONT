@@ -3,6 +3,16 @@ import { moduleGuard, roleGuard } from '../../core/auth/guards';
 
 export const PROGRAMACION_ROUTES: Routes = [
   {
+    path: 'programacion/generador-casetas',
+    canActivate: [
+      moduleGuard('PROGRAMACION'),
+      roleGuard('SUPERVISOR')
+    ],
+    loadComponent: () =>
+      import('./pages/generador-casetas/generador-asignacion-casetas.component')
+        .then(m => m.GeneradorAsignacionCasetasComponent)
+  },
+  {
     path: 'programacion/turnos',
     canActivate: [
       moduleGuard('PROGRAMACION'),

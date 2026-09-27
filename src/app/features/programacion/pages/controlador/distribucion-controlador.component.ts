@@ -136,6 +136,10 @@ export class DistribucionControladorComponent
 
   modalUbicacionesAbierto = false;
 
+  modalRestriccionesAbierto = false;
+
+  busquedaAgenteRestriccion = '';
+
   configPlazaId: number | null = null;
 
   ubicacionesConfiguracion: Ubicacion[] = [];
@@ -235,6 +239,48 @@ export class DistribucionControladorComponent
         'SUPERVISOR'
       );
   }
+
+  get agentesRestriccionFiltrados(): TrabajadorResumen[] {
+
+    const query =
+      this.busquedaAgenteRestriccion
+        .trim()
+        .toLowerCase();
+
+    if (!query) {
+      return this.agentesRestriccionConfiguracion;
+    }
+
+    return this.agentesRestriccionConfiguracion
+      .filter(
+        agente =>
+          `${agente.codigo} ${agente.nombreCompleto}`
+            .toLowerCase()
+            .includes(query)
+      );
+  }
+
+
+  get restriccionesCasetaFiltradas(): RestriccionCaseta[] {
+
+    const query =
+      this.busquedaAgenteRestriccion
+        .trim()
+        .toLowerCase();
+
+    if (!query) {
+      return this.restriccionesCasetaConfiguracion;
+    }
+
+    return this.restriccionesCasetaConfiguracion
+      .filter(
+        restriccion =>
+          `${restriccion.codigoTrabajador} ${restriccion.trabajador} ${restriccion.ubicacionCodigo}`
+            .toLowerCase()
+            .includes(query)
+      );
+  }
+
 
   get mesInput(): string {
 
@@ -1787,6 +1833,75 @@ export class DistribucionControladorComponent
           this.cdr.detectChanges();
         }
       });
+  }
+
+
+  abrirModalRestriccionesAgentes(): void {
+
+    if (
+      !this.esSupervisor ||
+      !this.configPlazaId
+    ) {
+      return;
+    }
+
+    this.modalUbicacionesAbierto =
+      false;
+
+    this.modalRestriccionesAbierto =
+      true;
+
+    this.busquedaAgenteRestriccion =
+      '';
+
+    this.resetFormularioRestriccionConfiguracion();
+
+    this.cdr.detectChanges();
+  }
+
+
+  cerrarModalRestriccionesAgentes(): void {
+
+    if (
+      this.guardandoRestriccionConfiguracion ||
+      this.eliminandoRestriccionId !== null
+    ) {
+      return;
+    }
+
+    this.modalRestriccionesAbierto =
+      false;
+
+    this.busquedaAgenteRestriccion =
+      '';
+
+    this.resetFormularioRestriccionConfiguracion();
+
+    this.cdr.detectChanges();
+  }
+
+
+  volverConfiguracionCasetas(): void {
+
+    if (
+      this.guardandoRestriccionConfiguracion ||
+      this.eliminandoRestriccionId !== null
+    ) {
+      return;
+    }
+
+    this.modalRestriccionesAbierto =
+      false;
+
+    this.modalUbicacionesAbierto =
+      true;
+
+    this.busquedaAgenteRestriccion =
+      '';
+
+    this.resetFormularioRestriccionConfiguracion();
+
+    this.cdr.detectChanges();
   }
 
 

@@ -1646,13 +1646,13 @@ export class DistribucionControladorComponent
       ubicacion.orden;
 
     this.ubicacionPermiteTurnoA =
-      ubicacion.permiteTurnoA;
+      ubicacion.permiteTurnoA !== false;
 
     this.ubicacionPermiteTurnoB =
-      ubicacion.permiteTurnoB;
+      ubicacion.permiteTurnoB !== false;
 
     this.ubicacionPermiteTurnoC =
-      ubicacion.permiteTurnoC;
+      ubicacion.permiteTurnoC !== false;
 
     this.errorConfiguracion =
       '';
@@ -2008,15 +2008,15 @@ export class DistribucionControladorComponent
   ): boolean {
 
     if (estado === 'A') {
-      return ubicacion.permiteTurnoA;
+      return ubicacion.permiteTurnoA !== false;
     }
 
     if (estado === 'B') {
-      return ubicacion.permiteTurnoB;
+      return ubicacion.permiteTurnoB !== false;
     }
 
     if (estado === 'C') {
-      return ubicacion.permiteTurnoC;
+      return ubicacion.permiteTurnoC !== false;
     }
 
     return false;

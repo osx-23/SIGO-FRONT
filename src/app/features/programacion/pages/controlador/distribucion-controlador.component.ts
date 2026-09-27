@@ -1102,7 +1102,9 @@ export class DistribucionControladorComponent
       )
     ) {
       this.error =
-        `No se puede asignar ${ubicacionNueva.codigo}. Primero deben asignarse las ubicaciones auxiliares/apoyo anteriores para el turno ${programacionActual.estado}.`;
+        ubicacionNueva.tipo === 'AUXILIAR'
+          ? `No se puede asignar ${ubicacionNueva.codigo}. Primero deben completarse todas las vías habilitadas del turno ${programacionActual.estado} y luego respetarse el orden de auxiliares.`
+          : `No se puede asignar ${ubicacionNueva.codigo}. Primero deben asignarse las ubicaciones auxiliares/apoyo anteriores para el turno ${programacionActual.estado}.`;
       this.cdr.detectChanges();
       return;
     }
@@ -2482,6 +2484,39 @@ export class DistribucionControladorComponent
 
     if (ubicacion.tipo === 'VIA') {
       return true;
+    }
+
+    if (
+      ubicacion.tipo === 'AUXILIAR'
+    ) {
+
+      const viasPendientes =
+        this.ubicaciones
+          .filter(
+            item =>
+              item.activo &&
+              item.tipo === 'VIA' &&
+              this.ubicacionHabilitadaParaTurno(
+                item,
+                programacion.estado
+              )
+          )
+          .some(
+            via =>
+              !this.programaciones
+                .some(
+                  otra =>
+                    otra.fecha === programacion.fecha &&
+                    otra.estado === programacion.estado &&
+                    this.asignacion(
+                      otra.programacionId
+                    ) === via.id
+                )
+          );
+
+      if (viasPendientes) {
+        return false;
+      }
     }
 
     const anteriores =

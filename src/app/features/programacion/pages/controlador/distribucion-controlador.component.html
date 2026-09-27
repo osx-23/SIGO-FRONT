@@ -435,7 +435,181 @@
       <span class="estado-lic">LIC · Licencia</span>
     </div>
   </section>
+<!-- MODAL GENERADOR DE DISTRIBUCIÓN -->
+@if(generadorAbierto){
+  <div
+    class="modal-backdrop"
+    (click)="cerrarGeneradorDistribucion()"
+  >
+    <section
+      class="generator-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="generator-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="locations-accent"></div>
 
+      <div class="locations-header">
+        <div>
+          <span class="eyebrow">GENERADOR AUTOMÁTICO</span>
+          <h2 id="generator-title">Generar asignación de casetas</h2>
+          <p>
+            El sistema usará los turnos A, B y C ya programados por el Supervisor
+            para cargar automáticamente las casetas en esta misma tabla.
+          </p>
+        </div>
+
+        <button
+          class="modal-close"
+          type="button"
+          (click)="cerrarGeneradorDistribucion()"
+          [disabled]="generandoDistribucion"
+        >
+          Cerrar
+        </button>
+      </div>
+
+      <div class="generator-context">
+        <div>
+          <span>Plaza</span>
+          <strong>
+            @for(plaza of plazas; track plaza.id){
+              @if(plaza.id === plazaId){
+                {{ plaza.codigo }}
+              }
+            }
+          </strong>
+        </div>
+
+        <div>
+          <span>Mes</span>
+          <strong>{{ mesInput }}</strong>
+        </div>
+
+        <div>
+          <span>Turnos utilizados</span>
+          <strong>A · B · C</strong>
+        </div>
+      </div>
+
+      <div class="generator-period">
+        <label>Periodo de generación</label>
+
+        <div class="segmented-generator">
+          <button
+            type="button"
+            [class.active]="generadorPeriodo === 'SEMANA'"
+            (click)="cambiarPeriodoGenerador('SEMANA')"
+          >
+            Semana
+          </button>
+
+          <button
+            type="button"
+            [class.active]="generadorPeriodo === 'MES'"
+            (click)="cambiarPeriodoGenerador('MES')"
+          >
+            Mes completo
+          </button>
+        </div>
+      </div>
+
+      @if(generadorPeriodo === 'SEMANA'){
+        <label class="generator-week">
+          Semana
+          <select [(ngModel)]="generadorSemana">
+            <option [ngValue]="1">Semana 1 · 01 al 07</option>
+            <option [ngValue]="2">Semana 2 · 08 al 14</option>
+            <option [ngValue]="3">Semana 3 · 15 al 21</option>
+            <option [ngValue]="4">Semana 4 · 22 al 28</option>
+            <option [ngValue]="5">Semana 5 · 29 al fin de mes</option>
+          </select>
+        </label>
+      }
+
+      <div class="generator-info">
+        <strong>¿Qué hará el generador?</strong>
+
+        <p>
+          Solo asignará casetas a los agentes que tengan turno operativo.
+          Aplicará las restricciones por agente, los grupos de alto y bajo flujo
+          y los máximos configurados para la plaza.
+        </p>
+
+        <p>
+          El resultado se cargará como cambios pendientes en la tabla.
+          No se guardará hasta que pulses <b>Guardar distribución</b>.
+        </p>
+      </div>
+
+      @if(errorGenerador){
+        <div class="config-alert error">
+          {{ errorGenerador }}
+        </div>
+      }
+
+      @if(mensajeGenerador){
+        <div class="config-alert success">
+          {{ mensajeGenerador }}
+        </div>
+      }
+
+      @if(propuestaGenerador && propuestaGenerador.conflictos.length){
+        <div class="generator-conflicts">
+          <strong>
+            Observaciones: {{ propuestaGenerador.conflictos.length }}
+          </strong>
+
+          <div class="generator-conflict-list">
+            @for(
+              conflicto of propuestaGenerador.conflictos;
+              track conflicto.programacionTurnoId
+            ){
+              <div>
+                <span>
+                  {{ conflicto.fecha }} · Turno {{ conflicto.turno }}
+                </span>
+
+                <strong>
+                  {{ conflicto.trabajador }}
+                </strong>
+
+                <small>
+                  {{ conflicto.mensaje }}
+                </small>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="generator-actions">
+        <button
+          class="secondary"
+          type="button"
+          (click)="abrirConfiguracionGenerador()"
+          [disabled]="generandoDistribucion"
+        >
+          Configurar reglas
+        </button>
+
+        <button
+          class="primary"
+          type="button"
+          (click)="generarYCargarDistribucion()"
+          [disabled]="generandoDistribucion || !plazaId"
+        >
+          {{
+            generandoDistribucion
+              ? 'Generando...'
+              : 'Generar y cargar en tabla'
+          }}
+        </button>
+      </div>
+    </section>
+  </div>
+}
 
   <!-- MODAL CONFIGURACIÓN DE CASETAS -->
   @if(modalUbicacionesAbierto){

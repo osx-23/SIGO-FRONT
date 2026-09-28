@@ -2573,7 +2573,9 @@ export class DistribucionControladorComponent
           else {
 
             this.mensajeGenerador =
-              `Se cargaron ${total} asignaciones. Calidad ${propuesta.calidad.puntuacion}/100 · ${propuesta.calidad.solucionesEvaluadas} solución(es) evaluada(s). Revisa el resultado y pulsa Guardar distribución.`;
+              propuesta.calidad
+                ? `Se cargaron ${total} asignaciones. Calidad ${propuesta.calidad.puntuacion}/100 · ${propuesta.calidad.solucionesEvaluadas} solución(es) evaluada(s). Revisa el resultado y pulsa Guardar distribución.`
+                : `Se cargaron ${total} asignaciones en la tabla. Revisa el resultado y pulsa Guardar distribución.`;
 
           }
 

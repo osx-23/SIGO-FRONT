@@ -17,7 +17,8 @@ import {
   Plaza,
   RestriccionCaseta,
   TipoPeriodoCaseta,
-  TrabajadorResumen
+  TrabajadorResumen,
+  Ubicacion
 } from '../../models/programacion.models';
 
 @Component({
@@ -43,6 +44,7 @@ export class GeneradorAsignacionCasetasComponent
   plazas: Plaza[] = [];
   agentes: TrabajadorResumen[] = [];
   casetas: CasetaConfiguracion[] = [];
+  ubicaciones: Ubicacion[] = [];
   restricciones: RestriccionCaseta[] = [];
 
   plazaId: number | null = null;
@@ -138,6 +140,10 @@ export class GeneradorAsignacionCasetasComponent
               this.api.getCasetasGenerador(
                 this.plazaId
               ),
+            ubicaciones:
+              this.api.getUbicacionesConfiguracion(
+                this.plazaId
+              ),
             restricciones:
               this.api.getRestriccionesCasetas(
                 this.plazaId
@@ -154,6 +160,9 @@ export class GeneradorAsignacionCasetasComponent
 
       this.casetas =
         contexto.casetas;
+
+      this.ubicaciones =
+        contexto.ubicaciones;
 
       this.restricciones =
         contexto.restricciones;
@@ -478,6 +487,582 @@ export class GeneradorAsignacionCasetasComponent
     } finally {
       this.guardandoPropuesta = false;
       this.cdr.markForCheck();
+    }
+  }
+
+  exportarJsonDiagnostico(): void {
+    if (
+      !this.propuesta ||
+      !this.plazaId
+    ) {
+      return;
+    }
+
+    const plaza =
+      this.plazas.find(
+        item => item.id === this.plazaId
+      ) ?? null;
+
+    const ubicacionPorId =
+      new Map(
+        this.ubicaciones.map(
+          item => [
+            item.id,
+            item
+          ] as const
+        )
+      );
+
+    const configuracionPorId =
+      new Map(
+        this.casetas.map(
+          item => [
+            item.ubicacionId,
+            item
+          ] as const
+        )
+      );
+
+    type HistorialFlujo = {
+      fecha: string;
+      ubicacionId: number;
+      ubicacionCodigo: string;
+      tipo: string | null;
+    };
+
+    const ultimaPorAgenteFlujo =
+      new Map<string, HistorialFlujo>();
+
+    const asignacionesDiagnostico =
+      [...this.propuesta.asignaciones]
+        .sort((a, b) =>
+          a.fecha.localeCompare(b.fecha)
+          || a.turno.localeCompare(b.turno)
+          || a.codigoTrabajador - b.codigoTrabajador
+        )
+        .map(item => {
+          const ubicacion =
+            ubicacionPorId.get(
+              item.ubicacionId
+            );
+
+          const configuracionCaseta =
+            configuracionPorId.get(
+              item.ubicacionId
+            );
+
+          const historialKey =
+            `${item.trabajadorId}|${item.grupoFlujo}`;
+
+          const ultimaMismoFlujo =
+            ultimaPorAgenteFlujo.get(
+              historialKey
+            ) ?? null;
+
+          const tipo =
+            ubicacion?.tipo ?? null;
+
+          const excepcionesDetectadas:
+            string[] = [];
+
+          if (
+            ultimaMismoFlujo &&
+            tipo &&
+            (
+              tipo === 'VIA' ||
+              tipo === 'AUXILIAR'
+            ) &&
+            ultimaMismoFlujo.tipo === tipo
+          ) {
+            excepcionesDetectadas.push(
+              'REPETICION_TIPO_EN_MISMO_FLUJO'
+            );
+          }
+
+          if (
+            ubicacion &&
+            !this.ubicacionHabilitadaParaTurno(
+              ubicacion,
+              item.turno
+            )
+          ) {
+            excepcionesDetectadas.push(
+              'UBICACION_NO_HABILITADA_PARA_TURNO'
+            );
+          }
+
+          if (tipo === 'APOYO') {
+            excepcionesDetectadas.push(
+              'USO_DE_APOYO'
+            );
+          }
+
+          const diagnostico = {
+            programacionTurnoId:
+              item.programacionTurnoId,
+            fecha:
+              item.fecha,
+            turno:
+              item.turno,
+            agente: {
+              id:
+                item.trabajadorId,
+              codigo:
+                item.codigoTrabajador,
+              nombre:
+                item.trabajador
+            },
+            ubicacion: {
+              id:
+                item.ubicacionId,
+              codigo:
+                item.ubicacionCodigo,
+              nombre:
+                item.ubicacionNombre,
+              tipo,
+              orden:
+                ubicacion?.orden ?? null,
+              activo:
+                ubicacion?.activo ?? null,
+              habilitadaParaTurno:
+                ubicacion
+                  ? this.ubicacionHabilitadaParaTurno(
+                      ubicacion,
+                      item.turno
+                    )
+                  : null
+            },
+            flujo:
+              item.grupoFlujo,
+            puntaje:
+              item.puntaje,
+            limitesCaseta: {
+              maxSemana:
+                configuracionCaseta
+                  ?.maxSemana ?? null,
+              maxMes:
+                configuracionCaseta
+                  ?.maxMes ?? null
+            },
+            ultimaAsignacionMismoFlujo:
+              ultimaMismoFlujo,
+            excepcionesDetectadas
+          };
+
+          ultimaPorAgenteFlujo.set(
+            historialKey,
+            {
+              fecha:
+                item.fecha,
+              ubicacionId:
+                item.ubicacionId,
+              ubicacionCodigo:
+                item.ubicacionCodigo,
+              tipo
+            }
+          );
+
+          return diagnostico;
+        });
+
+    type ResumenTurno = {
+      fecha: string;
+      turno: 'A' | 'B' | 'C';
+      agentesAsignados: number;
+      agentesSinAsignar: number;
+      agentesProgramados: number;
+      viasUsadas: number;
+      auxiliaresUsados: number;
+      apoyosUsados: number;
+      ubicacionesUsadas: string[];
+      ubicacionesLibres: string[];
+      duplicidades: string[];
+      alertas: string[];
+    };
+
+    const resumenPorTurno =
+      new Map<string, ResumenTurno>();
+
+    const obtenerResumen = (
+      fecha: string,
+      turno: 'A' | 'B' | 'C'
+    ): ResumenTurno => {
+      const key =
+        `${fecha}|${turno}`;
+
+      const existente =
+        resumenPorTurno.get(key);
+
+      if (existente) {
+        return existente;
+      }
+
+      const elegibles =
+        this.ubicaciones.filter(
+          ubicacion =>
+            ubicacion.activo &&
+            (
+              turno !== 'C' ||
+              ubicacion.tipo === 'VIA'
+            )
+        );
+
+      const creado: ResumenTurno = {
+        fecha,
+        turno,
+        agentesAsignados: 0,
+        agentesSinAsignar: 0,
+        agentesProgramados: 0,
+        viasUsadas: 0,
+        auxiliaresUsados: 0,
+        apoyosUsados: 0,
+        ubicacionesUsadas: [],
+        ubicacionesLibres:
+          elegibles.map(
+            item => item.codigo
+          ),
+        duplicidades: [],
+        alertas: []
+      };
+
+      resumenPorTurno.set(
+        key,
+        creado
+      );
+
+      return creado;
+    };
+
+    const ocupacionPorTurno =
+      new Map<string, Map<number, number>>();
+
+    for (
+      const item of asignacionesDiagnostico
+    ) {
+      const resumen =
+        obtenerResumen(
+          item.fecha,
+          item.turno
+        );
+
+      resumen.agentesAsignados++;
+
+      const codigo =
+        item.ubicacion.codigo;
+
+      if (
+        !resumen.ubicacionesUsadas.includes(
+          codigo
+        )
+      ) {
+        resumen.ubicacionesUsadas.push(
+          codigo
+        );
+      }
+
+      resumen.ubicacionesLibres =
+        resumen.ubicacionesLibres.filter(
+          value => value !== codigo
+        );
+
+      switch (item.ubicacion.tipo) {
+        case 'VIA':
+          resumen.viasUsadas++;
+          break;
+
+        case 'AUXILIAR':
+          resumen.auxiliaresUsados++;
+          break;
+
+        case 'APOYO':
+          resumen.apoyosUsados++;
+          break;
+      }
+
+      const turnoKey =
+        `${item.fecha}|${item.turno}`;
+
+      const ocupacion =
+        ocupacionPorTurno.get(
+          turnoKey
+        ) ?? new Map<number, number>();
+
+      const cantidad =
+        (
+          ocupacion.get(
+            item.ubicacion.id
+          ) ?? 0
+        ) + 1;
+
+      ocupacion.set(
+        item.ubicacion.id,
+        cantidad
+      );
+
+      ocupacionPorTurno.set(
+        turnoKey,
+        ocupacion
+      );
+
+      if (cantidad > 1) {
+        resumen.duplicidades.push(
+          codigo
+        );
+      }
+    }
+
+    for (
+      const conflicto of
+      this.propuesta.conflictos
+    ) {
+      const resumen =
+        obtenerResumen(
+          conflicto.fecha,
+          conflicto.turno
+        );
+
+      resumen.agentesSinAsignar++;
+    }
+
+    for (
+      const resumen of
+      resumenPorTurno.values()
+    ) {
+      resumen.agentesProgramados =
+        resumen.agentesAsignados
+        + resumen.agentesSinAsignar;
+
+      if (
+        resumen.agentesSinAsignar > 0 &&
+        resumen.ubicacionesLibres.length > 0
+      ) {
+        resumen.alertas.push(
+          'HAY_PERSONAL_SIN_ASIGNAR_Y_UBICACIONES_LIBRES'
+        );
+      }
+
+      if (
+        resumen.duplicidades.length > 0
+      ) {
+        resumen.alertas.push(
+          'CASETA_DUPLICADA_EN_MISMO_TURNO'
+        );
+      }
+
+      const auxiliaresActivos =
+        this.ubicaciones.filter(
+          item =>
+            item.activo &&
+            item.tipo === 'AUXILIAR'
+        ).length;
+
+      if (
+        resumen.apoyosUsados > 0 &&
+        resumen.auxiliaresUsados <
+          auxiliaresActivos
+      ) {
+        resumen.alertas.push(
+          'APOYO_USADO_ANTES_DE_COMPLETAR_AUXILIARES'
+        );
+      }
+
+      resumen.ubicacionesUsadas.sort();
+      resumen.ubicacionesLibres.sort();
+      resumen.duplicidades =
+        [...new Set(
+          resumen.duplicidades
+        )].sort();
+    }
+
+    const catalogoCasetas =
+      this.ubicaciones
+        .map(ubicacion => {
+          const config =
+            configuracionPorId.get(
+              ubicacion.id
+            );
+
+          return {
+            id:
+              ubicacion.id,
+            codigo:
+              ubicacion.codigo,
+            nombre:
+              ubicacion.nombre,
+            tipo:
+              ubicacion.tipo,
+            orden:
+              ubicacion.orden,
+            activo:
+              ubicacion.activo,
+            permiteTurnoA:
+              ubicacion.permiteTurnoA,
+            permiteTurnoB:
+              ubicacion.permiteTurnoB,
+            permiteTurnoC:
+              ubicacion.permiteTurnoC,
+            grupoFlujo:
+              config?.grupoFlujo
+              ?? 'SIN_CLASIFICAR',
+            maxSemana:
+              config?.maxSemana ?? null,
+            maxMes:
+              config?.maxMes ?? null
+          };
+        })
+        .sort(
+          (a, b) =>
+            a.orden - b.orden
+            || a.codigo.localeCompare(
+              b.codigo
+            )
+        );
+
+    const payload = {
+      versionDiagnostico: 1,
+      exportadoEn:
+        new Date().toISOString(),
+      plaza: {
+        id:
+          this.plazaId,
+        codigo:
+          plaza?.codigo ?? null,
+        descripcion:
+          plaza?.descripcion ?? null
+      },
+      periodo: {
+        anio:
+          this.propuesta.anio,
+        mes:
+          this.propuesta.mes,
+        tipo:
+          this.propuesta.periodo,
+        semana:
+          this.propuesta.semana,
+        desde:
+          this.propuesta.desde,
+        hasta:
+          this.propuesta.hasta
+      },
+      reglasGenerales: {
+        ...this.configuracion
+      },
+      limitacionesDiagnostico: [
+        'El backend actualmente entrega puntaje total, pero no el desglose de penalizaciones.',
+        'La fase exacta ESTRICTA/FLEXIBLE/REPARACION no viene incluida en la respuesta del backend.',
+        'La última asignación del mismo flujo se calcula dentro del rango exportado; el backend puede considerar historial anterior.'
+      ],
+      resumen: {
+        totalAsignaciones:
+          asignacionesDiagnostico.length,
+        totalConflictos:
+          this.propuesta.conflictos.length,
+        turnos:
+          [...resumenPorTurno.values()]
+            .sort(
+              (a, b) =>
+                a.fecha.localeCompare(
+                  b.fecha
+                )
+                || a.turno.localeCompare(
+                  b.turno
+                )
+            )
+      },
+      catalogoCasetas,
+      restricciones:
+        this.restricciones.map(
+          item => ({
+            id:
+              item.id,
+            trabajadorId:
+              item.trabajadorId,
+            codigoTrabajador:
+              item.codigoTrabajador,
+            trabajador:
+              item.trabajador,
+            ubicacionId:
+              item.ubicacionId,
+            ubicacionCodigo:
+              item.ubicacionCodigo,
+            motivo:
+              item.motivo,
+            activo:
+              item.activo
+          })
+        ),
+      asignaciones:
+        asignacionesDiagnostico,
+      conflictos:
+        this.propuesta.conflictos
+    };
+
+    const contenido =
+      JSON.stringify(
+        payload,
+        null,
+        2
+      );
+
+    const blob =
+      new Blob(
+        [contenido],
+        {
+          type:
+            'application/json;charset=utf-8'
+        }
+      );
+
+    const url =
+      URL.createObjectURL(
+        blob
+      );
+
+    const enlace =
+      document.createElement(
+        'a'
+      );
+
+    const plazaArchivo =
+      plaza?.codigo
+        ?.replace(
+          /[^a-zA-Z0-9_-]/g,
+          '-'
+        )
+        || `plaza-${this.plazaId}`;
+
+    enlace.href = url;
+    enlace.download =
+      `diagnostico-asignacion-casetas-${plazaArchivo}-${this.periodoMes}.json`;
+
+    document.body.appendChild(
+      enlace
+    );
+
+    enlace.click();
+    enlace.remove();
+
+    URL.revokeObjectURL(
+      url
+    );
+
+    this.mensaje =
+      'JSON de diagnóstico exportado. Puedes subir ese archivo al chat para revisar la asignación.';
+  }
+
+  private ubicacionHabilitadaParaTurno(
+    ubicacion: Ubicacion,
+    turno: 'A' | 'B' | 'C'
+  ): boolean {
+    switch (turno) {
+      case 'A':
+        return ubicacion.permiteTurnoA;
+
+      case 'B':
+        return ubicacion.permiteTurnoB;
+
+      case 'C':
+        return ubicacion.permiteTurnoC;
     }
   }
 

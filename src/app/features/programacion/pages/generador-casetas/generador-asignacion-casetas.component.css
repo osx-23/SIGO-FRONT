@@ -250,6 +250,14 @@ select {
   margin-top: 16px;
 }
 
+.proposal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .primary,
 .secondary {
   min-height: 40px;

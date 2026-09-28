@@ -2145,9 +2145,6 @@ export class DistribucionControladorComponent
                 plazaId,
               codigo:
                 plaza?.codigo ??
-                this.auth
-                  .usuario()
-                  ?.plaza ??
                 null,
               descripcion:
                 plaza?.descripcion ??
@@ -2295,9 +2292,6 @@ export class DistribucionControladorComponent
           const plazaArchivo =
             (
               plaza?.codigo ??
-              this.auth
-                .usuario()
-                ?.plaza ??
               `plaza-${plazaId}`
             )
               .replace(

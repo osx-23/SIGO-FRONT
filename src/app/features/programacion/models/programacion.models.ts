@@ -229,5 +229,5 @@ export interface GeneradorCasetasPropuesta {
   hasta: string;
   asignaciones: AsignacionCasetaPropuesta[];
   conflictos: ConflictoCasetaPropuesta[];
-  calidad: CalidadGeneracionCasetas;
+  calidad?: CalidadGeneracionCasetas;
 }

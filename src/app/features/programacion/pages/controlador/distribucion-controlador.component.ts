@@ -1552,6 +1552,58 @@ export class DistribucionControladorComponent
                 )
             );
 
+          const flujoPermiteAlternanciaTipo = (
+            grupo: GrupoFlujoCaseta,
+            turno: EstadoProgramacion
+          ): boolean => {
+
+            if (
+              grupo ===
+                'SIN_CLASIFICAR' ||
+              turno === 'C'
+            ) {
+              return false;
+            }
+
+            const delFlujo =
+              this.ubicaciones
+                .filter(
+                  ubicacion =>
+                    ubicacion.activo &&
+                    (
+                      casetaPorId
+                        .get(
+                          ubicacion.id
+                        )
+                        ?.grupoFlujo ??
+                      'SIN_CLASIFICAR'
+                    ) === grupo
+                );
+
+            const tieneVia =
+              delFlujo.some(
+                ubicacion =>
+                  ubicacion.tipo ===
+                    'VIA'
+              );
+
+            const tieneAuxiliar =
+              delFlujo.some(
+                ubicacion =>
+                  ubicacion.tipo ===
+                    'AUXILIAR' &&
+                  this.ubicacionHabilitadaParaTurno(
+                    ubicacion,
+                    turno
+                  )
+              );
+
+            return (
+              tieneVia &&
+              tieneAuxiliar
+            );
+          };
+
           type HistorialFlujo = {
             fecha: string;
             ubicacionId: number;
@@ -1835,6 +1887,10 @@ export class DistribucionControladorComponent
             }
 
             if (
+              flujoPermiteAlternanciaTipo(
+                grupo,
+                programacion.estado
+              ) &&
               ultimaMismoFlujo &&
               ubicacion &&
               (

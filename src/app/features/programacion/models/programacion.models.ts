@@ -206,6 +206,19 @@ export interface ConflictoCasetaPropuesta {
   mensaje: string;
 }
 
+export interface CalidadGeneracionCasetas {
+  puntuacion: number;
+  coberturaPct: number;
+  rotacionFlujoPct: number;
+  rotacionTipoPct: number;
+  rotacionCasetaPct: number;
+  repeticionesTipo: number;
+  repeticionesExactas: number;
+  duplicidades: number;
+  restriccionesVioladas: number;
+  solucionesEvaluadas: number;
+}
+
 export interface GeneradorCasetasPropuesta {
   plazaId: number;
   anio: number;
@@ -216,4 +229,5 @@ export interface GeneradorCasetasPropuesta {
   hasta: string;
   asignaciones: AsignacionCasetaPropuesta[];
   conflictos: ConflictoCasetaPropuesta[];
+  calidad: CalidadGeneracionCasetas;
 }

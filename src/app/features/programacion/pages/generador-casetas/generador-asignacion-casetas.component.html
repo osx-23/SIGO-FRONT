@@ -533,21 +533,35 @@
           </p>
         </div>
 
-        <button
-          type="button"
-          class="primary"
-          (click)="guardarPropuesta()"
-          [disabled]="
-            guardandoPropuesta ||
-            !propuesta.asignaciones.length
-          "
-        >
-          {{
-            guardandoPropuesta
-              ? 'Guardando...'
-              : 'Guardar distribución'
-          }}
-        </button>
+        <div class="proposal-actions">
+          <button
+            type="button"
+            class="secondary"
+            (click)="exportarJsonDiagnostico()"
+            [disabled]="
+              !propuesta.asignaciones.length &&
+              !propuesta.conflictos.length
+            "
+          >
+            Exportar JSON
+          </button>
+
+          <button
+            type="button"
+            class="primary"
+            (click)="guardarPropuesta()"
+            [disabled]="
+              guardandoPropuesta ||
+              !propuesta.asignaciones.length
+            "
+          >
+            {{
+              guardandoPropuesta
+                ? 'Guardando...'
+                : 'Guardar distribución'
+            }}
+          </button>
+        </div>
       </div>
 
       @if (propuesta.conflictos.length) {

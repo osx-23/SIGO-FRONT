@@ -130,6 +130,8 @@ export class DistribucionControladorComponent
 
   guardando = false;
 
+  exportandoJson = false;
+
   error = '';
 
   mensaje = '';
@@ -1431,6 +1433,926 @@ export class DistribucionControladorComponent
 
       });
   }
+
+  exportarJsonDiagnostico(): void {
+
+    if (
+      !this.plazaId ||
+      this.exportandoJson
+    ) {
+      return;
+    }
+
+    this.exportandoJson =
+      true;
+
+    this.error =
+      '';
+
+    this.mensaje =
+      '';
+
+    const plazaId =
+      this.plazaId;
+
+    const mesAnteriorFecha =
+      new Date(
+        this.anio,
+        this.mes - 2,
+        1
+      );
+
+    const anioAnterior =
+      mesAnteriorFecha
+        .getFullYear();
+
+    const mesAnterior =
+      mesAnteriorFecha
+        .getMonth() + 1;
+
+    forkJoin({
+      configuracion:
+        this.api
+          .getConfiguracionGeneradorCasetas(
+            plazaId
+          ),
+      casetas:
+        this.api
+          .getCasetasGenerador(
+            plazaId
+          ),
+      restricciones:
+        this.api
+          .getRestriccionesCasetas(
+            plazaId
+          ),
+      distribucionAnterior:
+        this.api
+          .getDistribucion(
+            plazaId,
+            anioAnterior,
+            mesAnterior
+          )
+    })
+      .pipe(
+        finalize(() => {
+
+          this.exportandoJson =
+            false;
+
+          this.cdr.detectChanges();
+
+        })
+      )
+      .subscribe({
+
+        next: (
+          contexto
+        ) => {
+
+          const plaza =
+            this.plazas
+              .find(
+                item =>
+                  item.id ===
+                  plazaId
+              ) ??
+            null;
+
+          const ubicacionPorId =
+            new Map(
+              this.ubicaciones
+                .map(
+                  item => [
+                    item.id,
+                    item
+                  ] as const
+                )
+            );
+
+          const casetaPorId =
+            new Map(
+              contexto.casetas
+                .map(
+                  item => [
+                    item.ubicacionId,
+                    item
+                  ] as const
+                )
+            );
+
+          const agentePorId =
+            new Map(
+              this.agentes
+                .map(
+                  item => [
+                    item.id,
+                    item
+                  ] as const
+                )
+            );
+
+          type HistorialFlujo = {
+            fecha: string;
+            ubicacionId: number;
+            ubicacionCodigo: string;
+            tipo: TipoUbicacion | null;
+          };
+
+          const ultimaPorAgenteFlujo =
+            new Map<
+              string,
+              HistorialFlujo
+            >();
+
+          const historialAnterior =
+            [...contexto.distribucionAnterior]
+              .sort(
+                (a, b) =>
+                  a.fecha.localeCompare(
+                    b.fecha
+                  )
+              );
+
+          for (
+            const item of
+            historialAnterior
+          ) {
+
+            const caseta =
+              casetaPorId.get(
+                item.ubicacionId
+              );
+
+            const grupo =
+              caseta?.grupoFlujo ??
+              'SIN_CLASIFICAR';
+
+            if (
+              grupo ===
+              'SIN_CLASIFICAR'
+            ) {
+              continue;
+            }
+
+            ultimaPorAgenteFlujo
+              .set(
+                `${item.trabajadorId}|${grupo}`,
+                {
+                  fecha:
+                    item.fecha,
+                  ubicacionId:
+                    item.ubicacionId,
+                  ubicacionCodigo:
+                    item.ubicacionCodigo,
+                  tipo:
+                    item.ubicacionTipo ??
+                    ubicacionPorId
+                      .get(
+                        item.ubicacionId
+                      )
+                      ?.tipo ??
+                    null
+                }
+              );
+          }
+
+          const programacionesOperativas =
+            this.programaciones
+              .filter(
+                item =>
+                  this.esOperativo(
+                    item.estado
+                  )
+              )
+              .sort(
+                (a, b) =>
+                  a.fecha.localeCompare(
+                    b.fecha
+                  ) ||
+                  a.estado.localeCompare(
+                    b.estado
+                  ) ||
+                  a.codigoTrabajador -
+                    b.codigoTrabajador
+              );
+
+          const asignaciones:
+            Array<Record<string, unknown>> =
+            [];
+
+          const conflictos:
+            Array<Record<string, unknown>> =
+            [];
+
+          const resumenTurnos =
+            new Map<
+              string,
+              {
+                fecha: string;
+                turno: EstadoProgramacion;
+                programados: number;
+                asignados: number;
+                sinAsignar: number;
+                vias: number;
+                auxiliares: number;
+                apoyos: number;
+                ubicacionesUsadas: string[];
+                ubicacionesLibres: string[];
+                duplicidades: string[];
+                alertas: string[];
+              }
+            >();
+
+          const obtenerResumen = (
+            fecha: string,
+            turno: EstadoProgramacion
+          ) => {
+
+            const key =
+              `${fecha}|${turno}`;
+
+            const existente =
+              resumenTurnos
+                .get(
+                  key
+                );
+
+            if (
+              existente
+            ) {
+              return existente;
+            }
+
+            const ubicacionesElegibles =
+              this.ubicaciones
+                .filter(
+                  ubicacion =>
+                    ubicacion.activo &&
+                    (
+                      turno !== 'C' ||
+                      ubicacion.tipo ===
+                        'VIA'
+                    )
+                )
+                .map(
+                  ubicacion =>
+                    ubicacion.codigo
+                );
+
+            const creado = {
+              fecha,
+              turno,
+              programados: 0,
+              asignados: 0,
+              sinAsignar: 0,
+              vias: 0,
+              auxiliares: 0,
+              apoyos: 0,
+              ubicacionesUsadas:
+                [] as string[],
+              ubicacionesLibres:
+                ubicacionesElegibles,
+              duplicidades:
+                [] as string[],
+              alertas:
+                [] as string[]
+            };
+
+            resumenTurnos
+              .set(
+                key,
+                creado
+              );
+
+            return creado;
+          };
+
+          const ocupacion =
+            new Map<
+              string,
+              Map<number, number>
+            >();
+
+          for (
+            const programacion of
+            programacionesOperativas
+          ) {
+
+            const resumen =
+              obtenerResumen(
+                programacion.fecha,
+                programacion.estado
+              );
+
+            resumen.programados++;
+
+            const ubicacionId =
+              this.asignacion(
+                programacion.programacionId
+              );
+
+            if (
+              !ubicacionId
+            ) {
+
+              resumen.sinAsignar++;
+
+              conflictos.push({
+                tipo:
+                  'AGENTE_SIN_CASETA',
+                programacionTurnoId:
+                  programacion.programacionId,
+                fecha:
+                  programacion.fecha,
+                turno:
+                  programacion.estado,
+                trabajadorId:
+                  programacion.trabajadorId,
+                codigoTrabajador:
+                  programacion.codigoTrabajador,
+                trabajador:
+                  programacion.nombreTrabajador
+              });
+
+              continue;
+            }
+
+            const ubicacion =
+              ubicacionPorId
+                .get(
+                  ubicacionId
+                );
+
+            const caseta =
+              casetaPorId
+                .get(
+                  ubicacionId
+                );
+
+            const grupo =
+              caseta?.grupoFlujo ??
+              'SIN_CLASIFICAR';
+
+            const historialKey =
+              `${programacion.trabajadorId}|${grupo}`;
+
+            const ultimaMismoFlujo =
+              grupo ===
+                'SIN_CLASIFICAR'
+                ? null
+                : (
+                    ultimaPorAgenteFlujo
+                      .get(
+                        historialKey
+                      ) ??
+                    null
+                  );
+
+            const excepciones:
+              string[] =
+              [];
+
+            if (
+              ubicacion &&
+              !this.ubicacionHabilitadaParaTurno(
+                ubicacion,
+                programacion.estado
+              )
+            ) {
+              excepciones.push(
+                'UBICACION_NO_HABILITADA_PARA_TURNO'
+              );
+            }
+
+            if (
+              ubicacion?.tipo ===
+              'APOYO'
+            ) {
+              excepciones.push(
+                'USO_DE_APOYO'
+              );
+            }
+
+            if (
+              ultimaMismoFlujo &&
+              ubicacion &&
+              (
+                ubicacion.tipo ===
+                  'VIA' ||
+                ubicacion.tipo ===
+                  'AUXILIAR'
+              ) &&
+              ultimaMismoFlujo.tipo ===
+                ubicacion.tipo
+            ) {
+              excepciones.push(
+                'REPETICION_TIPO_EN_MISMO_FLUJO'
+              );
+            }
+
+            const restriccion =
+              contexto.restricciones
+                .find(
+                  item =>
+                    item.activo &&
+                    item.trabajadorId ===
+                      programacion.trabajadorId &&
+                    item.ubicacionId ===
+                      ubicacionId
+                );
+
+            if (
+              restriccion
+            ) {
+              excepciones.push(
+                'CASETA_RESTRINGIDA_PARA_AGENTE'
+              );
+            }
+
+            const agente =
+              agentePorId.get(
+                programacion.trabajadorId
+              );
+
+            asignaciones.push({
+              programacionTurnoId:
+                programacion.programacionId,
+              fecha:
+                programacion.fecha,
+              turno:
+                programacion.estado,
+              agente: {
+                id:
+                  programacion.trabajadorId,
+                codigo:
+                  programacion.codigoTrabajador,
+                nombre:
+                  programacion.nombreTrabajador,
+                grupo:
+                  this.secuencias
+                    .find(
+                      secuencia =>
+                        secuencia.agenteId ===
+                          programacion.trabajadorId
+                    )
+                    ?.grupo ??
+                  null,
+                orden:
+                  this.secuencias
+                    .find(
+                      secuencia =>
+                        secuencia.agenteId ===
+                          programacion.trabajadorId
+                    )
+                    ?.orden ??
+                  null,
+                activo:
+                  agente?.activo ??
+                  null
+              },
+              ubicacion: {
+                id:
+                  ubicacionId,
+                codigo:
+                  ubicacion?.codigo ??
+                  null,
+                nombre:
+                  ubicacion?.nombre ??
+                  null,
+                tipo:
+                  ubicacion?.tipo ??
+                  null,
+                orden:
+                  ubicacion?.orden ??
+                  null,
+                activo:
+                  ubicacion?.activo ??
+                  null,
+                habilitadaParaTurno:
+                  ubicacion
+                    ? this.ubicacionHabilitadaParaTurno(
+                        ubicacion,
+                        programacion.estado
+                      )
+                    : null
+              },
+              flujo:
+                grupo,
+              ultimaAsignacionMismoFlujo:
+                ultimaMismoFlujo,
+              cambioPendiente:
+                this.cambios.has(
+                  programacion.programacionId
+                ),
+              restriccionAplicable:
+                restriccion
+                  ? {
+                      id:
+                        restriccion.id,
+                      motivo:
+                        restriccion.motivo
+                    }
+                  : null,
+              excepcionesDetectadas:
+                excepciones
+            });
+
+            resumen.asignados++;
+
+            if (
+              ubicacion
+            ) {
+
+              switch (
+                ubicacion.tipo
+              ) {
+                case 'VIA':
+                  resumen.vias++;
+                  break;
+
+                case 'AUXILIAR':
+                  resumen.auxiliares++;
+                  break;
+
+                case 'APOYO':
+                  resumen.apoyos++;
+                  break;
+              }
+
+              if (
+                !resumen
+                  .ubicacionesUsadas
+                  .includes(
+                    ubicacion.codigo
+                  )
+              ) {
+                resumen
+                  .ubicacionesUsadas
+                  .push(
+                    ubicacion.codigo
+                  );
+              }
+
+              resumen
+                .ubicacionesLibres =
+                resumen
+                  .ubicacionesLibres
+                  .filter(
+                    codigo =>
+                      codigo !==
+                        ubicacion.codigo
+                  );
+
+              const turnoKey =
+                `${programacion.fecha}|${programacion.estado}`;
+
+              const porUbicacion =
+                ocupacion.get(
+                  turnoKey
+                ) ??
+                new Map<number, number>();
+
+              const cantidad =
+                (
+                  porUbicacion.get(
+                    ubicacionId
+                  ) ??
+                  0
+                ) + 1;
+
+              porUbicacion.set(
+                ubicacionId,
+                cantidad
+              );
+
+              ocupacion.set(
+                turnoKey,
+                porUbicacion
+              );
+
+              if (
+                cantidad > 1
+              ) {
+                resumen
+                  .duplicidades
+                  .push(
+                    ubicacion.codigo
+                  );
+              }
+            }
+
+            if (
+              grupo !==
+              'SIN_CLASIFICAR' &&
+              ubicacion
+            ) {
+              ultimaPorAgenteFlujo
+                .set(
+                  historialKey,
+                  {
+                    fecha:
+                      programacion.fecha,
+                    ubicacionId,
+                    ubicacionCodigo:
+                      ubicacion.codigo,
+                    tipo:
+                      ubicacion.tipo
+                  }
+                );
+            }
+          }
+
+          const auxiliaresActivos =
+            this.ubicaciones
+              .filter(
+                item =>
+                  item.activo &&
+                  item.tipo ===
+                    'AUXILIAR'
+              )
+              .length;
+
+          for (
+            const resumen of
+            resumenTurnos
+              .values()
+          ) {
+
+            if (
+              resumen.sinAsignar > 0 &&
+              resumen
+                .ubicacionesLibres
+                .length > 0
+            ) {
+              resumen.alertas.push(
+                'HAY_PERSONAL_SIN_ASIGNAR_Y_UBICACIONES_LIBRES'
+              );
+            }
+
+            if (
+              resumen
+                .duplicidades
+                .length > 0
+            ) {
+              resumen.alertas.push(
+                'CASETA_DUPLICADA_EN_MISMO_TURNO'
+              );
+            }
+
+            if (
+              resumen.apoyos > 0 &&
+              resumen.auxiliares <
+                auxiliaresActivos
+            ) {
+              resumen.alertas.push(
+                'APOYO_USADO_ANTES_DE_COMPLETAR_AUXILIARES'
+              );
+            }
+
+            resumen.ubicacionesUsadas =
+              [
+                ...new Set(
+                  resumen.ubicacionesUsadas
+                )
+              ].sort();
+
+            resumen.ubicacionesLibres =
+              [
+                ...new Set(
+                  resumen.ubicacionesLibres
+                )
+              ].sort();
+
+            resumen.duplicidades =
+              [
+                ...new Set(
+                  resumen.duplicidades
+                )
+              ].sort();
+          }
+
+          const payload = {
+            versionDiagnostico:
+              2,
+            origen:
+              '/programacion/distribucion',
+            exportadoEn:
+              new Date()
+                .toISOString(),
+            plaza: {
+              id:
+                plazaId,
+              codigo:
+                plaza?.codigo ??
+                this.auth
+                  .usuario()
+                  ?.plaza ??
+                null,
+              descripcion:
+                plaza?.descripcion ??
+                null
+            },
+            periodo: {
+              anio:
+                this.anio,
+              mes:
+                this.mes,
+              semanaVisible:
+                this.filtroSemana,
+              rangoSemanaVisible:
+                this.rangoSemanaTexto
+            },
+            estadoPantalla: {
+              cambiosPendientes:
+                this.cambios.size,
+              incluyeCambiosNoGuardados:
+                true,
+              propuestaGeneradorDisponible:
+                this.propuestaGenerador !==
+                null,
+              conflictosGenerador:
+                this.propuestaGenerador
+                  ?.conflictos ??
+                []
+            },
+            reglasGenerales:
+              contexto.configuracion,
+            catalogoCasetas:
+              this.ubicaciones
+                .map(
+                  ubicacion => {
+
+                    const caseta =
+                      casetaPorId.get(
+                        ubicacion.id
+                      );
+
+                    return {
+                      id:
+                        ubicacion.id,
+                      codigo:
+                        ubicacion.codigo,
+                      nombre:
+                        ubicacion.nombre,
+                      tipo:
+                        ubicacion.tipo,
+                      orden:
+                        ubicacion.orden,
+                      activo:
+                        ubicacion.activo,
+                      permiteTurnoA:
+                        ubicacion.permiteTurnoA,
+                      permiteTurnoB:
+                        ubicacion.permiteTurnoB,
+                      permiteTurnoC:
+                        ubicacion.permiteTurnoC,
+                      grupoFlujo:
+                        caseta
+                          ?.grupoFlujo ??
+                        'SIN_CLASIFICAR',
+                      maxSemana:
+                        caseta
+                          ?.maxSemana ??
+                        null,
+                      maxMes:
+                        caseta
+                          ?.maxMes ??
+                        null
+                    };
+                  }
+                )
+                .sort(
+                  (a, b) =>
+                    (
+                      a.orden ??
+                      Number
+                        .MAX_SAFE_INTEGER
+                    ) -
+                    (
+                      b.orden ??
+                      Number
+                        .MAX_SAFE_INTEGER
+                    ) ||
+                    a.codigo.localeCompare(
+                      b.codigo
+                    )
+                ),
+            restricciones:
+              contexto.restricciones,
+            resumenTurnos:
+              [
+                ...resumenTurnos
+                  .values()
+              ]
+                .sort(
+                  (a, b) =>
+                    a.fecha.localeCompare(
+                      b.fecha
+                    ) ||
+                    a.turno.localeCompare(
+                      b.turno
+                    )
+                ),
+            asignaciones,
+            conflictos,
+            notasDiagnostico: [
+              'Las asignaciones reflejan exactamente el estado actual de la tabla, incluidos cambios no guardados.',
+              'El historial del mismo flujo incorpora el mes anterior guardado y luego la distribución actual.',
+              'El puntaje y la fase exacta ESTRICTA/FLEXIBLE/REPARACION solo están disponibles cuando el backend los devuelve en la propuesta generada.'
+            ]
+          };
+
+          const contenido =
+            JSON.stringify(
+              payload,
+              null,
+              2
+            );
+
+          const blob =
+            new Blob(
+              [
+                contenido
+              ],
+              {
+                type:
+                  'application/json;charset=utf-8'
+              }
+            );
+
+          const url =
+            URL.createObjectURL(
+              blob
+            );
+
+          const enlace =
+            document
+              .createElement(
+                'a'
+              );
+
+          const plazaArchivo =
+            (
+              plaza?.codigo ??
+              this.auth
+                .usuario()
+                ?.plaza ??
+              `plaza-${plazaId}`
+            )
+              .replace(
+                /[^a-zA-Z0-9_-]/g,
+                '-'
+              );
+
+          enlace.href =
+            url;
+
+          enlace.download =
+            `diagnostico-distribucion-${plazaArchivo}-${this.anio}-${String(
+              this.mes
+            ).padStart(
+              2,
+              '0'
+            )}.json`;
+
+          document.body
+            .appendChild(
+              enlace
+            );
+
+          enlace.click();
+
+          enlace.remove();
+
+          URL.revokeObjectURL(
+            url
+          );
+
+          this.mensaje =
+            'JSON de diagnóstico exportado correctamente.';
+
+          this.cdr.detectChanges();
+
+        },
+
+        error: (
+          e
+        ) => {
+
+          this.error =
+            this.mensajeError(
+              e,
+              'No se pudo preparar el JSON de diagnóstico.'
+            );
+
+          this.cdr.detectChanges();
+
+        }
+
+      });
+  }
+
 
   abrirGeneradorDistribucion(): void {
 

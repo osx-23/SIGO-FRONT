@@ -631,6 +631,75 @@
         </div>
       }
 
+      @if(propuestaGenerador?.calidad){
+        <section class="generator-quality">
+          <div class="quality-score">
+            <span>Calidad global</span>
+            <strong>
+              {{ propuestaGenerador!.calidad.puntuacion }}
+            </strong>
+            <small>/ 100</small>
+          </div>
+
+          <div class="quality-metrics">
+            <div>
+              <span>Cobertura</span>
+              <strong>
+                {{ propuestaGenerador!.calidad.coberturaPct }}%
+              </strong>
+            </div>
+
+            <div>
+              <span>Rotación flujo</span>
+              <strong>
+                {{ propuestaGenerador!.calidad.rotacionFlujoPct }}%
+              </strong>
+            </div>
+
+            <div>
+              <span>VIA / AUX</span>
+              <strong>
+                {{ propuestaGenerador!.calidad.rotacionTipoPct }}%
+              </strong>
+            </div>
+
+            <div>
+              <span>Rotación caseta</span>
+              <strong>
+                {{ propuestaGenerador!.calidad.rotacionCasetaPct }}%
+              </strong>
+            </div>
+          </div>
+
+          <div class="quality-detail">
+            <span>
+              Repeticiones VIA/AUX:
+              <b>{{ propuestaGenerador!.calidad.repeticionesTipo }}</b>
+            </span>
+
+            <span>
+              Caseta consecutiva:
+              <b>{{ propuestaGenerador!.calidad.repeticionesExactas }}</b>
+            </span>
+
+            <span>
+              Duplicidades:
+              <b>{{ propuestaGenerador!.calidad.duplicidades }}</b>
+            </span>
+
+            <span>
+              Restricciones violadas:
+              <b>{{ propuestaGenerador!.calidad.restriccionesVioladas }}</b>
+            </span>
+
+            <span>
+              Soluciones evaluadas:
+              <b>{{ propuestaGenerador!.calidad.solucionesEvaluadas }}</b>
+            </span>
+          </div>
+        </section>
+      }
+
       @if(propuestaGenerador && propuestaGenerador.conflictos.length){
         <div class="generator-conflicts">
           <strong>

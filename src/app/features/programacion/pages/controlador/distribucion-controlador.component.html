@@ -631,12 +631,12 @@
         </div>
       }
 
-      @if(propuestaGenerador?.calidad){
+      @if(propuestaGenerador?.calidad; as calidad){
         <section class="generator-quality">
           <div class="quality-score">
             <span>Calidad global</span>
             <strong>
-              {{ propuestaGenerador!.calidad.puntuacion }}
+              {{ calidad.puntuacion }}
             </strong>
             <small>/ 100</small>
           </div>
@@ -645,28 +645,28 @@
             <div>
               <span>Cobertura</span>
               <strong>
-                {{ propuestaGenerador!.calidad.coberturaPct }}%
+                {{ calidad.coberturaPct }}%
               </strong>
             </div>
 
             <div>
               <span>Rotación flujo</span>
               <strong>
-                {{ propuestaGenerador!.calidad.rotacionFlujoPct }}%
+                {{ calidad.rotacionFlujoPct }}%
               </strong>
             </div>
 
             <div>
               <span>VIA / AUX</span>
               <strong>
-                {{ propuestaGenerador!.calidad.rotacionTipoPct }}%
+                {{ calidad.rotacionTipoPct }}%
               </strong>
             </div>
 
             <div>
               <span>Rotación caseta</span>
               <strong>
-                {{ propuestaGenerador!.calidad.rotacionCasetaPct }}%
+                {{ calidad.rotacionCasetaPct }}%
               </strong>
             </div>
           </div>
@@ -674,27 +674,27 @@
           <div class="quality-detail">
             <span>
               Repeticiones VIA/AUX:
-              <b>{{ propuestaGenerador!.calidad.repeticionesTipo }}</b>
+              <b>{{ calidad.repeticionesTipo }}</b>
             </span>
 
             <span>
               Caseta consecutiva:
-              <b>{{ propuestaGenerador!.calidad.repeticionesExactas }}</b>
+              <b>{{ calidad.repeticionesExactas }}</b>
             </span>
 
             <span>
               Duplicidades:
-              <b>{{ propuestaGenerador!.calidad.duplicidades }}</b>
+              <b>{{ calidad.duplicidades }}</b>
             </span>
 
             <span>
               Restricciones violadas:
-              <b>{{ propuestaGenerador!.calidad.restriccionesVioladas }}</b>
+              <b>{{ calidad.restriccionesVioladas }}</b>
             </span>
 
             <span>
               Soluciones evaluadas:
-              <b>{{ propuestaGenerador!.calidad.solucionesEvaluadas }}</b>
+              <b>{{ calidad.solucionesEvaluadas }}</b>
             </span>
           </div>
         </section>

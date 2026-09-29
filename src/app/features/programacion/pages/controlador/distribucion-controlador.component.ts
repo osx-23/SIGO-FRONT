@@ -286,6 +286,13 @@ export class DistribucionControladorComponent
   readonly asignaciones =
     new Map<number, number>();
 
+  /**
+   * Copia exacta de la última distribución confirmada por backend.
+   * Se usa para saber si una celda realmente cambió.
+   */
+  readonly asignacionesGuardadas =
+    new Map<number, number>();
+
   readonly cambios =
     new Map<number, number>();
 
@@ -1230,6 +1237,9 @@ export class DistribucionControladorComponent
           this.asignaciones
             .clear();
 
+          this.asignacionesGuardadas
+            .clear();
+
           this.cambios
             .clear();
 
@@ -1239,6 +1249,15 @@ export class DistribucionControladorComponent
           ) {
 
             this.asignaciones
+              .set(
+                distribucion
+                  .programacionTurnoId,
+
+                distribucion
+                  .ubicacionId
+              );
+
+            this.asignacionesGuardadas
               .set(
                 distribucion
                   .programacionTurnoId,
@@ -1736,199 +1755,30 @@ export class DistribucionControladorComponent
             nuevaUbicacionId
         );
 
+    /*
+     * En edición manual solo validamos que la caseta exista, esté activa
+     * y pueda usarse en ese turno. Las reglas globales se validan al guardar
+     * la matriz final, porque durante un intercambio pueden existir estados
+     * intermedios temporalmente inválidos.
+     */
     if (
       !ubicacionNueva ||
+      !ubicacionNueva.activo ||
       !this.ubicacionHabilitadaParaTurno(
         ubicacionNueva,
         programacionActual.estado
       )
     ) {
       this.error =
-        'La caseta seleccionada no está habilitada para este turno.';
-      this.cdr.detectChanges();
-      return;
-    }
+        'La caseta seleccionada no está disponible para este turno.';
 
-    if (
-      !this.cumpleOrdenSecuencial(
-        ubicacionNueva,
-        programacionActual
-      )
-    ) {
-      this.error =
-        ubicacionNueva.tipo === 'AUXILIAR'
-          ? `No se puede asignar ${ubicacionNueva.codigo}. Primero deben completarse todas las vías habilitadas del turno ${programacionActual.estado} y luego respetarse el orden de auxiliares.`
-          : `No se puede asignar ${ubicacionNueva.codigo}. Primero deben asignarse las ubicaciones auxiliares/apoyo anteriores para el turno ${programacionActual.estado}.`;
-      this.cdr.detectChanges();
-      return;
-    }
-
-    const fechaAnterior =
-      this.fechaAnterior(
-        programacionActual.fecha
-      );
-
-    const programacionCualquierTurnoDiaAnterior =
-      this.programaciones
-        .find(
-          otra =>
-            otra.trabajadorId ===
-              programacionActual.trabajadorId &&
-            otra.fecha ===
-              fechaAnterior
-        );
-
-    if (
-      programacionCualquierTurnoDiaAnterior
-    ) {
-      const ubicacionAnteriorId =
-        this.asignacion(
-          programacionCualquierTurnoDiaAnterior
-            .programacionId
-        );
-
-      const ubicacionAnterior =
-        this.ubicaciones
-          .find(
-            ubicacion =>
-              ubicacion.id ===
-                ubicacionAnteriorId
-          );
-
-      const actualEsApoyoOAuxiliar =
-        ubicacionNueva.tipo === 'APOYO' ||
-        ubicacionNueva.tipo === 'AUXILIAR';
-
-      const anteriorEsApoyoOAuxiliar =
-        ubicacionAnterior?.tipo === 'APOYO' ||
-        ubicacionAnterior?.tipo === 'AUXILIAR';
-
-      if (
-        actualEsApoyoOAuxiliar &&
-        anteriorEsApoyoOAuxiliar
-      ) {
-        this.error =
-          'El agente no puede estar dos días seguidos en una caseta de tipo apoyo o auxiliar.';
-        this.cdr.detectChanges();
-        return;
-      }
-    }
-
-    const programacionDiaAnterior =
-      this.programaciones
-        .find(
-          otra =>
-            otra.trabajadorId ===
-              programacionActual.trabajadorId &&
-            otra.fecha ===
-              fechaAnterior &&
-            otra.estado ===
-              programacionActual.estado
-        );
-
-    if (
-      programacionDiaAnterior &&
-      this.asignacion(
-        programacionDiaAnterior.programacionId
-      ) === nuevaUbicacionId
-    ) {
-      this.error =
-        `No se puede repetir ${ubicacionNueva.codigo}. El agente ya tuvo esa caseta el día anterior en el mismo turno ${programacionActual.estado}.`;
-      this.cdr.detectChanges();
-      return;
-    }
-
-    /*
-     * Buscamos si existe otro agente
-     * con la misma fecha,
-     * mismo turno
-     * y misma ubicación.
-     */
-    const conflicto =
-      this.programaciones
-        .find(
-          otra => {
-
-            if (
-              otra.programacionId ===
-              programacionActual
-                .programacionId
-            ) {
-              return false;
-            }
-
-            if (
-              otra.fecha !==
-              programacionActual.fecha
-            ) {
-              return false;
-            }
-
-            if (
-              otra.estado !==
-              programacionActual.estado
-            ) {
-              return false;
-            }
-
-            const ubicacionOtra =
-              this.asignaciones
-                .get(
-                  otra.programacionId
-                );
-
-            return (
-              ubicacionOtra ===
-              nuevaUbicacionId
-            );
-          }
-        );
-
-    if (
-      conflicto
-    ) {
-
-      const ubicacion =
-        this.ubicaciones
-          .find(
-            u =>
-              u.id ===
-              nuevaUbicacionId
-          );
-
-      this.conflictoInfo = {
-
-        ubicacion:
-          ubicacion?.codigo ??
-          'Sin código',
-
-        fecha:
-          this.formatearFecha(
-            programacionActual.fecha
-          ),
-
-        turno:
-          programacionActual.estado,
-
-        agente:
-          conflicto.nombreTrabajador
-
-      };
-
-      this.conflictoVisible =
-        true;
-
-      /*
-       * Como no actualizamos el Map,
-       * al cerrar el modal el select
-       * mantiene su valor anterior.
-       */
       this.cdr.detectChanges();
 
       return;
     }
 
-    this.error = '';
+    this.error =
+      '';
 
     this.asignaciones
       .set(
@@ -1936,12 +1786,34 @@ export class DistribucionControladorComponent
         nuevaUbicacionId
       );
 
-    this.cambios
-      .set(
-        programacionId,
-        nuevaUbicacionId
-      );
+    const valorGuardado =
+      this.asignacionesGuardadas
+        .get(
+          programacionId
+        ) ??
+      null;
 
+    if (
+      valorGuardado ===
+        nuevaUbicacionId
+    ) {
+      this.cambios
+        .delete(
+          programacionId
+        );
+    }
+    else {
+      this.cambios
+        .set(
+          programacionId,
+          nuevaUbicacionId
+        );
+    }
+
+    /*
+     * Nueva referencia lógica para que el estado del botón y el badge
+     * se reflejen inmediatamente incluso con OnPush/detección manual.
+     */
     this.cdr.detectChanges();
   }
 
@@ -2242,6 +2114,15 @@ export class DistribucionControladorComponent
           ) {
 
             this.asignaciones
+              .set(
+                item
+                  .programacionTurnoId,
+
+                item
+                  .ubicacionId
+              );
+
+            this.asignacionesGuardadas
               .set(
                 item
                   .programacionTurnoId,
@@ -3461,11 +3342,29 @@ export class DistribucionControladorComponent
                 item.ubicacionId
               );
 
-            this.cambios
-              .set(
-                item.programacionTurnoId,
+            const valorGuardado =
+              this.asignacionesGuardadas
+                .get(
+                  item.programacionTurnoId
+                ) ??
+              null;
+
+            if (
+              valorGuardado ===
                 item.ubicacionId
-              );
+            ) {
+              this.cambios
+                .delete(
+                  item.programacionTurnoId
+                );
+            }
+            else {
+              this.cambios
+                .set(
+                  item.programacionTurnoId,
+                  item.ubicacionId
+                );
+            }
 
           }
 

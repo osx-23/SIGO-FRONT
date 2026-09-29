@@ -65,8 +65,8 @@
       Plaza
 
       <select
-        [(ngModel)]="plazaId"
-        (ngModelChange)="cargar()"
+        [ngModel]="plazaId"
+        (ngModelChange)="cambiarPlaza($event)"
       >
 
         @for(

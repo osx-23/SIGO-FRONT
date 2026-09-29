@@ -84,8 +84,8 @@
         <label class="field">
           <span>Plaza</span>
           <select
-            [(ngModel)]="plazaId"
-            (ngModelChange)="cargar()"
+            [ngModel]="plazaId"
+            (ngModelChange)="cambiarPlaza($event)"
           >
             @for(plaza of plazas; track plaza.id){
               <option [ngValue]="plaza.id">

@@ -2145,27 +2145,45 @@ export class DistribucionControladorComponent
       return;
     }
 
+    /*
+     * Enviamos la matriz FINAL completa, no solo el delta.
+     *
+     * Las reglas de distribución dependen de días vecinos y de la ocupación
+     * completa de cada turno. Enviar solo "cambios" podía hacer que backend
+     * mezclara una fila editada con valores anteriores que seguían en BD.
+     */
     const distribuciones =
-      [
-        ...this.cambios
-          .entries()
-      ]
+      this.programaciones
+        .filter(
+          programacion =>
+            this.esOperativo(
+              programacion.estado
+            )
+        )
         .map(
-          (
-            [
-              programacionTurnoId,
-              ubicacionId
-            ]
-          ) => ({
+          programacion => ({
+            programacionTurnoId:
+              programacion.programacionId,
 
-            programacionTurnoId,
-
-            ubicacionId,
+            ubicacionId:
+              this.asignacion(
+                programacion.programacionId
+              ),
 
             observacion:
               null
-
           })
+        )
+        .filter(
+          (
+            item
+          ): item is {
+            programacionTurnoId: number;
+            ubicacionId: number;
+            observacion: null;
+          } =>
+            item.ubicacionId !== null &&
+            item.ubicacionId !== undefined
         );
 
     this.guardando =
@@ -2250,7 +2268,7 @@ export class DistribucionControladorComponent
             'Asignaciones guardadas';
 
           this.mensajeResultadoDistribucion =
-            `Se guardaron ${totalGuardado} asignación(es) de caseta correctamente.`;
+            `Se validó y guardó la distribución final con ${totalGuardado} asignación(es). Los cambios manuales quedaron incluidos.`;
 
           this.observacionesResultadoDistribucion =
             [];

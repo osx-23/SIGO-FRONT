@@ -152,6 +152,8 @@ export class DistribucionControladorComponent
 
   generandoReportePdf = false;
 
+  generandoReporteMatrizPdf = false;
+
   errorReportePdf = '';
 
   error = '';
@@ -1374,6 +1376,147 @@ export class DistribucionControladorComponent
 
       });
   }
+
+  exportarReporteMatrizPdf(): void {
+
+    if (
+      !this.plazaId ||
+      !this.diasVisibles.length
+    ) {
+      this.error =
+        'Selecciona una plaza y un periodo válido para exportar el PDF.';
+
+      this.cdr.detectChanges();
+
+      return;
+    }
+
+    if (
+      this.cambios.size > 0
+    ) {
+      this.error =
+        'Guarda primero las asignaciones pendientes antes de exportar el PDF.';
+
+      this.cdr.detectChanges();
+
+      return;
+    }
+
+    if (
+      this.generandoReporteMatrizPdf
+    ) {
+      return;
+    }
+
+    const primerDia =
+      this.diasVisibles[0];
+
+    const ultimoDia =
+      this.diasVisibles[
+        this.diasVisibles.length - 1
+      ];
+
+    const desde =
+      this.fecha(
+        primerDia
+      );
+
+    const hasta =
+      this.fecha(
+        ultimoDia
+      );
+
+    this.generandoReporteMatrizPdf =
+      true;
+
+    this.error =
+      '';
+
+    this.mensaje =
+      '';
+
+    this.cdr.detectChanges();
+
+    this.api
+      .getReporteDistribucionPlazaPdf(
+        this.plazaId,
+        desde,
+        hasta
+      )
+      .pipe(
+        finalize(
+          () => {
+            this.generandoReporteMatrizPdf =
+              false;
+
+            this.cdr.detectChanges();
+          }
+        )
+      )
+      .subscribe({
+        next: blob => {
+          const plaza =
+            this.plazas
+              .find(
+                item =>
+                  item.id ===
+                  this.plazaId
+              );
+
+          const plazaCodigo =
+            plaza?.codigo ??
+            this.auth.usuario()?.plaza ??
+            'plaza';
+
+          const url =
+            URL.createObjectURL(
+              blob
+            );
+
+          const enlace =
+            document.createElement(
+              'a'
+            );
+
+          enlace.href =
+            url;
+
+          enlace.download =
+            `distribucion-${plazaCodigo}-${desde}-${hasta}.pdf`;
+
+          document.body
+            .appendChild(
+              enlace
+            );
+
+          enlace.click();
+
+          enlace.remove();
+
+          URL.revokeObjectURL(
+            url
+          );
+
+          this.mensaje =
+            this.filtroSemana === 0
+              ? 'PDF mensual de distribución generado correctamente.'
+              : 'PDF de la semana visible generado correctamente.';
+
+          this.cdr.detectChanges();
+        },
+
+        error: e => {
+          this.error =
+            this.mensajeError(
+              e,
+              'No se pudo generar el PDF de distribución.'
+            );
+
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
 
   abrirReportePdf(): void {
 

@@ -136,6 +136,8 @@ export class DistribucionControladorComponent
 
   guardando = false;
 
+  totalAsignacionesGuardando = 0;
+
   exportandoJson = false;
 
   modalReportePdfAbierto = false;
@@ -1991,6 +1993,9 @@ export class DistribucionControladorComponent
     this.guardando =
       true;
 
+    this.totalAsignacionesGuardando =
+      distribuciones.length;
+
     this.error =
       '';
 
@@ -2020,6 +2025,9 @@ export class DistribucionControladorComponent
 
           this.guardando =
             false;
+
+          this.totalAsignacionesGuardando =
+            0;
 
           this.cdr.detectChanges();
 

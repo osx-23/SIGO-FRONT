@@ -29,6 +29,7 @@ import {
   TrabajadorResumen,
   Ubicacion,
   GeneradorCasetasPropuesta,
+  CalidadGeneracionCasetas,
   TipoPeriodoCaseta,
   CasetaConfiguracion,
   GrupoFlujoCaseta,
@@ -221,6 +222,10 @@ export class DistribucionControladorComponent
 
   propuestaGenerador:
     GeneradorCasetasPropuesta | null =
+    null;
+
+  ultimaCalidadGeneracion:
+    CalidadGeneracionCasetas | null =
     null;
 
   conflictoInfo: {
@@ -704,6 +709,16 @@ export class DistribucionControladorComponent
       '';
 
     this.resumen =
+      null;
+
+    /*
+     * Al cambiar plaza/mes ya no debemos conservar métricas de una
+     * generación anterior, porque pertenecerían a otro contexto.
+     */
+    this.ultimaCalidadGeneracion =
+      null;
+
+    this.propuestaGenerador =
       null;
 
     this.conflictoVisible =
@@ -2222,12 +2237,10 @@ export class DistribucionControladorComponent
               incluyeCambiosNoGuardados:
                 true,
               propuestaGeneradorDisponible:
-                this.propuestaGenerador !==
+                this.ultimaCalidadGeneracion !==
                 null,
               calidadGeneracion:
-                this.propuestaGenerador
-                  ?.calidad ??
-                null,
+                this.ultimaCalidadGeneracion,
               conflictosGenerador:
                 this.propuestaGenerador
                   ?.conflictos ??
@@ -2498,6 +2511,9 @@ export class DistribucionControladorComponent
     this.propuestaGenerador =
       null;
 
+    this.ultimaCalidadGeneracion =
+      null;
+
     this.api
       .generarPropuestaCasetas({
         plazaId:
@@ -2538,6 +2554,10 @@ export class DistribucionControladorComponent
 
           this.propuestaGenerador =
             propuesta;
+
+          this.ultimaCalidadGeneracion =
+            propuesta.calidad ??
+            null;
 
           for (
             const item

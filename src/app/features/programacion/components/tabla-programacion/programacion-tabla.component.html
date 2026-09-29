@@ -25,15 +25,11 @@
         [disabled]="
           !plazaId ||
           generador.procesando ||
-          guardandoTurnos ||
-          guardandoOrden ||
-          agentesProcesando.size > 0 ||
-          agentes.length === 0 ||
-          agentesSinSecuencia > 0
+          guardandoTurnos
         "
         [title]="
           agentesSinSecuencia > 0
-            ? 'Asigna primero una secuencia a todos los agentes pendientes'
+            ? 'Hay agentes sin secuencia; el generador mostrará observaciones'
             : 'Generar una propuesta automática de turnos'
         "
       >
@@ -66,11 +62,8 @@
         type="button"
         (click)="abrirExcepciones.emit()"
         [disabled]="
-          agentes.length === 0 ||
           generador.procesando ||
-          guardandoTurnos ||
-          guardandoOrden ||
-          agentesProcesando.size > 0
+          guardandoTurnos
         "
       >
         Añadir excepción

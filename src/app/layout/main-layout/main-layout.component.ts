@@ -44,6 +44,9 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   readonly collapsed = signal(false);
   readonly chatOpen = signal(false);
 
+  readonly bienvenidaVisible =
+    signal(true);
+
   readonly incidenciasPendientes = signal(0);
 
   readonly gruposAbiertos =
@@ -56,6 +59,10 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
 
   private timerIncidencias:
     ReturnType<typeof setInterval> | null =
+    null;
+
+  private timerBienvenida:
+    ReturnType<typeof setTimeout> | null =
     null;
 
 
@@ -78,6 +85,15 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
 
     this.actualizarIncidenciasPendientes();
 
+    this.timerBienvenida =
+      setTimeout(
+        () =>
+          this.bienvenidaVisible.set(
+            false
+          ),
+        3800
+      );
+
     this.timerIncidencias =
       setInterval(
         () =>
@@ -96,6 +112,16 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
       );
 
       this.timerIncidencias =
+        null;
+    }
+
+    if (this.timerBienvenida) {
+
+      clearTimeout(
+        this.timerBienvenida
+      );
+
+      this.timerBienvenida =
         null;
     }
   }

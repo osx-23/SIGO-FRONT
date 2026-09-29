@@ -336,6 +336,19 @@ export class DistribucionControladorComponent
       );
   }
 
+
+  get puedeGenerarDistribucion(): boolean {
+
+    return (
+      this.auth.tieneRol(
+        'SUPERVISOR'
+      ) ||
+      this.auth.tieneRol(
+        'CONTROLADOR'
+      )
+    );
+  }
+
   get agentesRestriccionFiltrados(): TrabajadorResumen[] {
 
     const query =
@@ -3221,7 +3234,7 @@ export class DistribucionControladorComponent
   abrirGeneradorDistribucion(): void {
 
     if (
-      !this.esSupervisor ||
+      !this.puedeGenerarDistribucion ||
       !this.plazaId
     ) {
       return;
@@ -3290,7 +3303,7 @@ export class DistribucionControladorComponent
   generarYCargarDistribucion(): void {
 
     if (
-      !this.esSupervisor ||
+      !this.puedeGenerarDistribucion ||
       !this.plazaId
     ) {
       return;

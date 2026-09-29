@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import {
   AgenteProgramacionExcepcion,
   AgenteProgramacionExcepcionRequest,
@@ -10,7 +10,7 @@ export class ProgramacionExcepcionState {
   readonly porAgente =
     new Map<number, AgenteProgramacionExcepcion>();
 
-  modalAbierto = false;
+  readonly modalAbierto = signal(false);
   agente: TrabajadorResumen | null = null;
 
   permiteA = true;
@@ -50,7 +50,7 @@ export class ProgramacionExcepcionState {
     this.permiteC = true;
     this.motivo = '';
     this.color = '#FFF3B0';
-    this.modalAbierto = true;
+    this.modalAbierto.set(true);
   }
 
   abrir(
@@ -80,7 +80,7 @@ export class ProgramacionExcepcionState {
       actual?.color ??
       '#FFF3B0';
 
-    this.modalAbierto = true;
+    this.modalAbierto.set(true);
   }
 
   cerrar(): boolean {
@@ -88,7 +88,7 @@ export class ProgramacionExcepcionState {
       return false;
     }
 
-    this.modalAbierto = false;
+    this.modalAbierto.set(false);
     this.agente = null;
     return true;
   }
@@ -143,7 +143,7 @@ export class ProgramacionExcepcionState {
       excepcion
     );
 
-    this.modalAbierto = false;
+    this.modalAbierto.set(false);
     this.agente = null;
   }
 
@@ -153,7 +153,7 @@ export class ProgramacionExcepcionState {
     this.porAgente.delete(
       agenteId
     );
-    this.modalAbierto = false;
+    this.modalAbierto.set(false);
     this.agente = null;
   }
 

@@ -91,7 +91,7 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
           this.bienvenidaVisible.set(
             false
           ),
-        3800
+        4800
       );
 
     this.timerIncidencias =

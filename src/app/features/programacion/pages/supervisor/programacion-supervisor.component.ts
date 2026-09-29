@@ -1304,8 +1304,7 @@ export class ProgramacionSupervisorComponent
   abrirGenerador(): void {
     if (
       !this.plazaId ||
-      this.generador.procesando ||
-      this.guardando
+      this.generador.procesando
     ) {
       return;
     }

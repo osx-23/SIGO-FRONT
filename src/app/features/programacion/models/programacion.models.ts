@@ -13,7 +13,7 @@ export interface ProgramacionDia{
   programacionId:number; trabajadorId:number; codigoTrabajador:number; nombreTrabajador:string;
   plazaId:number; plazaCodigo:string; fecha:string; estado:EstadoProgramacion;
 }
-export interface TurnoItemRequest{ trabajadorId:number; fecha:string; estado:EstadoProgramacion; }
+export interface TurnoItemRequest{ trabajadorId:number; fecha:string; estado:EstadoProgramacion|null; }
 export interface GuardarProgramacionRequest{ plazaId:number; programaciones:TurnoItemRequest[]; }
 export interface Ubicacion{
   id:number; plazaId:number; codigo:string; nombre:string; tipo:TipoUbicacion;

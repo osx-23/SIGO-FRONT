@@ -78,6 +78,7 @@
               class="secondary"
               type="button"
               (click)="agregarDiaEspecial()"
+              [disabled]="generador.procesando"
             >
               Añadir fecha
             </button>
@@ -125,6 +126,7 @@
                     class="generator-remove"
                     type="button"
                     (click)="quitarDiaEspecial(i)"
+                    [disabled]="generador.procesando"
                     title="Eliminar"
                   >
                     ×
@@ -146,6 +148,7 @@
               class="secondary"
               type="button"
               (click)="agregarNovedad()"
+              [disabled]="generador.procesando"
             >
               Añadir novedad
             </button>
@@ -204,6 +207,7 @@
                     class="generator-remove"
                     type="button"
                     (click)="quitarNovedad(i)"
+                    [disabled]="generador.procesando"
                     title="Eliminar"
                   >
                     ×

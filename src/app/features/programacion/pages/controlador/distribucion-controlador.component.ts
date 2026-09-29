@@ -258,6 +258,13 @@ export class DistribucionControladorComponent
   observacionesResultadoDistribucion:
     ConflictoCasetaPropuesta[] = [];
 
+  /**
+   * Observaciones activas por celda de programación.
+   * Se mantienen aunque se cierre el modal de resultado.
+   */
+  readonly observacionesPorProgramacion =
+    new Map<number, string>();
+
   modalCambiosPendientesAbierto =
     false;
 
@@ -295,6 +302,31 @@ export class DistribucionControladorComponent
 
   readonly cambios =
     new Map<number, number>();
+
+  tieneObservacion(
+    programacionTurnoId: number
+  ): boolean {
+
+    return this.observacionesPorProgramacion
+      .has(
+        programacionTurnoId
+      );
+  }
+
+
+  mensajeObservacion(
+    programacionTurnoId: number
+  ): string {
+
+    return (
+      this.observacionesPorProgramacion
+        .get(
+          programacionTurnoId
+        ) ??
+      ''
+    );
+  }
+
 
   get esSupervisor(): boolean {
 
@@ -1134,6 +1166,9 @@ export class DistribucionControladorComponent
     this.propuestaGenerador =
       null;
 
+    this.observacionesPorProgramacion
+      .clear();
+
     this.conflictoVisible =
       false;
 
@@ -1811,6 +1846,16 @@ export class DistribucionControladorComponent
     }
 
     /*
+     * Si el usuario modifica exactamente la celda observada,
+     * quitamos la marca roja de esa observación. Una validación
+     * posterior volverá a marcarla si el problema persiste.
+     */
+    this.observacionesPorProgramacion
+      .delete(
+        programacionId
+      );
+
+    /*
      * Nueva referencia lógica para que el estado del botón y el badge
      * se reflejen inmediatamente incluso con OnPush/detección manual.
      */
@@ -2153,6 +2198,9 @@ export class DistribucionControladorComponent
 
           this.observacionesResultadoDistribucion =
             [];
+
+          this.observacionesPorProgramacion
+            .clear();
 
           this.modalResultadoDistribucionAbierto =
             true;
@@ -3327,6 +3375,20 @@ export class DistribucionControladorComponent
               ...propuesta.conflictos
             ];
 
+          this.observacionesPorProgramacion
+            .clear();
+
+          for (
+            const conflicto
+            of propuesta.conflictos
+          ) {
+            this.observacionesPorProgramacion
+              .set(
+                conflicto.programacionTurnoId,
+                conflicto.mensaje
+              );
+          }
+
           this.ultimaCalidadGeneracion =
             propuesta.calidad ??
             null;
@@ -3430,6 +3492,9 @@ export class DistribucionControladorComponent
 
           this.observacionesResultadoDistribucion =
             [];
+
+          this.observacionesPorProgramacion
+            .clear();
 
           this.tipoResultadoDistribucion =
             'error';

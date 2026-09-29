@@ -24,8 +24,7 @@
         (click)="abrirGenerador.emit()"
         [disabled]="
           !plazaId ||
-          generador.procesando ||
-          guardandoTurnos
+          generador.procesando
         "
         [title]="
           agentesSinSecuencia > 0
@@ -61,10 +60,7 @@
         class="secondary exception-main-button"
         type="button"
         (click)="abrirExcepciones.emit()"
-        [disabled]="
-          generador.procesando ||
-          guardandoTurnos
-        "
+        [disabled]="excepciones.guardando"
       >
         Añadir excepción
       </button>

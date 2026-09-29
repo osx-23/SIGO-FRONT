@@ -326,7 +326,7 @@ export class ProgramacionSupervisorComponent
   readonly cambios =
     new Map<
       string,
-      EstadoProgramacion
+      EstadoProgramacion | null
     >();
 
 
@@ -392,28 +392,11 @@ export class ProgramacionSupervisorComponent
         );
 
 
-    const query =
-      this.busqueda
-        .trim()
-        .toLowerCase();
-
-
-    if (
-      query
-    ) {
-
-      resultado =
-        resultado.filter(
-          agente =>
-            this.coincideBusqueda(
-              agente,
-              query
-            )
-        );
-
-    }
-
-
+    /*
+     * Este conteo es operativo, no visual. No debe depender del
+     * filtro de búsqueda de la tabla porque se usa para decidir
+     * si el generador puede ejecutarse.
+     */
     return resultado
       .sort(
         (
@@ -1319,7 +1302,27 @@ export class ProgramacionSupervisorComponent
    */
 
   abrirGenerador(): void {
-    if (!this.plazaId || this.generador.procesando) {
+    if (
+      !this.plazaId ||
+      this.generador.procesando ||
+      this.guardando ||
+      this.guardandoOrden ||
+      this.agentesProcesando.size > 0
+    ) {
+      return;
+    }
+
+    if (this.agentesSinSecuencia.length > 0) {
+      this.error =
+        `Asigna una secuencia a los ${this.agentesSinSecuencia.length} agente(s) pendiente(s) antes de generar la programación.`;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    if (this.agentesProgramadosLista.length === 0) {
+      this.error =
+        'No hay agentes con secuencia para generar la programación.';
+      this.cdr.detectChanges();
       return;
     }
 
@@ -1460,10 +1463,6 @@ export class ProgramacionSupervisorComponent
     estado: EstadoProgramacion | null
   ): void {
 
-    if (!estado) {
-      return;
-    }
-
     if (
       (estado === 'A' || estado === 'B' || estado === 'C') &&
       !this.turnoRecomendado(agenteId, estado)
@@ -1512,7 +1511,7 @@ export class ProgramacionSupervisorComponent
   private aplicarCambioEstado(
     agenteId: number,
     dia: number,
-    estado: EstadoProgramacion
+    estado: EstadoProgramacion | null
   ): void {
     const key = this.key(agenteId, dia);
 

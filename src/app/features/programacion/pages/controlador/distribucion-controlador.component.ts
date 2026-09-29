@@ -3382,10 +3382,18 @@ export class DistribucionControladorComponent
             const conflicto
             of propuesta.conflictos
           ) {
+            const mensajeAnterior =
+              this.observacionesPorProgramacion
+                .get(
+                  conflicto.programacionTurnoId
+                );
+
             this.observacionesPorProgramacion
               .set(
                 conflicto.programacionTurnoId,
-                conflicto.mensaje
+                mensajeAnterior
+                  ? `${mensajeAnterior}\n• ${conflicto.mensaje}`
+                  : conflicto.mensaje
               );
           }
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import {
   CoberturaDiaPropuesta,
   ConflictoProgramacionPropuesta,
@@ -20,7 +20,7 @@ export interface ProgramacionCeldaPropuesta {
 
 @Injectable()
 export class ProgramacionGeneradorState {
-  modalAbierto = false;
+  readonly modalAbierto = signal(false);
   procesando = false;
 
   coberturaNormal = {
@@ -55,7 +55,7 @@ export class ProgramacionGeneradorState {
       return false;
     }
 
-    this.modalAbierto = true;
+    this.modalAbierto.set(true);
     return true;
   }
 
@@ -64,7 +64,7 @@ export class ProgramacionGeneradorState {
       return false;
     }
 
-    this.modalAbierto = false;
+    this.modalAbierto.set(false);
     return true;
   }
 

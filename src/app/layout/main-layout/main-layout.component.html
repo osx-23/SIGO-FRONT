@@ -4,31 +4,58 @@
 >
 
   @if(bienvenidaVisible()){
-    <div class="welcome-overlay" aria-live="polite">
-      <section class="welcome-card">
-        <div class="welcome-mark">
+    <div
+      class="welcome-screen"
+      aria-live="polite"
+      aria-label="Bienvenida a SIGO"
+    >
+      <div class="welcome-ambient welcome-ambient-one"></div>
+      <div class="welcome-ambient welcome-ambient-two"></div>
+
+      <div class="welcome-stage">
+        <div class="welcome-brand">
+          <span class="welcome-brand-dot"></span>
           <span>SIGO</span>
         </div>
 
-        <div class="welcome-copy">
-          <small>BIENVENIDO</small>
-
-          <h2>
-            {{
-              auth.usuario()?.nombre ||
-              'Usuario'
-            }}
-          </h2>
-
-          <p>
-            {{
-              auth.usuario()?.plaza
-                ? 'Plaza ' + auth.usuario()?.plaza + ' · ' + auth.usuario()?.rol
-                : auth.usuario()?.rol
-            }}
+        <div class="welcome-main">
+          <p class="welcome-kicker">
+            Sistema Integral de Gestión Operativa
           </p>
+
+          <h1>
+            <span class="welcome-word">
+              Bienvenido,
+            </span>
+
+            <span class="welcome-name">
+              {{
+                auth.usuario()?.nombre ||
+                'Usuario'
+              }}
+            </span>
+          </h1>
+
+          <div class="welcome-meta">
+            @if(auth.usuario()?.plaza){
+              <span>
+                {{ auth.usuario()?.plaza }}
+              </span>
+            }
+
+            <span class="welcome-meta-separator"></span>
+
+            <span>
+              {{ auth.usuario()?.rol }}
+            </span>
+          </div>
         </div>
-      </section>
+
+        <div class="welcome-footer">
+          <span class="welcome-line"></span>
+          <span>Todo listo para comenzar</span>
+        </div>
+      </div>
     </div>
   }
 

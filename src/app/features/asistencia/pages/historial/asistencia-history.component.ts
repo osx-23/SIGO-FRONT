@@ -216,6 +216,238 @@ export class AsistenciaHistoryComponent implements OnInit {
     );
   }
 
+  reportesPendientes(): Array<{
+    fecha: string;
+    plazaId: number;
+    plaza: string;
+    turno: 'A' | 'B' | 'C';
+  }> {
+
+    if (
+      !this.inicio ||
+      !this.fin ||
+      !this.plazas().length
+    ) {
+      return [];
+    }
+
+    const plazasObjetivo =
+      this.plazaId
+        ? this.plazas().filter(
+            plaza =>
+              plaza.id ===
+              this.plazaId
+          )
+        : this.plazas();
+
+    const turnoSeleccionado =
+      this.turnoFiltro
+        .trim()
+        .toUpperCase();
+
+    const turnosObjetivo:
+      Array<'A' | 'B' | 'C'> =
+      turnoSeleccionado === 'A' ||
+      turnoSeleccionado === 'B' ||
+      turnoSeleccionado === 'C'
+        ? [
+            turnoSeleccionado as
+              'A' | 'B' | 'C'
+          ]
+        : [
+            'A',
+            'B',
+            'C'
+          ];
+
+    const existentes =
+      new Set(
+        this.registros()
+          .map(
+            registro =>
+              `${registro.fecha}|${registro.plazaId}|${String(registro.turno).trim().toUpperCase()}`
+          )
+      );
+
+    const pendientes:
+      Array<{
+        fecha: string;
+        plazaId: number;
+        plaza: string;
+        turno: 'A' | 'B' | 'C';
+      }> =
+      [];
+
+    for (
+      const fecha
+      of this.fechasPeriodo()
+    ) {
+      for (
+        const plaza
+        of plazasObjetivo
+      ) {
+        for (
+          const turno
+          of turnosObjetivo
+        ) {
+          const clave =
+            `${fecha}|${plaza.id}|${turno}`;
+
+          if (
+            existentes.has(
+              clave
+            )
+          ) {
+            continue;
+          }
+
+          pendientes.push({
+            fecha,
+            plazaId:
+              plaza.id,
+            plaza:
+              plaza.codigo,
+            turno
+          });
+        }
+      }
+    }
+
+    return pendientes;
+  }
+
+
+  pendientesPorPlaza(): Array<{
+    plazaId: number;
+    plaza: string;
+    pendientes: Array<{
+      fecha: string;
+      turno: 'A' | 'B' | 'C';
+    }>;
+  }> {
+
+    const agrupados =
+      new Map<
+        number,
+        {
+          plazaId: number;
+          plaza: string;
+          pendientes: Array<{
+            fecha: string;
+            turno: 'A' | 'B' | 'C';
+          }>;
+        }
+      >();
+
+    for (
+      const pendiente
+      of this.reportesPendientes()
+    ) {
+      const actual =
+        agrupados.get(
+          pendiente.plazaId
+        ) ?? {
+          plazaId:
+            pendiente.plazaId,
+          plaza:
+            pendiente.plaza,
+          pendientes: []
+        };
+
+      actual.pendientes.push({
+        fecha:
+          pendiente.fecha,
+        turno:
+          pendiente.turno
+      });
+
+      agrupados.set(
+        pendiente.plazaId,
+        actual
+      );
+    }
+
+    return [
+      ...agrupados.values()
+    ];
+  }
+
+
+  periodoUnSoloDia(): boolean {
+
+    return (
+      !!this.inicio &&
+      this.inicio ===
+        this.fin
+    );
+  }
+
+
+  private fechasPeriodo(): string[] {
+
+    if (
+      !this.inicio ||
+      !this.fin ||
+      this.inicio >
+        this.fin
+    ) {
+      return [];
+    }
+
+    const fechas: string[] =
+      [];
+
+    const actual =
+      new Date(
+        `${this.inicio}T00:00:00`
+      );
+
+    const fin =
+      new Date(
+        `${this.fin}T00:00:00`
+      );
+
+    let seguridad =
+      0;
+
+    while (
+      actual <= fin &&
+      seguridad < 370
+    ) {
+      const anio =
+        actual.getFullYear();
+
+      const mes =
+        String(
+          actual.getMonth() + 1
+        ).padStart(
+          2,
+          '0'
+        );
+
+      const dia =
+        String(
+          actual.getDate()
+        ).padStart(
+          2,
+          '0'
+        );
+
+      fechas.push(
+        `${anio}-${mes}-${dia}`
+      );
+
+      actual.setDate(
+        actual.getDate() + 1
+      );
+
+      seguridad++;
+    }
+
+    return fechas;
+  }
+
+
   promedioAsistencia(): number {
 
     const registros =

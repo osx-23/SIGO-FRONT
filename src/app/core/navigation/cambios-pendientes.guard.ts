@@ -4,7 +4,7 @@ import {
 
 export interface ProtegeCambiosPendientes {
   tieneCambiosPendientes(): boolean;
-  mensajeCambiosPendientes(): string;
+  confirmarSalidaConCambios(): Promise<boolean>;
 }
 
 export const cambiosPendientesGuard:
@@ -20,8 +20,6 @@ export const cambiosPendientesGuard:
         return true;
       }
 
-      return window.confirm(
-        componente
-          .mensajeCambiosPendientes()
-      );
+      return componente
+        .confirmarSalidaConCambios();
     };

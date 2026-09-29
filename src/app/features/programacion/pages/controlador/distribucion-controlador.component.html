@@ -201,6 +201,100 @@
     </article>
   </section>
 
+  @if(agenteSeleccionado; as agente){
+    <section class="agent-rotation-card">
+      <div class="agent-rotation-head">
+        <div>
+          <span class="eyebrow">AGENTE SELECCIONADO</span>
+          <h2>
+            {{ agente.codigo }} · {{ agente.nombreCompleto }}
+          </h2>
+          <p>
+            Frecuencia de uso de casetas en
+            {{ mesInput }} según la distribución actualmente visible.
+          </p>
+        </div>
+
+        <div class="agent-rotation-actions">
+          @if(cambios.size > 0){
+            <small>
+              Guarda las asignaciones pendientes para habilitar el PDF.
+            </small>
+          }
+
+          <button
+            class="secondary"
+            type="button"
+            (click)="abrirReportePdf()"
+            [disabled]="
+              cambios.size > 0 ||
+              generandoReportePdf
+            "
+          >
+            Generar PDF
+          </button>
+        </div>
+      </div>
+
+      <div class="agent-rotation-metrics">
+        <article>
+          <span>Asignaciones</span>
+          <strong>{{ totalAsignacionesAgenteSeleccionado }}</strong>
+          <small>Casetas asignadas en el mes</small>
+        </article>
+
+        <article>
+          <span>Casetas distintas</span>
+          <strong>{{ totalCasetasDistintasAgenteSeleccionado }}</strong>
+          <small>Ubicaciones diferentes utilizadas</small>
+        </article>
+
+        <article class="repeat">
+          <span>Repeticiones</span>
+          <strong>{{ totalRepeticionesAgenteSeleccionado }}</strong>
+          <small>Usos adicionales de una caseta ya utilizada</small>
+        </article>
+      </div>
+
+      @if(frecuenciaCasetasAgenteSeleccionado.length === 0){
+        <div class="agent-rotation-empty">
+          El agente todavía no tiene casetas asignadas en este mes.
+        </div>
+      }
+      @else{
+        <div class="agent-location-frequency">
+          @for(
+            item of frecuenciaCasetasAgenteSeleccionado;
+            track item.ubicacionId
+          ){
+            <article [class.repeated]="item.repeticiones > 0">
+              <div class="agent-location-code">
+                {{ item.codigo }}
+              </div>
+
+              <div class="agent-location-info">
+                <strong>{{ item.nombre }}</strong>
+                <span>{{ item.tipo }}</span>
+              </div>
+
+              <div class="agent-location-count">
+                <strong>{{ item.veces }}</strong>
+                <span>
+                  {{ item.veces === 1 ? 'vez' : 'veces' }}
+                </span>
+              </div>
+
+              <div class="agent-location-repeat">
+                <strong>{{ item.repeticiones }}</strong>
+                <span>repetición(es)</span>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+  }
+
 
   <!-- ===================================================== -->
   <!-- TABLA SUPERIOR: AGENTES -->
@@ -511,6 +605,148 @@
       <span class="estado-lic">LIC · Licencia</span>
     </div>
   </section>
+<!-- MODAL REPORTE PDF POR AGENTE -->
+@if(modalReportePdfAbierto){
+  <div
+    class="modal-backdrop"
+    (click)="cerrarReportePdf()"
+  >
+    <section
+      class="report-pdf-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="report-pdf-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="locations-accent"></div>
+
+      <div class="locations-header">
+        <div>
+          <span class="eyebrow">REPORTE PDF</span>
+          <h2 id="report-pdf-title">
+            Distribución del agente
+          </h2>
+
+          @if(agenteSeleccionado; as agente){
+            <p>
+              {{ agente.codigo }} · {{ agente.nombreCompleto }}
+            </p>
+          }
+        </div>
+
+        <button
+          class="modal-close"
+          type="button"
+          (click)="cerrarReportePdf()"
+          [disabled]="generandoReportePdf"
+        >
+          Cerrar
+        </button>
+      </div>
+
+      <div class="report-pdf-body">
+        <div class="report-pdf-mode">
+          <span>Periodo del reporte</span>
+
+          <div class="segmented-generator">
+            <button
+              type="button"
+              [class.active]="modoReportePdf === 'MES'"
+              (click)="cambiarModoReportePdf('MES')"
+              [disabled]="generandoReportePdf"
+            >
+              Mes completo
+            </button>
+
+            <button
+              type="button"
+              [class.active]="modoReportePdf === 'RANGO'"
+              (click)="cambiarModoReportePdf('RANGO')"
+              [disabled]="generandoReportePdf"
+            >
+              Rango de fechas
+            </button>
+          </div>
+        </div>
+
+        @if(modoReportePdf === 'MES'){
+          <div class="report-month-card">
+            <span>Mes seleccionado</span>
+            <strong>{{ mesInput }}</strong>
+            <small>
+              Se incluirán todas las asignaciones guardadas del mes.
+            </small>
+          </div>
+        }
+        @else{
+          <div class="report-date-grid">
+            <label class="field">
+              <span>Desde</span>
+              <input
+                type="date"
+                [(ngModel)]="reportePdfDesde"
+                [disabled]="generandoReportePdf"
+              >
+            </label>
+
+            <label class="field">
+              <span>Hasta</span>
+              <input
+                type="date"
+                [(ngModel)]="reportePdfHasta"
+                [disabled]="generandoReportePdf"
+              >
+            </label>
+          </div>
+        }
+
+        <div class="report-pdf-info">
+          <strong>El PDF incluirá</strong>
+          <p>
+            Resumen del agente, total de asignaciones, casetas distintas,
+            repeticiones, frecuencia por caseta y detalle diario con
+            fecha, turno y ubicación.
+          </p>
+        </div>
+
+        @if(errorReportePdf){
+          <div class="config-alert error">
+            {{ errorReportePdf }}
+          </div>
+        }
+      </div>
+
+      <div class="report-pdf-actions">
+        <button
+          class="secondary"
+          type="button"
+          (click)="cerrarReportePdf()"
+          [disabled]="generandoReportePdf"
+        >
+          Cancelar
+        </button>
+
+        <button
+          class="primary"
+          type="button"
+          (click)="generarReportePdf()"
+          [disabled]="
+            generandoReportePdf ||
+            !reportePdfDesde ||
+            !reportePdfHasta
+          "
+        >
+          {{
+            generandoReportePdf
+              ? 'Generando PDF...'
+              : 'Descargar PDF'
+          }}
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
 <!-- MODAL GENERADOR DE DISTRIBUCIÓN -->
 @if(generadorAbierto){
   <div

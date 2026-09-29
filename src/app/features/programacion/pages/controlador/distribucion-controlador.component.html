@@ -833,7 +833,7 @@
           <div class="distribution-observations-list">
             @for(
               observacion of observacionesResultadoDistribucion;
-              track observacion.programacionTurnoId
+              track $index
             ){
               <article>
                 <div class="distribution-observation-meta">

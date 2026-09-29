@@ -716,16 +716,6 @@ nav a.active {
 }
 
 
-.welcome-label {
-  display:block;
-  margin-bottom:2px;
-  color:#64748b;
-  font-size:.63rem;
-  font-weight:700;
-  letter-spacing:.02em;
-}
-
-
 .user-identity b {
   display: block;
 
@@ -1139,11 +1129,6 @@ footer {
   }
 
 
-  .welcome-label {
-    font-size:.56rem;
-  }
-
-
   .user-identity b {
     font-size: .84rem;
 
@@ -1258,6 +1243,240 @@ footer {
 
     overflow-wrap:
       anywhere;
+  }
+
+}
+
+/* =========================================================
+   BIENVENIDA ANIMADA
+   ========================================================= */
+
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+
+  display: grid;
+  place-items: start center;
+
+  padding-top: 96px;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(15, 23, 42, .12) 0%,
+      rgba(15, 23, 42, 0) 46%
+    );
+
+  animation:
+    welcome-overlay-life 3.8s ease forwards;
+}
+
+
+.welcome-card {
+  width:
+    min(
+      520px,
+      calc(100vw - 32px)
+    );
+
+  display: flex;
+  align-items: center;
+
+  gap: 16px;
+
+  padding:
+    18px 20px;
+
+  border:
+    1px solid
+    rgba(191, 219, 254, .95);
+
+  border-radius: 20px;
+
+  background:
+    rgba(255, 255, 255, .97);
+
+  box-shadow:
+    0 24px 65px
+    rgba(15, 23, 42, .20);
+
+  backdrop-filter:
+    blur(16px);
+
+  animation:
+    welcome-card-life 3.8s
+    cubic-bezier(.2,.8,.2,1)
+    forwards;
+}
+
+
+.welcome-mark {
+  width: 58px;
+  height: 58px;
+
+  flex:
+    0 0 58px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #0b2342 0%,
+      #2563eb 100%
+    );
+
+  color: #fff;
+
+  box-shadow:
+    0 12px 28px
+    rgba(37, 99, 235, .24);
+}
+
+
+.welcome-mark span {
+  font-size: .72rem;
+  font-weight: 950;
+  letter-spacing: .12em;
+}
+
+
+.welcome-copy {
+  min-width: 0;
+
+  display: grid;
+  gap: 3px;
+}
+
+
+.welcome-copy small {
+  color: #2563eb;
+
+  font-size: .62rem;
+  font-weight: 900;
+
+  letter-spacing: .12em;
+}
+
+
+.welcome-copy h2 {
+  margin: 0;
+
+  color: #0f172a;
+
+  font-size: 1.08rem;
+  line-height: 1.25;
+
+  overflow-wrap: anywhere;
+}
+
+
+.welcome-copy p {
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+
+@keyframes welcome-card-life {
+
+  0% {
+    opacity: 0;
+
+    transform:
+      translateY(-18px)
+      scale(.96);
+  }
+
+  12% {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+
+  78% {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      translateY(-10px)
+      scale(.985);
+  }
+
+}
+
+
+@keyframes welcome-overlay-life {
+
+  0% {
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  82% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+
+}
+
+
+@media (
+  max-width: 640px
+) {
+
+  .welcome-overlay {
+    padding:
+      74px 12px 0;
+  }
+
+
+  .welcome-card {
+    width: 100%;
+
+    padding:
+      15px 16px;
+
+    border-radius: 16px;
+  }
+
+
+  .welcome-mark {
+    width: 50px;
+    height: 50px;
+
+    flex-basis: 50px;
+
+    border-radius: 14px;
+  }
+
+
+  .welcome-copy h2 {
+    font-size: .95rem;
   }
 
 }

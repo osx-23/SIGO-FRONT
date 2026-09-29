@@ -1956,6 +1956,155 @@ export class DistribucionControladorComponent
     this.cdr.detectChanges();
   }
 
+  private validarMatrizAntesDeGuardar(): string | null {
+
+    const ubicacionPorId =
+      new Map(
+        this.ubicaciones
+          .map(
+            ubicacion => [
+              ubicacion.id,
+              ubicacion
+            ] as const
+          )
+      );
+
+    const programacionPorAgenteFecha =
+      new Map<string, ProgramacionDia>();
+
+    for (
+      const programacion
+      of this.programaciones
+    ) {
+      if (
+        !this.esOperativo(
+          programacion.estado
+        )
+      ) {
+        continue;
+      }
+
+      programacionPorAgenteFecha.set(
+        `${programacion.trabajadorId}|${programacion.fecha}`,
+        programacion
+      );
+    }
+
+    for (
+      const actual
+      of this.programaciones
+    ) {
+      if (
+        !this.esOperativo(
+          actual.estado
+        )
+      ) {
+        continue;
+      }
+
+      const ubicacionActualId =
+        this.asignacion(
+          actual.programacionId
+        );
+
+      if (
+        !ubicacionActualId
+      ) {
+        continue;
+      }
+
+      const ubicacionActual =
+        ubicacionPorId.get(
+          ubicacionActualId
+        );
+
+      if (
+        !ubicacionActual
+      ) {
+        continue;
+      }
+
+      const anterior =
+        programacionPorAgenteFecha.get(
+          `${actual.trabajadorId}|${this.fechaAnterior(actual.fecha)}`
+        );
+
+      if (
+        !anterior
+      ) {
+        continue;
+      }
+
+      const ubicacionAnteriorId =
+        this.asignacion(
+          anterior.programacionId
+        );
+
+      if (
+        !ubicacionAnteriorId
+      ) {
+        continue;
+      }
+
+      const ubicacionAnterior =
+        ubicacionPorId.get(
+          ubicacionAnteriorId
+        );
+
+      if (
+        !ubicacionAnterior
+      ) {
+        continue;
+      }
+
+      const actualEsAuxiliarOApoyo =
+        ubicacionActual.tipo ===
+          'AUXILIAR' ||
+        ubicacionActual.tipo ===
+          'APOYO';
+
+      const anteriorEsAuxiliarOApoyo =
+        ubicacionAnterior.tipo ===
+          'AUXILIAR' ||
+        ubicacionAnterior.tipo ===
+          'APOYO';
+
+      if (
+        actualEsAuxiliarOApoyo &&
+        anteriorEsAuxiliarOApoyo
+      ) {
+        const agente =
+          this.agentes.find(
+            item =>
+              item.id ===
+                actual.trabajadorId
+          );
+
+        return (
+          `${agente?.nombreCompleto ?? actual.nombreTrabajador} tiene dos días seguidos en AUXILIAR/APOYO: ` +
+          `${this.fechaAnterior(actual.fecha)} = ${ubicacionAnterior.codigo} y ` +
+          `${actual.fecha} = ${ubicacionActual.codigo}. Cambia una de esas dos asignaciones por una VIA.`
+        );
+      }
+
+      if (
+        anterior.estado ===
+          actual.estado &&
+        ubicacionAnteriorId ===
+          ubicacionActualId
+      ) {
+        return (
+          `${actual.nombreTrabajador} repite la caseta ${ubicacionActual.codigo} ` +
+          `en días consecutivos manteniendo el turno ${actual.estado}: ` +
+          `${anterior.fecha} y ${actual.fecha}.`
+        );
+      }
+    }
+
+    return null;
+  }
+
+
   guardar(): void {
 
     if (
@@ -1963,6 +2112,35 @@ export class DistribucionControladorComponent
       this.cambios.size ===
         0
     ) {
+
+      return;
+    }
+
+    const errorMatriz =
+      this.validarMatrizAntesDeGuardar();
+
+    if (
+      errorMatriz
+    ) {
+      this.error =
+        errorMatriz;
+
+      this.tipoResultadoDistribucion =
+        'error';
+
+      this.tituloResultadoDistribucion =
+        'Revisa la distribución';
+
+      this.mensajeResultadoDistribucion =
+        errorMatriz;
+
+      this.observacionesResultadoDistribucion =
+        [];
+
+      this.modalResultadoDistribucionAbierto =
+        true;
+
+      this.cdr.detectChanges();
 
       return;
     }

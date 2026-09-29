@@ -216,6 +216,60 @@ export class AsistenciaHistoryComponent implements OnInit {
     );
   }
 
+  promedioAsistencia(): number {
+
+    const registros =
+      this.registrosFiltrados();
+
+    if (!registros.length) {
+      return 0;
+    }
+
+    return (
+      registros.reduce(
+        (total, registro) =>
+          total +
+          Number(
+            registro.porcentaje ??
+            0
+          ),
+        0
+      ) /
+      registros.length
+    );
+  }
+
+
+  totalAusentesFiltrados(): number {
+
+    return this.registrosFiltrados()
+      .reduce(
+        (total, registro) =>
+          total +
+          Number(
+            registro.ausentes ??
+            0
+          ),
+        0
+      );
+  }
+
+
+  totalPresentesFiltrados(): number {
+
+    return this.registrosFiltrados()
+      .reduce(
+        (total, registro) =>
+          total +
+          Number(
+            registro.presentes ??
+            0
+          ),
+        0
+      );
+  }
+
+
   registrosPaginados(): AsistenciaResponse[] {
 
     const registros =

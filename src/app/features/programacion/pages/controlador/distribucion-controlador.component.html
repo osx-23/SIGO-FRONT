@@ -28,7 +28,9 @@
         >
           Restringir casetas
         </button>
+      }
 
+      @if(puedeGenerarDistribucion){
         <button
           class="secondary generator-button"
           type="button"
@@ -1052,14 +1054,16 @@
       }
 
       <div class="generator-actions">
-        <button
-          class="secondary"
-          type="button"
-          (click)="abrirConfiguracionGenerador()"
-          [disabled]="generandoDistribucion"
-        >
-          Configurar reglas
-        </button>
+        @if(esSupervisor){
+          <button
+            class="secondary"
+            type="button"
+            (click)="abrirConfiguracionGenerador()"
+            [disabled]="generandoDistribucion"
+          >
+            Configurar reglas
+          </button>
+        }
 
         <button
           class="primary"

@@ -1361,7 +1361,7 @@ export class ProgramacionSupervisorComponent
       .subscribe({
         next: propuesta => {
           this.aplicarPropuesta(propuesta);
-          this.generador.modalAbierto = false;
+          this.generador.modalAbierto.set(false);
           this.mensaje = 'Propuesta generada. Revísala y edítala antes de guardar.';
           this.cdr.detectChanges();
         },

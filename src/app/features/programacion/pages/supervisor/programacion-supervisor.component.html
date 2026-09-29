@@ -349,16 +349,53 @@
   (generar)="generarPropuesta()"
 />
 
+@if(generador.procesando){
+  <div class="generation-loading-backdrop">
+    <section
+      class="generation-loading-modal"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div class="generation-spinner" aria-hidden="true"></div>
+
+      <div class="generation-loading-copy">
+        <span>GENERANDO PROGRAMACIÓN</span>
+        <h2>Generando propuesta...</h2>
+        <p>
+          SIGO está calculando los turnos del mes y validando
+          cobertura, secuencias y excepciones.
+        </p>
+      </div>
+    </section>
+  </div>
+}
+
 @if(modalConfirmacionAccionAbierto){
   <div class="shift-warning-backdrop" (click)="cerrarConfirmacionAccion()">
-    <section class="shift-warning-modal" (click)="$event.stopPropagation()">
+    <section
+      class="shift-warning-modal"
+      [class.result-error]="tipoConfirmacionAccion === 'error'"
+      [class.result-success]="tipoConfirmacionAccion === 'success'"
+      (click)="$event.stopPropagation()"
+    >
       <div class="shift-warning-accent"></div>
 
       <div class="shift-warning-content">
         <div class="shift-warning-heading">
-          <div class="shift-warning-icon">✓</div>
+          <div class="shift-warning-icon">
+            {{ tipoConfirmacionAccion === 'error' ? '!' : '✓' }}
+          </div>
+
           <div>
-            <span class="shift-warning-kicker">OPERACIÓN COMPLETADA</span>
+            <span class="shift-warning-kicker">
+              {{
+                tipoConfirmacionAccion === 'error'
+                  ? 'OPERACIÓN NO COMPLETADA'
+                  : 'OPERACIÓN COMPLETADA'
+              }}
+            </span>
+
             <h2>{{ tituloConfirmacionAccion }}</h2>
             <p>{{ mensajeConfirmacionAccion }}</p>
           </div>
@@ -366,7 +403,11 @@
       </div>
 
       <div class="shift-warning-actions">
-        <button class="shift-warning-confirm" type="button" (click)="cerrarConfirmacionAccion()">
+        <button
+          class="shift-warning-confirm"
+          type="button"
+          (click)="cerrarConfirmacionAccion()"
+        >
           Aceptar
         </button>
       </div>

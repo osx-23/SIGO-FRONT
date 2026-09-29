@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 
 import {
   Component,
+  OnDestroy,
   OnInit,
   inject,
   signal
@@ -32,7 +33,7 @@ import {
   templateUrl: './asistencia-history.component.html',
   styleUrl: './asistencia-history.component.css'
 })
-export class AsistenciaHistoryComponent implements OnInit {
+export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
 
   private readonly api =
     inject(AsistenciaApiService);
@@ -54,6 +55,13 @@ export class AsistenciaHistoryComponent implements OnInit {
 
   readonly loadingPlazas =
     signal(false);
+
+  readonly ahora =
+    signal(new Date());
+
+  private relojTimer:
+    ReturnType<typeof setInterval> | null =
+    null;
 
   readonly generandoPdfId =
     signal<number | null>(null);
@@ -92,6 +100,30 @@ export class AsistenciaHistoryComponent implements OnInit {
 
     this.cargarPlazas();
     this.cargar();
+
+    this.relojTimer =
+      setInterval(
+        () =>
+          this.ahora.set(
+            new Date()
+          ),
+        60000
+      );
+  }
+
+
+  ngOnDestroy(): void {
+
+    if (
+      this.relojTimer
+    ) {
+      clearInterval(
+        this.relojTimer
+      );
+
+      this.relojTimer =
+        null;
+    }
   }
 
   /*
@@ -245,21 +277,6 @@ export class AsistenciaHistoryComponent implements OnInit {
         .trim()
         .toUpperCase();
 
-    const turnosObjetivo:
-      Array<'A' | 'B' | 'C'> =
-      turnoSeleccionado === 'A' ||
-      turnoSeleccionado === 'B' ||
-      turnoSeleccionado === 'C'
-        ? [
-            turnoSeleccionado as
-              'A' | 'B' | 'C'
-          ]
-        : [
-            'A',
-            'B',
-            'C'
-          ];
-
     const existentes =
       new Set(
         this.registros()
@@ -282,13 +299,24 @@ export class AsistenciaHistoryComponent implements OnInit {
       const fecha
       of this.fechasPeriodo()
     ) {
+      const turnosEsperados =
+        this.turnosEsperadosParaFecha(
+          fecha
+        )
+          .filter(
+            turno =>
+              !turnoSeleccionado ||
+              turno ===
+                turnoSeleccionado
+          );
+
       for (
         const plaza
         of plazasObjetivo
       ) {
         for (
           const turno
-          of turnosObjetivo
+          of turnosEsperados
         ) {
           const clave =
             `${fecha}|${plaza.id}|${turno}`;
@@ -314,6 +342,111 @@ export class AsistenciaHistoryComponent implements OnInit {
     }
 
     return pendientes;
+  }
+
+
+  private turnosEsperadosParaFecha(
+    fecha: string
+  ): Array<'A' | 'B' | 'C'> {
+
+    const ahora =
+      this.ahora();
+
+    const hoy =
+      this.fechaLocal(
+        ahora
+      );
+
+    if (
+      fecha < hoy
+    ) {
+      return [
+        'A',
+        'B',
+        'C'
+      ];
+    }
+
+    if (
+      fecha > hoy
+    ) {
+      return [];
+    }
+
+    const hora =
+      ahora.getHours();
+
+    /*
+     * Turnos:
+     * A: 06:00 - 14:00
+     * B: 14:00 - 22:00
+     * C: 22:00 - 06:00 del día siguiente
+     *
+     * El reporte del turno C se atribuye a la fecha
+     * en la que el turno inicia (22:00).
+     */
+    if (
+      hora >= 22
+    ) {
+      return [
+        'A',
+        'B',
+        'C'
+      ];
+    }
+
+    if (
+      hora >= 14
+    ) {
+      return [
+        'A',
+        'B'
+      ];
+    }
+
+    if (
+      hora >= 6
+    ) {
+      return [
+        'A'
+      ];
+    }
+
+    /*
+     * Entre 00:00 y 05:59 todavía no ha iniciado
+     * ningún turno correspondiente a la fecha actual.
+     * El C en curso pertenece al día anterior.
+     */
+    return [];
+  }
+
+
+  private fechaLocal(
+    fecha: Date
+  ): string {
+
+    const anio =
+      fecha.getFullYear();
+
+    const mes =
+      String(
+        fecha.getMonth() + 1
+      ).padStart(
+        2,
+        '0'
+      );
+
+    const dia =
+      String(
+        fecha.getDate()
+      ).padStart(
+        2,
+        '0'
+      );
+
+    return (
+      `${anio}-${mes}-${dia}`
+    );
   }
 
 

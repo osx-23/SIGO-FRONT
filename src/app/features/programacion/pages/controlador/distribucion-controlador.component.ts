@@ -30,6 +30,7 @@ import {
   TrabajadorResumen,
   Ubicacion,
   GeneradorCasetasPropuesta,
+  ConflictoCasetaPropuesta,
   CalidadGeneracionCasetas,
   TipoPeriodoCaseta,
   CasetaConfiguracion,
@@ -234,6 +235,19 @@ export class DistribucionControladorComponent
   tituloResultadoDistribucion = '';
 
   mensajeResultadoDistribucion = '';
+
+  observacionesResultadoDistribucion:
+    ConflictoCasetaPropuesta[] = [];
+
+  modalCambiosPendientesAbierto =
+    false;
+
+  mensajeSalidaPendiente =
+    '';
+
+  private resolverSalidaPendiente:
+    ((valor: boolean) => void) | null =
+    null;
 
   propuestaGenerador:
     GeneradorCasetasPropuesta | null =
@@ -445,9 +459,9 @@ export class DistribucionControladorComponent
       });
   }
 
-  cambiarMes(
+  async cambiarMes(
     value: string
-  ): void {
+  ): Promise<void> {
 
     if (
       !value
@@ -470,13 +484,13 @@ export class DistribucionControladorComponent
       return;
     }
 
+    const continuar =
+      await this.confirmarSalidaConCambios(
+        'cambiar de mes'
+      );
+
     if (
-      this.tieneCambiosPendientes() &&
-      !window.confirm(
-        this.mensajeCambiosPendientes(
-          'cambiar de mes'
-        )
-      )
+      !continuar
     ) {
       return;
     }
@@ -492,9 +506,9 @@ export class DistribucionControladorComponent
     this.cargar();
   }
 
-  cambiarPlaza(
+  async cambiarPlaza(
     nuevaPlazaId: number | null
-  ): void {
+  ): Promise<void> {
 
     if (
       nuevaPlazaId === this.plazaId
@@ -502,13 +516,13 @@ export class DistribucionControladorComponent
       return;
     }
 
+    const continuar =
+      await this.confirmarSalidaConCambios(
+        'cambiar de plaza'
+      );
+
     if (
-      this.tieneCambiosPendientes() &&
-      !window.confirm(
-        this.mensajeCambiosPendientes(
-          'cambiar de plaza'
-        )
-      )
+      !continuar
     ) {
       return;
     }
@@ -539,6 +553,89 @@ export class DistribucionControladorComponent
       `Tienes ${total} asignación(es) de caseta sin guardar. ` +
       `Si decides ${accion}, esos cambios se perderán. ` +
       '¿Deseas continuar sin guardar?'
+    );
+  }
+
+
+  confirmarSalidaConCambios(
+    accion = 'salir de este módulo'
+  ): Promise<boolean> {
+
+    if (
+      !this.tieneCambiosPendientes()
+    ) {
+      return Promise.resolve(
+        true
+      );
+    }
+
+    if (
+      this.resolverSalidaPendiente
+    ) {
+      return Promise.resolve(
+        false
+      );
+    }
+
+    this.mensajeSalidaPendiente =
+      this.mensajeCambiosPendientes(
+        accion
+      );
+
+    this.modalCambiosPendientesAbierto =
+      true;
+
+    this.cdr.detectChanges();
+
+    return new Promise<boolean>(
+      resolve => {
+        this.resolverSalidaPendiente =
+          resolve;
+      }
+    );
+  }
+
+
+  cancelarSalidaConCambios(): void {
+
+    const resolver =
+      this.resolverSalidaPendiente;
+
+    this.resolverSalidaPendiente =
+      null;
+
+    this.modalCambiosPendientesAbierto =
+      false;
+
+    this.mensajeSalidaPendiente =
+      '';
+
+    this.cdr.detectChanges();
+
+    resolver?.(
+      false
+    );
+  }
+
+
+  continuarSalidaSinGuardar(): void {
+
+    const resolver =
+      this.resolverSalidaPendiente;
+
+    this.resolverSalidaPendiente =
+      null;
+
+    this.modalCambiosPendientesAbierto =
+      false;
+
+    this.mensajeSalidaPendiente =
+      '';
+
+    this.cdr.detectChanges();
+
+    resolver?.(
+      true
     );
   }
 
@@ -2674,6 +2771,9 @@ export class DistribucionControladorComponent
     this.modalResultadoDistribucionAbierto =
       false;
 
+    this.observacionesResultadoDistribucion =
+      [];
+
     this.errorGenerador =
       '';
 
@@ -2732,6 +2832,11 @@ export class DistribucionControladorComponent
 
           this.propuestaGenerador =
             propuesta;
+
+          this.observacionesResultadoDistribucion =
+            [
+              ...propuesta.conflictos
+            ];
 
           this.ultimaCalidadGeneracion =
             propuesta.calidad ??
@@ -2816,6 +2921,9 @@ export class DistribucionControladorComponent
           this.generandoDistribucion =
             false;
 
+          this.observacionesResultadoDistribucion =
+            [];
+
           this.tipoResultadoDistribucion =
             'error';
 
@@ -2846,6 +2954,9 @@ export class DistribucionControladorComponent
 
     this.mensajeResultadoDistribucion =
       '';
+
+    this.observacionesResultadoDistribucion =
+      [];
 
     this.cdr.detectChanges();
   }

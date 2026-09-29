@@ -609,9 +609,9 @@ th.sticky-name{
 }
 
 .estado-c{
-  border-color:#bfdbfe!important;
-  background:#dbeafe!important;
-  color:#1d4ed8!important;
+  border-color:#d8a7a5!important;
+  background:#e8c4c2!important;
+  color:#713f3d!important;
 }
 
 .estado-d{
@@ -3255,5 +3255,183 @@ th.sticky-name{
 
   .report-pdf-modal{
     width:calc(100vw - 16px);
+  }
+}
+
+
+/* =========================================================
+   MODAL DE ROTACIÓN POR AGENTE
+   ========================================================= */
+
+.agent-rotation-modal{
+  width:min(760px,calc(100vw - 32px));
+  max-height:88vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:1px solid #e2e8f0;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 30px 90px rgba(15,23,42,.28);
+}
+
+.agent-rotation-modal-body{
+  min-height:0;
+  display:grid;
+  gap:14px;
+  padding:18px 22px;
+  overflow-y:auto;
+}
+
+.agent-rotation-modal .agent-rotation-metrics{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.agent-rotation-modal .agent-location-frequency{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.agent-rotation-modal .agent-location-frequency article{
+  grid-template-columns:52px minmax(0,1fr) auto;
+}
+
+.agent-rotation-modal .agent-location-count{
+  min-width:68px;
+}
+
+.agent-rotation-pending{
+  padding:10px 12px;
+  border:1px solid #fde68a;
+  border-radius:10px;
+  background:#fffbeb;
+  color:#92400e;
+  font-size:.66rem;
+  line-height:1.45;
+}
+
+.agent-rotation-modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:9px;
+  padding:14px 22px 20px;
+  border-top:1px solid #e2e8f0;
+  background:#fcfcfd;
+}
+
+
+/* =========================================================
+   GUARDADO DE ASIGNACIONES
+   ========================================================= */
+
+.distribution-save-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:1700;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(15,23,42,.56);
+  backdrop-filter:blur(4px);
+}
+
+.distribution-save-modal{
+  width:min(460px,100%);
+  display:grid;
+  gap:15px;
+  padding:24px;
+  border:1px solid #dbeafe;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 30px 90px rgba(15,23,42,.30);
+}
+
+.distribution-save-copy{
+  display:grid;
+  gap:5px;
+}
+
+.distribution-save-copy span{
+  color:#2563eb;
+  font-size:.62rem;
+  font-weight:900;
+  letter-spacing:.1em;
+}
+
+.distribution-save-copy h2{
+  margin:0;
+  color:#0f172a;
+  font-size:1.08rem;
+}
+
+.distribution-save-copy p{
+  margin:0;
+  color:#64748b;
+  font-size:.72rem;
+  line-height:1.5;
+}
+
+.distribution-save-progress{
+  position:relative;
+  height:10px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#e2e8f0;
+}
+
+.distribution-save-progress div{
+  position:absolute;
+  inset-block:0;
+  width:42%;
+  border-radius:999px;
+  background:linear-gradient(
+    90deg,
+    #bfdbfe 0%,
+    #2563eb 55%,
+    #bfdbfe 100%
+  );
+  animation:distribution-save-progress 1.15s ease-in-out infinite;
+}
+
+.distribution-save-modal > small{
+  color:#94a3b8;
+  font-size:.6rem;
+  line-height:1.4;
+}
+
+@keyframes distribution-save-progress{
+  0%{
+    left:-45%;
+  }
+
+  100%{
+    left:105%;
+  }
+}
+
+@media(max-width:700px){
+  .agent-rotation-modal{
+    width:calc(100vw - 16px);
+    max-height:92vh;
+  }
+
+  .agent-rotation-modal .agent-rotation-metrics,
+  .agent-rotation-modal .agent-location-frequency{
+    grid-template-columns:1fr;
+  }
+
+  .agent-rotation-modal-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+  .distribution-save-backdrop{
+    align-items:flex-end;
+    padding:10px;
+  }
+
+  .distribution-save-modal{
+    width:100%;
+    border-radius:16px 16px 0 0;
   }
 }

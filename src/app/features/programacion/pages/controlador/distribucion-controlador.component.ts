@@ -2691,6 +2691,9 @@ export class DistribucionControladorComponent
           this.mensaje =
             'Distribución generada y cargada en la tabla. Aún no se ha guardado.';
 
+          this.generandoDistribucion =
+            false;
+
           this.tipoResultadoDistribucion =
             'success';
 
@@ -2720,6 +2723,9 @@ export class DistribucionControladorComponent
               e,
               'No se pudo generar la distribución.'
             );
+
+          this.generandoDistribucion =
+            false;
 
           this.tipoResultadoDistribucion =
             'error';

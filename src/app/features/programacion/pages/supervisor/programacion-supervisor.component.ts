@@ -257,6 +257,7 @@ export class ProgramacionSupervisorComponent
   modalConfirmacionAccionAbierto = false;
   tituloConfirmacionAccion = 'Cambio registrado';
   mensajeConfirmacionAccion = '';
+  tipoConfirmacionAccion: 'success' | 'error' = 'success';
 
   modalSinSecuenciaAbierto = false;
   modalLideresAbierto = false;
@@ -312,7 +313,7 @@ export class ProgramacionSupervisorComponent
    * ============================================================
    */
 
-  readonly matrix =
+  matrix =
     new Map<
       string,
       EstadoProgramacion | null
@@ -1335,15 +1336,29 @@ export class ProgramacionSupervisorComponent
         this.anio,
         this.mes
       );
+
     if (errorValidacion) {
       this.error = errorValidacion;
-      this.cdr.detectChanges();
+
+      this.mostrarConfirmacionAccion(
+        errorValidacion,
+        'No se puede generar la propuesta',
+        'error'
+      );
+
       return;
     }
 
     this.generador.procesando = true;
+    this.generador.modalAbierto.set(false);
     this.error = '';
     this.mensaje = '';
+
+    /*
+     * Forzamos el render inmediato del modal de carga antes de
+     * iniciar la petición HTTP.
+     */
+    this.cdr.detectChanges();
 
     this.facade.generarPropuesta(
       this.generador.construirRequest(
@@ -1360,18 +1375,49 @@ export class ProgramacionSupervisorComponent
       )
       .subscribe({
         next: propuesta => {
-          this.aplicarPropuesta(propuesta);
-          this.generador.modalAbierto.set(false);
-          this.mensaje = 'Propuesta generada. Revísala y edítala antes de guardar.';
+          this.aplicarPropuesta(
+            propuesta
+          );
+
+          const alertas =
+            propuesta.conflictos?.length ?? 0;
+
+          const deficits =
+            this.diasPropuestaConDeficit();
+
+          this.mensaje =
+            'Propuesta generada. Revísala y edítala antes de guardar.';
+
+          this.mostrarConfirmacionAccion(
+            alertas > 0 || deficits > 0
+              ? `La propuesta terminó de generarse y ya fue cargada en la matriz. Tiene ${alertas} alerta(s) y ${deficits} día(s) con déficit para revisar.`
+              : 'La propuesta terminó de generarse y los turnos ya fueron cargados en la matriz. Revísalos antes de guardar.',
+            'Propuesta generada',
+            'success'
+          );
+
           this.cdr.detectChanges();
         },
         error: e => {
-          console.error('Error generando propuesta:', e);
-          this.error = this.mensajeError(
-            e,
-            'No se pudo generar la propuesta de programación.'
+          console.error(
+            'Error generando propuesta:',
+            e
           );
-          this.cdr.detectChanges();
+
+          const mensaje =
+            this.mensajeError(
+              e,
+              'No se pudo generar la propuesta de programación.'
+            );
+
+          this.error =
+            mensaje;
+
+          this.mostrarConfirmacionAccion(
+            mensaje,
+            'Error al generar la propuesta',
+            'error'
+          );
         }
       });
   }
@@ -1382,6 +1428,16 @@ export class ProgramacionSupervisorComponent
     const celdas =
       this.generador.aplicarPropuesta(
         propuesta
+      );
+
+    /*
+     * ProgramacionTablaComponent usa ChangeDetectionStrategy.OnPush.
+     * Mutar el mismo Map no cambia la referencia del @Input y la tabla
+     * puede no repintarse hasta que ocurra otro evento visual.
+     */
+    const nuevaMatrix =
+      new Map(
+        this.matrix
       );
 
     for (const celda of celdas) {
@@ -1396,7 +1452,7 @@ export class ProgramacionSupervisorComponent
           dia
         );
 
-      this.matrix.set(
+      nuevaMatrix.set(
         key,
         celda.estado
       );
@@ -1407,6 +1463,10 @@ export class ProgramacionSupervisorComponent
       );
     }
 
+    this.matrix =
+      nuevaMatrix;
+
+    this.cdr.detectChanges();
   }
 
   diasPropuestaConDeficit(): number {
@@ -1719,16 +1779,30 @@ export class ProgramacionSupervisorComponent
     this.cdr.detectChanges();
   }
 
-  private mostrarConfirmacionAccion(mensaje: string, titulo = 'Cambio registrado'): void {
-    this.tituloConfirmacionAccion = titulo;
-    this.mensajeConfirmacionAccion = mensaje;
-    this.modalConfirmacionAccionAbierto = true;
+  private mostrarConfirmacionAccion(
+    mensaje: string,
+    titulo = 'Cambio registrado',
+    tipo: 'success' | 'error' = 'success'
+  ): void {
+    this.tituloConfirmacionAccion =
+      titulo;
+
+    this.mensajeConfirmacionAccion =
+      mensaje;
+
+    this.tipoConfirmacionAccion =
+      tipo;
+
+    this.modalConfirmacionAccionAbierto =
+      true;
+
     this.cdr.detectChanges();
   }
 
   cerrarConfirmacionAccion(): void {
     this.modalConfirmacionAccionAbierto = false;
     this.mensajeConfirmacionAccion = '';
+    this.tipoConfirmacionAccion = 'success';
     this.cdr.detectChanges();
   }
 
@@ -1821,6 +1895,13 @@ export class ProgramacionSupervisorComponent
             turnosGuardados
           );
 
+          /*
+           * Mantiene sincronizada la tabla OnPush después del guardado.
+           */
+          this.matrix =
+            new Map(
+              this.matrix
+            );
 
           this.cambios.clear();
 

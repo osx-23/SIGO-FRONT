@@ -44,23 +44,28 @@
       <button
         class="secondary"
         type="button"
-        (click)="abrirReportePdf()"
+        (click)="exportarReporteMatrizPdf()"
         [disabled]="
           cargando ||
           guardando ||
-          generandoReportePdf ||
-          !seleccionado ||
+          generandoReporteMatrizPdf ||
+          !plazaId ||
+          programaciones.length === 0 ||
           cambios.size > 0
         "
         [title]="
           cambios.size > 0
             ? 'Guarda primero los cambios pendientes'
-            : !seleccionado
-              ? 'Selecciona un agente para exportar su distribución'
-              : 'Exportar distribución del agente seleccionado a PDF'
+            : filtroSemana === 0
+              ? 'Exportar la distribución mensual completa'
+              : 'Exportar la semana visible'
         "
       >
-        Exportar PDF
+        {{
+          generandoReporteMatrizPdf
+            ? 'Exportando PDF...'
+            : 'Exportar PDF'
+        }}
       </button>
 
       <button

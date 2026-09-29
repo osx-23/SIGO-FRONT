@@ -1,4 +1,4 @@
-@if(excepciones.modalAbierto){
+@if(excepciones.modalAbierto()){
   <div class="exception-modal-backdrop" (click)="cerrar()">
     <section class="exception-modal" (click)="$event.stopPropagation()">
       <div class="exception-modal-head">

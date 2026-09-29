@@ -3,6 +3,35 @@
   [class.collapsed]="collapsed()"
 >
 
+  @if(bienvenidaVisible()){
+    <div class="welcome-overlay" aria-live="polite">
+      <section class="welcome-card">
+        <div class="welcome-mark">
+          <span>SIGO</span>
+        </div>
+
+        <div class="welcome-copy">
+          <small>BIENVENIDO</small>
+
+          <h2>
+            {{
+              auth.usuario()?.nombre ||
+              'Usuario'
+            }}
+          </h2>
+
+          <p>
+            {{
+              auth.usuario()?.plaza
+                ? 'Plaza ' + auth.usuario()?.plaza + ' · ' + auth.usuario()?.rol
+                : auth.usuario()?.rol
+            }}
+          </p>
+        </div>
+      </section>
+    </div>
+  }
+
   <aside
     [class.open]="sidebarOpen()"
   >
@@ -889,10 +918,6 @@
 
 
       <div class="user-identity">
-
-        <small class="welcome-label">
-          Bienvenido
-        </small>
 
         <b>
           {{

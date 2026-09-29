@@ -26,6 +26,9 @@
       (click)="guardar()"
       [disabled]="
         guardando ||
+        guardandoOrden ||
+        generador.procesando ||
+        agentesProcesando.size > 0 ||
         cambios.size === 0
       "
     >
@@ -33,7 +36,7 @@
       {{
         guardando
           ? 'Guardando...'
-          : 'Guardar cambios'
+          : 'Guardar turnos'
       }}
 
       @if(
@@ -239,6 +242,7 @@
       [matrix]="matrix"
       [agentesProcesando]="agentesProcesando"
       [guardandoOrden]="guardandoOrden"
+      [guardandoTurnos]="guardando"
       [mostrarDetalles]="mostrarDetalles"
       [diaSeleccionado]="diaSeleccionado"
       (abrirGenerador)="abrirGenerador()"
@@ -380,8 +384,8 @@
           <div class="shift-warning-icon">!</div>
           <div>
             <span class="shift-warning-kicker">CONFIRMAR PROGRAMACIÓN</span>
-            <h2>¿Está seguro de guardar los cambios?</h2>
-            <p>Se guardarán {{ cambios.size }} cambio(s) de la programación de {{ nombreMes() }}.</p>
+            <h2>¿Está seguro de guardar los turnos?</h2>
+            <p>Se guardarán {{ cambios.size }} cambio(s) de turno de la programación de {{ nombreMes() }}.</p>
           </div>
         </div>
       </div>
@@ -389,7 +393,7 @@
       <div class="shift-warning-actions">
         <button class="secondary" type="button" (click)="cancelarGuardar()">Cancelar</button>
         <button class="shift-warning-confirm" type="button" (click)="confirmarGuardar()">
-          Sí, guardar cambios
+          Sí, guardar turnos
         </button>
       </div>
     </section>

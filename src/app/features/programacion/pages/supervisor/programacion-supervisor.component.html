@@ -415,6 +415,67 @@
   </div>
 }
 
+@if(modalCambiosPendientesAbierto){
+  <div
+    class="shift-warning-backdrop"
+    (click)="cancelarSalidaConCambios()"
+  >
+    <section
+      class="shift-warning-modal"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="unsaved-turns-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="shift-warning-accent"></div>
+
+      <div class="shift-warning-content">
+        <div class="shift-warning-heading">
+          <div class="shift-warning-icon">!</div>
+
+          <div>
+            <span class="shift-warning-kicker">
+              CAMBIOS SIN GUARDAR
+            </span>
+
+            <h2 id="unsaved-turns-title">
+              ¿Salir sin guardar los turnos?
+            </h2>
+
+            <p>
+              {{ mensajeSalidaPendiente }}
+            </p>
+          </div>
+        </div>
+
+        <div class="shift-warning-note">
+          Para conservar los cambios, selecciona
+          <b>Seguir aquí</b> y luego usa
+          <b>Guardar turnos</b>.
+        </div>
+      </div>
+
+      <div class="shift-warning-actions">
+        <button
+          class="secondary"
+          type="button"
+          (click)="cancelarSalidaConCambios()"
+        >
+          Seguir aquí
+        </button>
+
+        <button
+          class="shift-warning-confirm"
+          type="button"
+          (click)="continuarSalidaSinGuardar()"
+        >
+          Salir sin guardar
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
 @if(modalConfirmarGuardadoAbierto){
   <div class="shift-warning-backdrop" (click)="cancelarGuardar()">
     <section class="shift-warning-modal" (click)="$event.stopPropagation()">

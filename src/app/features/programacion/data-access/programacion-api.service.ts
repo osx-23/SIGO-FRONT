@@ -249,6 +249,24 @@ export class ProgramacionApiService {
     );
   }
 
+  getReporteDistribucionTrabajadorPdf(
+    trabajadorId: number,
+    desde: string,
+    hasta: string
+  ): Observable<Blob> {
+    const params = new HttpParams()
+      .set('desde', desde)
+      .set('hasta', hasta);
+
+    return this.http.get(
+      `${this.api}/distribucion/reporte-trabajador/${trabajadorId}/pdf`,
+      {
+        params,
+        responseType: 'blob'
+      }
+    );
+  }
+
   getMiHorario(desde: string, hasta: string): Observable<MiHorario> {
     const params = new HttpParams().set('desde', desde).set('hasta', hasta);
     return this.http.get<MiHorario>(`${this.api}/programacion/mi-horario`, { params });

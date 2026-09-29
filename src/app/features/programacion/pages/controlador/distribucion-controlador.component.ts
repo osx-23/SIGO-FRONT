@@ -2597,6 +2597,12 @@ export class DistribucionControladorComponent
     this.ultimaCalidadGeneracion =
       null;
 
+    /*
+     * Pintamos inmediatamente el modal de carga antes de iniciar
+     * la petición, evitando que la UI parezca congelada.
+     */
+    this.cdr.detectChanges();
+
     this.api
       .generarPropuestaCasetas({
         plazaId:

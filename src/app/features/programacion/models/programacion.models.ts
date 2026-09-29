@@ -217,6 +217,7 @@ export interface CalidadGeneracionCasetas {
   duplicidades: number;
   restriccionesVioladas: number;
   solucionesEvaluadas: number;
+  cambiosRespectoBase: number;
 }
 
 export interface GeneradorCasetasPropuesta {

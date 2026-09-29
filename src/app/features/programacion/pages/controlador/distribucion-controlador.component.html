@@ -44,6 +44,28 @@
       <button
         class="secondary"
         type="button"
+        (click)="abrirReportePdf()"
+        [disabled]="
+          cargando ||
+          guardando ||
+          generandoReportePdf ||
+          !seleccionado ||
+          cambios.size > 0
+        "
+        [title]="
+          cambios.size > 0
+            ? 'Guarda primero los cambios pendientes'
+            : !seleccionado
+              ? 'Selecciona un agente para exportar su distribución'
+              : 'Exportar distribución del agente seleccionado a PDF'
+        "
+      >
+        Exportar PDF
+      </button>
+
+      <button
+        class="secondary"
+        type="button"
         (click)="exportarJsonDiagnostico()"
         [disabled]="
           cargando ||
@@ -648,7 +670,7 @@
             generandoReportePdf
           "
         >
-          Generar PDF
+          Exportar PDF
         </button>
       </div>
     </section>

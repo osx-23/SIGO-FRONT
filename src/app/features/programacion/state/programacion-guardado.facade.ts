@@ -16,7 +16,7 @@ export class ProgramacionGuardadoFacade {
 
   guardar(
     plazaId: number,
-    cambios: ReadonlyMap<string, EstadoProgramacion>,
+    cambios: ReadonlyMap<string, EstadoProgramacion | null>,
     anio: number,
     mes: number
   ) {

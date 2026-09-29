@@ -102,6 +102,9 @@ export class ProgramacionTablaComponent {
   guardandoOrden = false;
 
   @Input()
+  guardandoTurnos = false;
+
+  @Input()
   mostrarDetalles = true;
 
   @Input()

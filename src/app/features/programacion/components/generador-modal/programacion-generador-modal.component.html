@@ -1,4 +1,4 @@
-@if(generador.modalAbierto){
+@if(generador.modalAbierto()){
   <div class="generator-backdrop" (click)="cerrar()">
     <section class="generator-modal" (click)="$event.stopPropagation()">
       <div class="generator-head">

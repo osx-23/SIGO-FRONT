@@ -22,15 +22,35 @@
         class="primary generator-button"
         type="button"
         (click)="abrirGenerador.emit()"
-        [disabled]="!plazaId || generador.procesando"
+        [disabled]="
+          !plazaId ||
+          generador.procesando ||
+          guardandoTurnos ||
+          guardandoOrden ||
+          agentesProcesando.size > 0 ||
+          agentes.length === 0 ||
+          agentesSinSecuencia > 0
+        "
+        [title]="
+          agentesSinSecuencia > 0
+            ? 'Asigna primero una secuencia a todos los agentes pendientes'
+            : 'Generar una propuesta automática de turnos'
+        "
       >
-        {{ generador.procesando ? 'Generando...' : 'Generar con IA' }}
+        {{ generador.procesando ? 'Generando...' : 'Generar propuesta' }}
       </button>
 
       <button
         class="secondary"
         type="button"
         (click)="abrirPendientes.emit()"
+        [disabled]="
+          agentesSinSecuencia === 0 ||
+          generador.procesando ||
+          guardandoTurnos ||
+          guardandoOrden ||
+          agentesProcesando.size > 0
+        "
       >
         Asignar secuencia
 
@@ -45,6 +65,13 @@
         class="secondary exception-main-button"
         type="button"
         (click)="abrirExcepciones.emit()"
+        [disabled]="
+          agentes.length === 0 ||
+          generador.procesando ||
+          guardandoTurnos ||
+          guardandoOrden ||
+          agentesProcesando.size > 0
+        "
       >
         Añadir excepción
       </button>
@@ -158,6 +185,8 @@
                       [disabled]="
                         !grupoActual ||
                         guardandoOrden ||
+                        guardandoTurnos ||
+                        agentesProcesando.size > 0 ||
                         !secuencias.puedeSubir(
                           grupoActual,
                           agente.id
@@ -175,6 +204,8 @@
                       [disabled]="
                         !grupoActual ||
                         guardandoOrden ||
+                        guardandoTurnos ||
+                        agentesProcesando.size > 0 ||
                         !secuencias.puedeBajar(
                           grupoActual,
                           agente.id
@@ -249,7 +280,11 @@
                         $event
                       )
                     "
-                    [disabled]="estaProcesandoAgente(agente.id)"
+                    [disabled]="
+                      guardandoTurnos ||
+                      guardandoOrden ||
+                      agentesProcesando.size > 0
+                    "
                   >
                     @for(opcion of gruposProgramacion; track opcion.codigo){
                       <option [ngValue]="opcion.codigo">
@@ -275,6 +310,12 @@
                       )
                     "
                     [class]="'shift-select ' + claseEstado(valor)"
+                    [disabled]="
+                      guardandoTurnos ||
+                      guardandoOrden ||
+                      generador.procesando ||
+                      agentesProcesando.size > 0
+                    "
                   >
                     <option [ngValue]="null">
                       -

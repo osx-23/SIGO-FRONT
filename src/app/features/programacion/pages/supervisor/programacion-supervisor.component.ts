@@ -1305,29 +1305,18 @@ export class ProgramacionSupervisorComponent
     if (
       !this.plazaId ||
       this.generador.procesando ||
-      this.guardando ||
-      this.guardandoOrden ||
-      this.agentesProcesando.size > 0
+      this.guardando
     ) {
       return;
     }
 
-    if (this.agentesSinSecuencia.length > 0) {
-      this.error =
-        `Asigna una secuencia a los ${this.agentesSinSecuencia.length} agente(s) pendiente(s) antes de generar la programación.`;
-      this.cdr.detectChanges();
-      return;
-    }
-
-    if (this.agentesProgramadosLista.length === 0) {
-      this.error =
-        'No hay agentes con secuencia para generar la programación.';
-      this.cdr.detectChanges();
-      return;
-    }
-
     this.error = '';
-    this.mensaje = '';
+
+    this.mensaje =
+      this.agentesSinSecuencia.length > 0
+        ? `Hay ${this.agentesSinSecuencia.length} agente(s) sin secuencia. La propuesta se generará con los agentes configurados y mostrará las observaciones correspondientes.`
+        : '';
+
     this.generador.abrir();
     this.cdr.detectChanges();
   }

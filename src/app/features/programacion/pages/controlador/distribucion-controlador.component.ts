@@ -3,6 +3,7 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  HostListener,
   OnInit,
   ViewChild,
   inject
@@ -462,6 +463,24 @@ export class DistribucionControladorComponent
         .split('-')
         .map(Number);
 
+    if (
+      anio === this.anio &&
+      mes === this.mes
+    ) {
+      return;
+    }
+
+    if (
+      this.tieneCambiosPendientes() &&
+      !window.confirm(
+        this.mensajeCambiosPendientes(
+          'cambiar de mes'
+        )
+      )
+    ) {
+      return;
+    }
+
     this.anio =
       anio;
 
@@ -472,6 +491,76 @@ export class DistribucionControladorComponent
 
     this.cargar();
   }
+
+  cambiarPlaza(
+    nuevaPlazaId: number | null
+  ): void {
+
+    if (
+      nuevaPlazaId === this.plazaId
+    ) {
+      return;
+    }
+
+    if (
+      this.tieneCambiosPendientes() &&
+      !window.confirm(
+        this.mensajeCambiosPendientes(
+          'cambiar de plaza'
+        )
+      )
+    ) {
+      return;
+    }
+
+    this.plazaId =
+      nuevaPlazaId;
+
+    this.cargar();
+  }
+
+
+  tieneCambiosPendientes(): boolean {
+
+    return (
+      this.cambios.size > 0
+    );
+  }
+
+
+  mensajeCambiosPendientes(
+    accion = 'salir de este módulo'
+  ): string {
+
+    const total =
+      this.cambios.size;
+
+    return (
+      `Tienes ${total} asignación(es) de caseta sin guardar. ` +
+      `Si decides ${accion}, esos cambios se perderán. ` +
+      '¿Deseas continuar sin guardar?'
+    );
+  }
+
+
+  @HostListener(
+    'window:beforeunload',
+    ['$event']
+  )
+  protegerSalidaNavegador(
+    event: BeforeUnloadEvent
+  ): void {
+
+    if (
+      !this.tieneCambiosPendientes()
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.returnValue = '';
+  }
+
 
   get agentesFiltrados(): TrabajadorResumen[] {
     return this.agentesFiltradosBase();

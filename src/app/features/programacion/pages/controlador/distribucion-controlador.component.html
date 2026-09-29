@@ -282,7 +282,15 @@
                     @if(p){
                       @let ubicacionActual = asignacion(p.programacionId);
 
-                      <div class="assignment-cell">
+                      <div
+                        class="assignment-cell"
+                        [class.assignment-observation]="tieneObservacion(p.programacionId)"
+                        [title]="
+                          tieneObservacion(p.programacionId)
+                            ? mensajeObservacion(p.programacionId)
+                            : ''
+                        "
+                      >
                         <span
                           [class]="'shift-state ' + claseEstado(p.estado)"
                         >
@@ -290,32 +298,48 @@
                         </span>
 
                         @if(esOperativo(p.estado)){
-                          <select
-                            class="location-select"
-                            [ngModel]="ubicacionActual"
-                            (ngModelChange)="cambiar(p.programacionId, $event)"
-                            [title]="'Asignar caseta · Turno ' + p.estado"
-                          >
-                            <option [ngValue]="null">-</option>
+                          <div class="location-select-wrap">
+                            <select
+                              class="location-select"
+                              [class.location-select-observation]="tieneObservacion(p.programacionId)"
+                              [ngModel]="ubicacionActual"
+                              (ngModelChange)="cambiar(p.programacionId, $event)"
+                              [title]="
+                                tieneObservacion(p.programacionId)
+                                  ? mensajeObservacion(p.programacionId)
+                                  : 'Asignar caseta · Turno ' + p.estado
+                              "
+                            >
+                              <option [ngValue]="null">-</option>
 
-                            @for(ubicacion of ubicacionesParaTurno(p.estado, p.programacionId); track ubicacion.id){
-                              <option
-                                [ngValue]="ubicacion.id"
-                                [disabled]="
-                                  !ubicacion.activo ||
-                                  !ubicacionHabilitadaParaTurno(ubicacion, p.estado)
-                                "
+                              @for(ubicacion of ubicacionesParaTurno(p.estado, p.programacionId); track ubicacion.id){
+                                <option
+                                  [ngValue]="ubicacion.id"
+                                  [disabled]="
+                                    !ubicacion.activo ||
+                                    !ubicacionHabilitadaParaTurno(ubicacion, p.estado)
+                                  "
+                                >
+                                  {{ ubicacion.codigo }}
+                                  @if(!ubicacion.activo){
+                                    · Inactiva
+                                  }
+                                  @else if(!ubicacionHabilitadaParaTurno(ubicacion, p.estado)){
+                                    · No habilitada para {{ p.estado }}
+                                  }
+                                </option>
+                              }
+                            </select>
+
+                            @if(tieneObservacion(p.programacionId)){
+                              <span
+                                class="assignment-observation-badge"
+                                [title]="mensajeObservacion(p.programacionId)"
                               >
-                                {{ ubicacion.codigo }}
-                                @if(!ubicacion.activo){
-                                  · Inactiva
-                                }
-                                @else if(!ubicacionHabilitadaParaTurno(ubicacion, p.estado)){
-                                  · No habilitada para {{ p.estado }}
-                                }
-                              </option>
+                                !
+                              </span>
                             }
-                          </select>
+                          </div>
                         }
                         @else{
                           <span class="blocked-location">—</span>

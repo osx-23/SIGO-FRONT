@@ -513,7 +513,8 @@
     </div>
   </section>
 <!-- MODAL DETALLE DE CASETAS POR AGENTE -->
-@if(modalDetalleAgenteAbierto && agenteSeleccionado; as agente){
+@if(modalDetalleAgenteAbierto){
+  @if(agenteSeleccionado; as agente){
   <div
     class="modal-backdrop"
     (click)="cerrarDetalleAgente()"
@@ -626,6 +627,7 @@
       </div>
     </section>
   </div>
+  }
 }
 
 <!-- MODAL DE GUARDADO DE ASIGNACIONES -->
@@ -642,7 +644,7 @@
         <h2>Guardando casetas...</h2>
         <p>
           SIGO está validando y guardando
-          {{ cambios.size }} asignación(es).
+          {{ totalAsignacionesGuardando }} asignación(es).
         </p>
       </div>
 

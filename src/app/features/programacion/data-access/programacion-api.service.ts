@@ -249,6 +249,25 @@ export class ProgramacionApiService {
     );
   }
 
+  getReporteDistribucionPlazaPdf(
+    plazaId: number,
+    desde: string,
+    hasta: string
+  ): Observable<Blob> {
+    const params = new HttpParams()
+      .set('plazaId', plazaId)
+      .set('desde', desde)
+      .set('hasta', hasta);
+
+    return this.http.get(
+      `${this.api}/distribucion/reporte-plaza/pdf`,
+      {
+        params,
+        responseType: 'blob'
+      }
+    );
+  }
+
   getReporteDistribucionTrabajadorPdf(
     trabajadorId: number,
     desde: string,

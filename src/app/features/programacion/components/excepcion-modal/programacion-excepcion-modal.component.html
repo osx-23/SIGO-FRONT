@@ -44,6 +44,7 @@
             [(ngModel)]="excepciones.busqueda"
             placeholder="Buscar por código o nombre..."
             autocomplete="off"
+            [disabled]="excepciones.guardando"
           >
 
           <div class="exception-agent-results">
@@ -52,6 +53,7 @@
                 type="button"
                 class="exception-agent-option"
                 [class.selected]="excepciones.agente?.id === agente.id"
+                [disabled]="excepciones.guardando"
                 (click)="seleccionarAgente(agente)"
               >
                 <span>
@@ -97,6 +99,7 @@
                 <input
                   type="checkbox"
                   [(ngModel)]="excepciones.permiteA"
+                  [disabled]="excepciones.guardando"
                 >
                 <span class="estado-a">A</span>
               </label>
@@ -105,6 +108,7 @@
                 <input
                   type="checkbox"
                   [(ngModel)]="excepciones.permiteB"
+                  [disabled]="excepciones.guardando"
                 >
                 <span class="estado-b">B</span>
               </label>
@@ -113,6 +117,7 @@
                 <input
                   type="checkbox"
                   [(ngModel)]="excepciones.permiteC"
+                  [disabled]="excepciones.guardando"
                 >
                 <span class="estado-c">C</span>
               </label>
@@ -129,6 +134,7 @@
               maxlength="500"
               rows="4"
               [(ngModel)]="excepciones.motivo"
+              [disabled]="excepciones.guardando"
               placeholder="Ej.: Estudia por las noches; preferentemente turno A o B."
             ></textarea>
 
@@ -151,6 +157,7 @@
                 id="exception-color"
                 type="color"
                 [(ngModel)]="excepciones.color"
+                [disabled]="excepciones.guardando"
               >
 
               <span
@@ -175,6 +182,7 @@
                       [class.selected]="excepciones.color.toUpperCase() === color.toUpperCase()"
                       [style.background-color]="color"
                       [title]="'Usar ' + color"
+                      [disabled]="excepciones.guardando"
                       (click)="seleccionarColor(color)"
                     ></button>
                   }
@@ -212,6 +220,7 @@
         </button>
 
         <button
+          class="primary"
           type="button"
           (click)="solicitarGuardado()"
           [disabled]="

@@ -118,6 +118,9 @@ export class DistribucionControladorComponent
   resumen:
     ResumenTrabajador | null = null;
 
+  modalDetalleAgenteAbierto =
+    false;
+
   seleccionado:
     number | null = null;
 
@@ -396,7 +399,6 @@ export class DistribucionControladorComponent
     nombre: string;
     tipo: TipoUbicacion;
     veces: number;
-    repeticiones: number;
   }[] {
 
     if (!this.seleccionado) {
@@ -463,12 +465,7 @@ export class DistribucionControladorComponent
             tipo:
               ubicacion?.tipo ??
               'VIA',
-            veces,
-            repeticiones:
-              Math.max(
-                0,
-                veces - 1
-              )
+            veces
           };
         }
       )
@@ -499,18 +496,6 @@ export class DistribucionControladorComponent
 
     return this.frecuenciaCasetasAgenteSeleccionado
       .length;
-  }
-
-
-  get totalRepeticionesAgenteSeleccionado(): number {
-
-    return this.frecuenciaCasetasAgenteSeleccionado
-      .reduce(
-        (total, item) =>
-          total +
-          item.repeticiones,
-        0
-      );
   }
 
 
@@ -1102,7 +1087,11 @@ export class DistribucionControladorComponent
       !this.seleccionado ||
       !visibles.some(a => a.id === this.seleccionado)
     ) {
-      this.seleccionar(visibles[0].id);
+      this.seleccionado =
+        visibles[0].id;
+
+      this.resumen =
+        null;
     }
   }
 
@@ -1336,6 +1325,9 @@ export class DistribucionControladorComponent
       this.cdr.detectChanges();
       return;
     }
+
+    this.modalDetalleAgenteAbierto =
+      false;
 
     this.modoReportePdf =
       'MES';
@@ -2005,6 +1997,14 @@ export class DistribucionControladorComponent
     this.mensaje =
       '';
 
+    this.modalResultadoDistribucionAbierto =
+      false;
+
+    /*
+     * Mostramos el modal de carga antes de iniciar la petición.
+     */
+    this.cdr.detectChanges();
+
     this.api
       .guardarDistribucion({
 
@@ -2048,25 +2048,31 @@ export class DistribucionControladorComponent
 
           }
 
+          const totalGuardado =
+            guardadas.length;
+
           this.cambios
             .clear();
 
           this.mensaje =
             'Distribución guardada correctamente.';
 
+          this.tipoResultadoDistribucion =
+            'success';
+
+          this.tituloResultadoDistribucion =
+            'Asignaciones guardadas';
+
+          this.mensajeResultadoDistribucion =
+            `Se guardaron ${totalGuardado} asignación(es) de caseta correctamente.`;
+
+          this.observacionesResultadoDistribucion =
+            [];
+
+          this.modalResultadoDistribucionAbierto =
+            true;
+
           this.cdr.detectChanges();
-
-          this.cargarCobertura();
-
-          if (
-            this.seleccionado
-          ) {
-
-            this.cargarResumen(
-              this.seleccionado
-            );
-
-          }
 
         },
 
@@ -2084,6 +2090,21 @@ export class DistribucionControladorComponent
               e,
               'No se pudo guardar la distribución.'
             );
+
+          this.tipoResultadoDistribucion =
+            'error';
+
+          this.tituloResultadoDistribucion =
+            'Error al guardar asignaciones';
+
+          this.mensajeResultadoDistribucion =
+            this.error;
+
+          this.observacionesResultadoDistribucion =
+            [];
+
+          this.modalResultadoDistribucionAbierto =
+            true;
 
           this.cdr.detectChanges();
 
@@ -4443,11 +4464,19 @@ export class DistribucionControladorComponent
     this.resumen =
       null;
 
-    this.cdr.detectChanges();
+    this.modalDetalleAgenteAbierto =
+      true;
 
-    this.cargarResumen(
-      trabajadorId
-    );
+    this.cdr.detectChanges();
+  }
+
+
+  cerrarDetalleAgente(): void {
+
+    this.modalDetalleAgenteAbierto =
+      false;
+
+    this.cdr.detectChanges();
   }
 
   count(

@@ -446,15 +446,31 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
       false
     );
 
-    this.gruposAbiertos.set(
-      new Set<GrupoMenu>()
-    );
+    /*
+     * Navegamos primero para que los canDeactivate puedan advertir
+     * sobre cambios pendientes. Solo cerramos la sesión si la salida
+     * fue confirmada por el usuario.
+     */
+    void this.router
+      .navigateByUrl(
+        '/login'
+      )
+      .then(
+        navegado => {
 
-    this.auth.logout();
+          if (
+            !navegado
+          ) {
+            return;
+          }
 
-    void this.router.navigateByUrl(
-      '/login'
-    );
+          this.gruposAbiertos.set(
+            new Set<GrupoMenu>()
+          );
+
+          this.auth.logout();
+        }
+      );
   }
 
 

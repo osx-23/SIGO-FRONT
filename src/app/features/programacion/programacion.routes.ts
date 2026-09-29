@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { moduleGuard, roleGuard } from '../../core/auth/guards';
+import { cambiosPendientesGuard } from '../../core/navigation/cambios-pendientes.guard';
 
 export const PROGRAMACION_ROUTES: Routes = [
   {
@@ -18,6 +19,9 @@ export const PROGRAMACION_ROUTES: Routes = [
       moduleGuard('PROGRAMACION'),
       roleGuard('SUPERVISOR')
     ],
+    canDeactivate: [
+      cambiosPendientesGuard
+    ],
     loadComponent: () =>
       import('./pages/supervisor/programacion-supervisor.component')
         .then(m => m.ProgramacionSupervisorComponent)
@@ -27,6 +31,9 @@ export const PROGRAMACION_ROUTES: Routes = [
     canActivate: [
       moduleGuard('DISTRIBUCION'),
       roleGuard('SUPERVISOR', 'CONTROLADOR')
+    ],
+    canDeactivate: [
+      cambiosPendientesGuard
     ],
     loadComponent: () =>
       import('./pages/controlador/distribucion-controlador.component')

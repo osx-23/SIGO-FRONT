@@ -135,6 +135,20 @@ export class DistribucionControladorComponent
 
   exportandoJson = false;
 
+  modalReportePdfAbierto = false;
+
+  modoReportePdf:
+    'MES' | 'RANGO' =
+    'MES';
+
+  reportePdfDesde = '';
+
+  reportePdfHasta = '';
+
+  generandoReportePdf = false;
+
+  errorReportePdf = '';
+
   error = '';
 
   mensaje = '';
@@ -355,6 +369,147 @@ export class DistribucionControladorComponent
           restriccion.trabajadorId ===
             this.nuevaRestriccionAgenteId &&
           restriccion.activo
+      );
+  }
+
+
+  get agenteSeleccionado(): TrabajadorResumen | null {
+
+    if (!this.seleccionado) {
+      return null;
+    }
+
+    return (
+      this.agentes.find(
+        agente =>
+          agente.id ===
+            this.seleccionado
+      ) ??
+      null
+    );
+  }
+
+
+  get frecuenciaCasetasAgenteSeleccionado(): {
+    ubicacionId: number;
+    codigo: string;
+    nombre: string;
+    tipo: TipoUbicacion;
+    veces: number;
+    repeticiones: number;
+  }[] {
+
+    if (!this.seleccionado) {
+      return [];
+    }
+
+    const conteos =
+      new Map<number, number>();
+
+    for (
+      const programacion
+      of this.programaciones
+    ) {
+      if (
+        programacion.trabajadorId !==
+          this.seleccionado ||
+        !this.esOperativo(
+          programacion.estado
+        )
+      ) {
+        continue;
+      }
+
+      const ubicacionId =
+        this.asignacion(
+          programacion.programacionId
+        );
+
+      if (!ubicacionId) {
+        continue;
+      }
+
+      conteos.set(
+        ubicacionId,
+        (
+          conteos.get(
+            ubicacionId
+          ) ??
+          0
+        ) + 1
+      );
+    }
+
+    return [...conteos.entries()]
+      .map(
+        ([ubicacionId, veces]) => {
+          const ubicacion =
+            this.ubicaciones.find(
+              item =>
+                item.id ===
+                  ubicacionId
+            );
+
+          return {
+            ubicacionId,
+            codigo:
+              ubicacion?.codigo ??
+              String(
+                ubicacionId
+              ),
+            nombre:
+              ubicacion?.nombre ??
+              'Ubicación',
+            tipo:
+              ubicacion?.tipo ??
+              'VIA',
+            veces,
+            repeticiones:
+              Math.max(
+                0,
+                veces - 1
+              )
+          };
+        }
+      )
+      .sort(
+        (a, b) =>
+          b.veces -
+            a.veces ||
+          a.codigo.localeCompare(
+            b.codigo,
+            'es'
+          )
+      );
+  }
+
+
+  get totalAsignacionesAgenteSeleccionado(): number {
+
+    return this.frecuenciaCasetasAgenteSeleccionado
+      .reduce(
+        (total, item) =>
+          total + item.veces,
+        0
+      );
+  }
+
+
+  get totalCasetasDistintasAgenteSeleccionado(): number {
+
+    return this.frecuenciaCasetasAgenteSeleccionado
+      .length;
+  }
+
+
+  get totalRepeticionesAgenteSeleccionado(): number {
+
+    return this.frecuenciaCasetasAgenteSeleccionado
+      .reduce(
+        (total, item) =>
+          total +
+          item.repeticiones,
+        0
       );
   }
 
@@ -1161,6 +1316,234 @@ export class DistribucionControladorComponent
 
       });
   }
+
+  abrirReportePdf(): void {
+
+    if (
+      !this.seleccionado
+    ) {
+      this.error =
+        'Selecciona primero un agente para generar su reporte PDF.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    if (
+      this.cambios.size > 0
+    ) {
+      this.error =
+        'Guarda primero las asignaciones pendientes antes de generar el PDF.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.modoReportePdf =
+      'MES';
+
+    this.configurarFechasMesReporte();
+
+    this.errorReportePdf =
+      '';
+
+    this.modalReportePdfAbierto =
+      true;
+
+    this.cdr.detectChanges();
+  }
+
+
+  cerrarReportePdf(): void {
+
+    if (
+      this.generandoReportePdf
+    ) {
+      return;
+    }
+
+    this.modalReportePdfAbierto =
+      false;
+
+    this.errorReportePdf =
+      '';
+
+    this.cdr.detectChanges();
+  }
+
+
+  cambiarModoReportePdf(
+    modo: 'MES' | 'RANGO'
+  ): void {
+
+    this.modoReportePdf =
+      modo;
+
+    this.errorReportePdf =
+      '';
+
+    if (
+      modo === 'MES'
+    ) {
+      this.configurarFechasMesReporte();
+    }
+
+    this.cdr.detectChanges();
+  }
+
+
+  private configurarFechasMesReporte(): void {
+
+    const ultimoDia =
+      new Date(
+        this.anio,
+        this.mes,
+        0
+      )
+        .getDate();
+
+    this.reportePdfDesde =
+      `${this.anio}-${String(
+        this.mes
+      ).padStart(
+        2,
+        '0'
+      )}-01`;
+
+    this.reportePdfHasta =
+      `${this.anio}-${String(
+        this.mes
+      ).padStart(
+        2,
+        '0'
+      )}-${String(
+        ultimoDia
+      ).padStart(
+        2,
+        '0'
+      )}`;
+  }
+
+
+  generarReportePdf(): void {
+
+    if (
+      !this.seleccionado
+    ) {
+      return;
+    }
+
+    if (
+      this.cambios.size > 0
+    ) {
+      this.errorReportePdf =
+        'Hay asignaciones sin guardar. Guarda los cambios antes de generar el PDF.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    if (
+      !this.reportePdfDesde ||
+      !this.reportePdfHasta
+    ) {
+      this.errorReportePdf =
+        'Selecciona la fecha desde y la fecha hasta.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    if (
+      this.reportePdfDesde >
+        this.reportePdfHasta
+    ) {
+      this.errorReportePdf =
+        'La fecha desde no puede ser posterior a la fecha hasta.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.generandoReportePdf =
+      true;
+
+    this.errorReportePdf =
+      '';
+
+    this.cdr.detectChanges();
+
+    const trabajadorId =
+      this.seleccionado;
+
+    this.api
+      .getReporteDistribucionTrabajadorPdf(
+        trabajadorId,
+        this.reportePdfDesde,
+        this.reportePdfHasta
+      )
+      .pipe(
+        finalize(() => {
+          this.generandoReportePdf =
+            false;
+
+          this.cdr.detectChanges();
+        })
+      )
+      .subscribe({
+        next: blob => {
+          const agente =
+            this.agenteSeleccionado;
+
+          const codigo =
+            agente?.codigo ??
+            trabajadorId;
+
+          const url =
+            URL.createObjectURL(
+              blob
+            );
+
+          const enlace =
+            document.createElement(
+              'a'
+            );
+
+          enlace.href =
+            url;
+
+          enlace.download =
+            `distribucion-${codigo}-${this.reportePdfDesde}-${this.reportePdfHasta}.pdf`;
+
+          document.body
+            .appendChild(
+              enlace
+            );
+
+          enlace.click();
+
+          enlace.remove();
+
+          URL.revokeObjectURL(
+            url
+          );
+
+          this.modalReportePdfAbierto =
+            false;
+
+          this.mensaje =
+            'Reporte PDF generado correctamente.';
+
+          this.cdr.detectChanges();
+        },
+
+        error: e => {
+          this.errorReportePdf =
+            this.mensajeError(
+              e,
+              'No se pudo generar el reporte PDF.'
+            );
+
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
 
   cargarCobertura(): void {
 

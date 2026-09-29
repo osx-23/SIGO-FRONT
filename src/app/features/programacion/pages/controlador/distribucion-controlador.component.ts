@@ -166,6 +166,9 @@ export class DistribucionControladorComponent
 
   nuevaRestriccionMotivo = '';
 
+  readonly casetasRestriccionSeleccionadas =
+    new Set<number>();
+
   cargandoConfiguracion = false;
 
   guardandoFlujoUbicacionId:
@@ -220,6 +223,17 @@ export class DistribucionControladorComponent
 
   mensajeGenerador = '';
 
+  modalResultadoDistribucionAbierto =
+    false;
+
+  tipoResultadoDistribucion:
+    'success' | 'error' =
+    'success';
+
+  tituloResultadoDistribucion = '';
+
+  mensajeResultadoDistribucion = '';
+
   propuestaGenerador:
     GeneradorCasetasPropuesta | null =
     null;
@@ -266,6 +280,66 @@ export class DistribucionControladorComponent
           `${agente.codigo} ${agente.nombreCompleto}`
             .toLowerCase()
             .includes(query)
+      );
+  }
+
+
+  get casetasRestriccionDisponibles(): Ubicacion[] {
+
+    return this.ubicacionesConfiguracion
+      .filter(
+        ubicacion =>
+          ubicacion.activo
+      )
+      .sort(
+        (a, b) => {
+          const tipoOrden =
+            (
+              a.tipo === 'VIA'
+                ? 0
+                : a.tipo === 'AUXILIAR'
+                  ? 1
+                  : 2
+            ) -
+            (
+              b.tipo === 'VIA'
+                ? 0
+                : b.tipo === 'AUXILIAR'
+                  ? 1
+                  : 2
+            );
+
+          if (tipoOrden !== 0) {
+            return tipoOrden;
+          }
+
+          return (
+            (a.orden ?? Number.MAX_SAFE_INTEGER) -
+            (b.orden ?? Number.MAX_SAFE_INTEGER)
+          ) || a.codigo.localeCompare(
+            b.codigo,
+            'es'
+          );
+        }
+      );
+  }
+
+  get cantidadCasetasRestriccionSeleccionadas(): number {
+    return this.casetasRestriccionSeleccionadas.size;
+  }
+
+  get restriccionesAgenteSeleccionado(): RestriccionCaseta[] {
+
+    if (!this.nuevaRestriccionAgenteId) {
+      return [];
+    }
+
+    return this.restriccionesCasetaConfiguracion
+      .filter(
+        restriccion =>
+          restriccion.trabajadorId ===
+            this.nuevaRestriccionAgenteId &&
+          restriccion.activo
       );
   }
 
@@ -2502,6 +2576,15 @@ export class DistribucionControladorComponent
     this.generandoDistribucion =
       true;
 
+    /*
+     * Cerramos el formulario y dejamos únicamente el modal de carga.
+     */
+    this.generadorAbierto =
+      false;
+
+    this.modalResultadoDistribucionAbierto =
+      false;
+
     this.errorGenerador =
       '';
 
@@ -2602,6 +2685,22 @@ export class DistribucionControladorComponent
           this.mensaje =
             'Distribución generada y cargada en la tabla. Aún no se ha guardado.';
 
+          this.tipoResultadoDistribucion =
+            'success';
+
+          this.tituloResultadoDistribucion =
+            'Asignación de casetas generada';
+
+          this.mensajeResultadoDistribucion =
+            propuesta.conflictos.length > 0
+              ? `Se cargaron ${total} asignaciones y quedaron ${propuesta.conflictos.length} observación(es) para revisar antes de guardar.`
+              : propuesta.calidad
+                ? `Se cargaron ${total} asignaciones correctamente. Calidad ${propuesta.calidad.puntuacion}/100. Revisa la tabla antes de guardar.`
+                : `Se cargaron ${total} asignaciones correctamente. Revisa la tabla antes de guardar.`;
+
+          this.modalResultadoDistribucionAbierto =
+            true;
+
           this.cdr.detectChanges();
 
         },
@@ -2616,11 +2715,38 @@ export class DistribucionControladorComponent
               'No se pudo generar la distribución.'
             );
 
+          this.tipoResultadoDistribucion =
+            'error';
+
+          this.tituloResultadoDistribucion =
+            'Error al generar la asignación';
+
+          this.mensajeResultadoDistribucion =
+            this.errorGenerador;
+
+          this.modalResultadoDistribucionAbierto =
+            true;
+
           this.cdr.detectChanges();
 
         }
 
       });
+  }
+
+
+  cerrarResultadoDistribucion(): void {
+
+    this.modalResultadoDistribucionAbierto =
+      false;
+
+    this.tituloResultadoDistribucion =
+      '';
+
+    this.mensajeResultadoDistribucion =
+      '';
+
+    this.cdr.detectChanges();
   }
 
 
@@ -3004,6 +3130,238 @@ export class DistribucionControladorComponent
   }
 
 
+  seleccionarAgenteRestriccion(
+    agenteId: number
+  ): void {
+
+    this.nuevaRestriccionAgenteId =
+      agenteId;
+
+    this.casetasRestriccionSeleccionadas
+      .clear();
+
+    for (
+      const restriccion
+      of this.restriccionesCasetaConfiguracion
+    ) {
+      if (
+        restriccion.activo &&
+        restriccion.trabajadorId ===
+          agenteId
+      ) {
+        this.casetasRestriccionSeleccionadas
+          .add(
+            restriccion.ubicacionId
+          );
+      }
+    }
+
+    this.errorConfiguracion =
+      '';
+
+    this.mensajeConfiguracion =
+      '';
+
+    this.cdr.detectChanges();
+  }
+
+
+  casetaRestriccionSeleccionada(
+    ubicacionId: number
+  ): boolean {
+
+    return this.casetasRestriccionSeleccionadas
+      .has(
+        ubicacionId
+      );
+  }
+
+
+  alternarCasetaRestriccion(
+    ubicacionId: number,
+    seleccionada: boolean
+  ): void {
+
+    if (
+      !this.nuevaRestriccionAgenteId ||
+      this.guardandoRestriccionConfiguracion
+    ) {
+      return;
+    }
+
+    if (seleccionada) {
+      this.casetasRestriccionSeleccionadas
+        .add(
+          ubicacionId
+        );
+    }
+    else {
+      this.casetasRestriccionSeleccionadas
+        .delete(
+          ubicacionId
+        );
+    }
+
+    this.cdr.detectChanges();
+  }
+
+
+  guardarRestriccionesAgenteConfiguracion(): void {
+
+    if (
+      !this.configPlazaId ||
+      !this.nuevaRestriccionAgenteId
+    ) {
+      this.errorConfiguracion =
+        'Selecciona primero un agente.';
+      return;
+    }
+
+    const existentes =
+      this.restriccionesCasetaConfiguracion
+        .filter(
+          restriccion =>
+            restriccion.activo &&
+            restriccion.trabajadorId ===
+              this.nuevaRestriccionAgenteId
+        );
+
+    const existentesPorUbicacion =
+      new Map(
+        existentes.map(
+          restriccion => [
+            restriccion.ubicacionId,
+            restriccion
+          ]
+        )
+      );
+
+    const nuevas =
+      [...this.casetasRestriccionSeleccionadas]
+        .filter(
+          ubicacionId =>
+            !existentesPorUbicacion.has(
+              ubicacionId
+            )
+        );
+
+    const eliminadas =
+      existentes.filter(
+        restriccion =>
+          !this.casetasRestriccionSeleccionadas
+            .has(
+              restriccion.ubicacionId
+            )
+      );
+
+    if (
+      nuevas.length === 0 &&
+      eliminadas.length === 0
+    ) {
+      this.mensajeConfiguracion =
+        'No hay cambios pendientes en las restricciones de este agente.';
+      this.errorConfiguracion =
+        '';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.guardandoRestriccionConfiguracion =
+      true;
+
+    this.errorConfiguracion =
+      '';
+
+    this.mensajeConfiguracion =
+      '';
+
+    const operaciones = [
+      ...nuevas.map(
+        ubicacionId =>
+          this.api.guardarRestriccionCaseta({
+            plazaId:
+              this.configPlazaId!,
+            trabajadorId:
+              this.nuevaRestriccionAgenteId!,
+            ubicacionId,
+            motivo:
+              this.nuevaRestriccionMotivo
+                .trim() || null,
+            activo:
+              true
+          })
+      ),
+      ...eliminadas.map(
+        restriccion =>
+          this.api.eliminarRestriccionCaseta(
+            restriccion.id
+          )
+      )
+    ];
+
+    forkJoin(
+      operaciones
+    )
+      .subscribe({
+        next: () => {
+          this.api
+            .getRestriccionesCasetas(
+              this.configPlazaId!
+            )
+            .pipe(
+              finalize(() => {
+                this.guardandoRestriccionConfiguracion =
+                  false;
+                this.cdr.detectChanges();
+              })
+            )
+            .subscribe({
+              next: restricciones => {
+                this.restriccionesCasetaConfiguracion =
+                  [...restricciones];
+
+                const agenteId =
+                  this.nuevaRestriccionAgenteId!;
+
+                this.seleccionarAgenteRestriccion(
+                  agenteId
+                );
+
+                this.nuevaRestriccionMotivo =
+                  '';
+
+                this.mensajeConfiguracion =
+                  `Restricciones actualizadas: ${nuevas.length} agregada(s) y ${eliminadas.length} quitada(s).`;
+
+                this.cdr.detectChanges();
+              },
+              error: e => {
+                this.errorConfiguracion =
+                  this.mensajeError(
+                    e,
+                    'Los cambios se guardaron, pero no se pudo refrescar la lista.'
+                  );
+
+                this.cdr.detectChanges();
+              }
+            });
+        },
+        error: e => {
+          this.guardandoRestriccionConfiguracion =
+            false;
+
+          this.errorConfiguracion =
+            this.mensajeError(
+              e,
+              'No se pudieron guardar todas las restricciones.'
+            );
+
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+
   agregarRestriccionCasetaConfiguracion(): void {
 
     if (
@@ -3148,6 +3506,9 @@ export class DistribucionControladorComponent
 
     this.nuevaRestriccionUbicacionId =
       null;
+
+    this.casetasRestriccionSeleccionadas
+      .clear();
 
     this.nuevaRestriccionMotivo =
       '';

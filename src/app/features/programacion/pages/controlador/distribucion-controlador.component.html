@@ -761,6 +761,73 @@
   </div>
 }
 
+@if(generandoDistribucion){
+  <div class="distribution-loading-backdrop">
+    <section
+      class="distribution-loading-modal"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div class="distribution-spinner" aria-hidden="true"></div>
+
+      <div>
+        <span>ASIGNANDO CASETAS</span>
+        <h2>Generando distribución...</h2>
+        <p>
+          SIGO está evaluando turnos, flujo, rotación,
+          restricciones y disponibilidad de casetas.
+        </p>
+      </div>
+    </section>
+  </div>
+}
+
+@if(modalResultadoDistribucionAbierto){
+  <div
+    class="distribution-result-backdrop"
+    (click)="cerrarResultadoDistribucion()"
+  >
+    <section
+      class="distribution-result-modal"
+      [class.result-error]="tipoResultadoDistribucion === 'error'"
+      [class.result-success]="tipoResultadoDistribucion === 'success'"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="distribution-result-accent"></div>
+
+      <div class="distribution-result-content">
+        <div class="distribution-result-icon">
+          {{ tipoResultadoDistribucion === 'error' ? '!' : '✓' }}
+        </div>
+
+        <div>
+          <span>
+            {{
+              tipoResultadoDistribucion === 'error'
+                ? 'OPERACIÓN NO COMPLETADA'
+                : 'OPERACIÓN COMPLETADA'
+            }}
+          </span>
+
+          <h2>{{ tituloResultadoDistribucion }}</h2>
+          <p>{{ mensajeResultadoDistribucion }}</p>
+        </div>
+      </div>
+
+      <div class="distribution-result-actions">
+        <button
+          class="primary"
+          type="button"
+          (click)="cerrarResultadoDistribucion()"
+        >
+          Aceptar
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
   <!-- MODAL CONFIGURACIÓN DE CASETAS -->
   @if(modalUbicacionesAbierto){
     <div
@@ -1122,25 +1189,26 @@
           </div>
         }
         @else{
-          <div class="restrictions-modal-body">
-            <section class="restriction-create-card">
+          <div class="restrictions-modal-body restriction-editor-layout">
+            <section class="restriction-create-card restriction-agent-panel">
               <div class="locations-section-head">
                 <div>
-                  <strong>Nueva restricción</strong>
+                  <strong>1. Selecciona un agente</strong>
                   <span>
-                    Busca y selecciona un agente para crear una nueva restricción.
+                    Busca por código o nombre para editar todas sus restricciones.
                   </span>
                 </div>
               </div>
 
               <div class="restriction-new-body">
                 <label class="restriction-search">
-                  Buscar agente por nombre o código
+                  Buscar agente
                   <input
                     type="search"
                     [(ngModel)]="busquedaAgenteRestriccion"
                     placeholder="Ej. 287 o Mario Pérez"
                     autocomplete="off"
+                    [disabled]="guardandoRestriccionConfiguracion"
                   >
                 </label>
 
@@ -1152,7 +1220,7 @@
                   }
                   @else if(agentesRestriccionFiltrados.length === 0){
                     <div class="restriction-search-hint">
-                      No se encontraron agentes con ese nombre o código.
+                      No se encontraron agentes.
                     </div>
                   }
                   @else{
@@ -1164,14 +1232,19 @@
                         type="button"
                         class="restriction-agent-option"
                         [class.selected]="nuevaRestriccionAgenteId === agente.id"
-                        (click)="nuevaRestriccionAgenteId = agente.id"
+                        (click)="seleccionarAgenteRestriccion(agente.id)"
+                        [disabled]="guardandoRestriccionConfiguracion"
                       >
                         <strong>
                           {{ agente.codigo }} · {{ agente.nombreCompleto }}
                         </strong>
 
                         <span>
-                          Seleccionar agente
+                          {{
+                            nuevaRestriccionAgenteId === agente.id
+                              ? 'Seleccionado'
+                              : 'Seleccionar'
+                          }}
                         </span>
                       </button>
                     }
@@ -1193,123 +1266,102 @@
                       }
                     }
                   </div>
+
+                  <div class="restriction-agent-summary">
+                    <span>Restricciones marcadas</span>
+                    <strong>
+                      {{ cantidadCasetasRestriccionSeleccionadas }}
+                    </strong>
+                  </div>
                 }
-
-                <label class="restriction-field">
-                  Caseta restringida
-                  <select
-                    [(ngModel)]="nuevaRestriccionUbicacionId"
-                    [disabled]="
-                      guardandoRestriccionConfiguracion ||
-                      !nuevaRestriccionAgenteId
-                    "
-                  >
-                    <option [ngValue]="null">
-                      Seleccionar caseta
-                    </option>
-
-                    @for(
-                      ubicacion of ubicacionesConfiguracion;
-                      track ubicacion.id
-                    ){
-                      @if(ubicacion.activo){
-                        <option [ngValue]="ubicacion.id">
-                          {{ ubicacion.codigo }} · {{ ubicacion.nombre }}
-                        </option>
-                      }
-                    }
-                  </select>
-                </label>
-
-                <label class="restriction-field">
-                  Motivo
-                  <input
-                    type="text"
-                    maxlength="250"
-                    placeholder="Opcional"
-                    [(ngModel)]="nuevaRestriccionMotivo"
-                    [disabled]="
-                      guardandoRestriccionConfiguracion ||
-                      !nuevaRestriccionAgenteId
-                    "
-                  >
-                </label>
-
-                <button
-                  type="button"
-                  class="primary restriction-add"
-                  (click)="agregarRestriccionCasetaConfiguracion()"
-                  [disabled]="
-                    guardandoRestriccionConfiguracion ||
-                    !nuevaRestriccionAgenteId ||
-                    !nuevaRestriccionUbicacionId
-                  "
-                >
-                  {{
-                    guardandoRestriccionConfiguracion
-                      ? 'Guardando...'
-                      : 'Agregar restricción'
-                  }}
-                </button>
               </div>
             </section>
 
-            <section class="restriction-results-card">
+            <section class="restriction-results-card restriction-casetas-panel">
               <div class="locations-section-head">
                 <div>
-                  <strong>Restricciones registradas</strong>
+                  <strong>2. Marca las casetas restringidas</strong>
                   <span>
-                    Todas las restricciones actuales de la plaza.
+                    Las casetas ya restringidas aparecen seleccionadas.
+                    Desmarca una para quitar la restricción.
                   </span>
                 </div>
 
                 <span class="locations-count">
-                  {{ restriccionesCasetaConfiguracion.length }}
+                  {{ cantidadCasetasRestriccionSeleccionadas }}
                 </span>
               </div>
 
-              @if(restriccionesCasetaConfiguracion.length === 0){
-                <div class="config-empty restrictions-empty">
-                  No hay restricciones configuradas para esta plaza.
+              @if(!nuevaRestriccionAgenteId){
+                <div class="restriction-casetas-empty">
+                  Selecciona un agente para cargar todas las casetas disponibles.
                 </div>
               }
               @else{
-                <div class="modal-restrictions-list modal-restrictions-list-large">
+                <div class="restriction-casetas-list">
                   @for(
-                    restriccion of restriccionesCasetaConfiguracion;
-                    track restriccion.id
+                    ubicacion of casetasRestriccionDisponibles;
+                    track ubicacion.id
                   ){
-                    <article>
-                      <div>
-                        <strong>
-                          {{ restriccion.codigoTrabajador }} ·
-                          {{ restriccion.trabajador }}
-                        </strong>
-
-                        <span>
-                          No puede usar
-                          <b>{{ restriccion.ubicacionCodigo }}</b>
-                        </span>
-
-                        @if(restriccion.motivo){
-                          <small>{{ restriccion.motivo }}</small>
-                        }
-                      </div>
-
-                      <button
-                        type="button"
-                        class="text-button danger"
-                        (click)="eliminarRestriccionCasetaConfiguracion(restriccion)"
-                        [disabled]="eliminandoRestriccionId !== null"
+                    <label
+                      class="restriction-caseta-check"
+                      [class.checked]="casetaRestriccionSeleccionada(ubicacion.id)"
+                    >
+                      <input
+                        type="checkbox"
+                        [ngModel]="casetaRestriccionSeleccionada(ubicacion.id)"
+                        (ngModelChange)="alternarCasetaRestriccion(ubicacion.id, $event)"
+                        [disabled]="guardandoRestriccionConfiguracion"
                       >
-                        {{
-                          eliminandoRestriccionId === restriccion.id
-                            ? 'Quitando...'
-                            : 'Quitar'
-                        }}
-                      </button>
-                    </article>
+
+                      <span class="restriction-caseta-code">
+                        {{ ubicacion.codigo }}
+                      </span>
+
+                      <span class="restriction-caseta-info">
+                        <strong>{{ ubicacion.nombre }}</strong>
+                        <small>
+                          {{ ubicacion.tipo }} · Orden {{ ubicacion.orden }}
+                        </small>
+                      </span>
+                    </label>
+                  } @empty {
+                    <div class="restriction-casetas-empty">
+                      No hay casetas activas configuradas para esta plaza.
+                    </div>
                   }
+                </div>
+
+                <div class="restriction-batch-footer">
+                  <label class="restriction-field">
+                    Motivo para nuevas restricciones
+                    <input
+                      type="text"
+                      maxlength="250"
+                      placeholder="Opcional"
+                      [(ngModel)]="nuevaRestriccionMotivo"
+                      [disabled]="guardandoRestriccionConfiguracion"
+                    >
+                  </label>
+
+                  <div class="restriction-batch-actions">
+                    <small>
+                      El motivo se aplicará solo a las restricciones nuevas.
+                    </small>
+
+                    <button
+                      type="button"
+                      class="primary restriction-add"
+                      (click)="guardarRestriccionesAgenteConfiguracion()"
+                      [disabled]="guardandoRestriccionConfiguracion"
+                    >
+                      {{
+                        guardandoRestriccionConfiguracion
+                          ? 'Guardando restricciones...'
+                          : 'Guardar restricciones'
+                      }}
+                    </button>
+                  </div>
                 </div>
               }
             </section>

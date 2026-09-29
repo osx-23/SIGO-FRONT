@@ -1,45 +1,72 @@
 <div class="mx-auto w-full max-w-7xl space-y-6 px-4 py-5 sm:px-6 lg:px-8">
   <header
-    class="relative overflow-hidden rounded-[28px] border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-6 shadow-xl shadow-slate-200/70 sm:p-8"
+    class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60 sm:p-8"
   >
-    <div
-      class="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl"
-    ></div>
-
-    <div class="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-      <div>
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex items-start gap-4">
         <div
-          class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-100"
+          class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600"
+          aria-hidden="true"
         >
-          <span class="h-1.5 w-1.5 rounded-full bg-blue-400"></span>
-          Trazabilidad
-        </div>
-
-        <h1 class="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-          Historial de asistencia
-        </h1>
-
-        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-          Consulta registros por fecha, plaza y turno. Revisa ausencias,
-          evidencias y genera reportes PDF desde un solo lugar.
-        </p>
-      </div>
-
-      <div
-        class="inline-flex w-fit items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur"
-      >
-        <div class="grid h-9 w-9 place-items-center rounded-xl bg-blue-500/20 text-blue-200">
-          <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5" stroke="currentColor" stroke-width="2">
-            <path d="M8 2v3M16 2v3M4 9h16M5 4h14a1 1 0 0 1 1 1v15H4V5a1 1 0 0 1 1-1Z" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            class="h-6 w-6"
+            stroke="currentColor"
+            stroke-width="1.9"
+          >
+            <path
+              d="M8 2v3M16 2v3M4 9h16M5 4h14a1 1 0 0 1 1 1v15H4V5a1 1 0 0 1 1-1Z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </div>
 
         <div>
-          <span class="block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+          <p
+            class="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600"
+          >
+            Trazabilidad
+          </p>
+
+          <h1
+            class="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl"
+          >
+            Historial de asistencia
+          </h1>
+
+          <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+            Consulta registros por fecha, plaza y turno. Revisa ausencias,
+            evidencias y genera reportes PDF desde un solo lugar.
+          </p>
+        </div>
+      </div>
+
+      <div
+        class="inline-flex w-fit items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+      >
+        <div class="grid h-9 w-9 place-items-center rounded-xl bg-white text-blue-600 shadow-sm">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            class="h-5 w-5"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M5 12h14M12 5v14"
+              stroke-linecap="round"
+            />
+          </svg>
+        </div>
+
+        <div>
+          <span class="block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
             Registros encontrados
           </span>
 
-          <strong class="mt-0.5 block text-xl font-semibold text-white">
+          <strong class="mt-0.5 block text-xl font-semibold text-slate-900">
             {{ registrosFiltrados().length }}
           </strong>
         </div>
@@ -145,52 +172,118 @@
     </div>
   </section>
 
-  @if (!loading() && registrosFiltrados().length > 0) {
-    <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50">
-        <span class="text-xs font-medium text-slate-500">Registros</span>
-        <strong class="mt-1 block text-2xl font-semibold text-slate-950">
-          {{ registrosFiltrados().length }}
-        </strong>
-      </article>
+  @if (!loading() && !loadingPlazas()) {
+    <section
+      class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/60 sm:p-6"
+    >
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-600">
+            Control de reportes
+          </p>
 
-      <article class="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
-        <span class="text-xs font-medium text-emerald-700">Presentes acumulados</span>
-        <strong class="mt-1 block text-2xl font-semibold text-emerald-800">
-          {{ totalPresentesFiltrados() }}
-        </strong>
-      </article>
+          <h2 class="mt-1 text-lg font-semibold text-slate-950">
+            Reportes pendientes
+          </h2>
 
-      <article
-        class="rounded-2xl border p-4"
-        [class.border-red-100]="totalAusentesFiltrados() > 0"
-        [class.bg-red-50]="totalAusentesFiltrados() > 0"
-        [class.border-slate-200]="totalAusentesFiltrados() === 0"
-        [class.bg-slate-50]="totalAusentesFiltrados() === 0"
-      >
-        <span
-          class="text-xs font-medium"
-          [class.text-red-700]="totalAusentesFiltrados() > 0"
-          [class.text-slate-500]="totalAusentesFiltrados() === 0"
+          <p class="mt-1 text-sm text-slate-500">
+            {{
+              periodoUnSoloDia()
+                ? 'Plazas y turnos que todavía no registran asistencia para la fecha seleccionada.'
+                : 'Plazas, fechas y turnos que todavía no registran asistencia en el periodo seleccionado.'
+            }}
+          </p>
+        </div>
+
+        <div
+          class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
+          [class.bg-emerald-100]="reportesPendientes().length === 0"
+          [class.text-emerald-700]="reportesPendientes().length === 0"
+          [class.bg-amber-100]="reportesPendientes().length > 0"
+          [class.text-amber-700]="reportesPendientes().length > 0"
         >
-          Ausencias acumuladas
-        </span>
+          @if (reportesPendientes().length === 0) {
+            ✓ Todo completo
+          } @else {
+            {{ reportesPendientes().length }} pendiente(s)
+          }
+        </div>
+      </div>
 
-        <strong
-          class="mt-1 block text-2xl font-semibold"
-          [class.text-red-800]="totalAusentesFiltrados() > 0"
-          [class.text-slate-950]="totalAusentesFiltrados() === 0"
+      @if (reportesPendientes().length === 0) {
+        <div
+          class="mt-5 flex items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 sm:px-5"
         >
-          {{ totalAusentesFiltrados() }}
-        </strong>
-      </article>
+          <div
+            class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-white"
+            aria-hidden="true"
+          >
+            ✓
+          </div>
 
-      <article class="rounded-2xl border border-blue-100 bg-blue-50 p-4 shadow-sm shadow-blue-100/60">
-        <span class="text-xs font-semibold text-blue-600">Asistencia promedio</span>
-        <strong class="mt-1 block text-2xl font-semibold text-blue-700">
-          {{ promedioAsistencia().toFixed(1) }}%
-        </strong>
-      </article>
+          <div>
+            <strong class="block text-sm font-semibold text-emerald-900">
+              Reportes completos
+            </strong>
+
+            <span class="mt-0.5 block text-xs text-emerald-700">
+              No faltan reportes para los filtros seleccionados.
+            </span>
+          </div>
+        </div>
+      } @else {
+        <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          @for (grupo of pendientesPorPlaza(); track grupo.plazaId) {
+            <article
+              class="rounded-2xl border border-amber-200 bg-amber-50/60 p-4"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-600">
+                    Plaza
+                  </span>
+
+                  <h3 class="mt-0.5 text-base font-semibold text-slate-950">
+                    {{ grupo.plaza }}
+                  </h3>
+                </div>
+
+                <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-700 shadow-sm">
+                  {{ grupo.pendientes.length }} faltante(s)
+                </span>
+              </div>
+
+              <div class="mt-4 flex flex-wrap gap-2">
+                @for (pendiente of grupo.pendientes; track pendiente.fecha + '-' + pendiente.turno) {
+                  <span
+                    class="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                  >
+                    @if (!periodoUnSoloDia()) {
+                      <span class="text-slate-400">
+                        {{ pendiente.fecha | date:'dd/MM':'UTC' }}
+                      </span>
+                    }
+
+                    <span
+                      class="inline-grid h-6 w-6 place-items-center rounded-lg text-[11px] font-bold"
+                      [class.bg-blue-100]="pendiente.turno === 'A'"
+                      [class.text-blue-700]="pendiente.turno === 'A'"
+                      [class.bg-amber-100]="pendiente.turno === 'B'"
+                      [class.text-amber-700]="pendiente.turno === 'B'"
+                      [class.bg-rose-100]="pendiente.turno === 'C'"
+                      [class.text-rose-700]="pendiente.turno === 'C'"
+                    >
+                      {{ pendiente.turno }}
+                    </span>
+
+                    Turno {{ pendiente.turno }}
+                  </span>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      }
     </section>
   }
 

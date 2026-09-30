@@ -256,3 +256,35 @@ export interface ResumenAsistencia {
   porcentajeGeneral: number;
 
 }
+
+export interface TopAusencia {
+
+  trabajadorId: number;
+
+  codigo: number;
+
+  nombre: string;
+
+  totalAusencias: number;
+
+}
+
+export interface AusenciaTrabajadorDetalle {
+
+  trabajadorId: number;
+
+  codigo: number;
+
+  nombre: string;
+
+  fecha: string;
+
+  motivo: string;
+
+  observacion: string | null;
+
+  plaza: string;
+
+  turno: string;
+
+}

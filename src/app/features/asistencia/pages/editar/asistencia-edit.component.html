@@ -1,7 +1,59 @@
 <div class="mx-auto w-full max-w-7xl space-y-6 px-4 py-5 sm:px-6 lg:px-8">
-  <header class="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-    <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Gestión de asistencia</p><h1 class="mt-2 text-2xl font-semibold text-slate-950 sm:text-3xl">Editar asistencia</h1><p class="mt-2 text-sm text-slate-500">Modifica datos, ausencias y evidencias del registro.</p></div>
-    <button type="button" class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" (click)="volver()">Volver</button>
+  <header
+    class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60 sm:p-8"
+  >
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex items-start gap-4">
+        <div
+          class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600"
+          aria-hidden="true"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            class="h-6 w-6"
+            stroke="currentColor"
+            stroke-width="1.9"
+          >
+            <path
+              d="M4 20h4l10.8-10.8a2.1 2.1 0 0 0-3-3L5 17v3Z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="m14.5 7.5 2 2"
+              stroke-linecap="round"
+            />
+          </svg>
+        </div>
+
+        <div>
+          <p
+            class="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600"
+          >
+            Gestión de asistencia
+          </p>
+
+          <h1
+            class="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl"
+          >
+            Editar asistencia
+          </h1>
+
+          <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+            Modifica los datos del turno, las ausencias y las evidencias del registro.
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="inline-flex w-fit items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        (click)="volver()"
+      >
+        Volver
+      </button>
+    </div>
   </header>
   @if (loading()) { <div class="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">Cargando información...</div> } @else {
     @if (error()) { <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{{ error() }}</div> }

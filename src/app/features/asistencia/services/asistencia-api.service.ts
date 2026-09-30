@@ -9,11 +9,13 @@ import {
   AsistenciaResponse,
   AsistenciaUpdateRequest,
   AusenciaMotivo,
+  AusenciaTrabajadorDetalle,
   DashboardPunto,
   EvidenciaResponse,
   MotivoAusencia,
   Plaza,
   ResumenAsistencia,
+  TopAusencia,
   Trabajador,
   Turno
 } from '../models/asistencia.models';
@@ -386,6 +388,60 @@ export class AsistenciaApiService {
 
     return this.http.get<DashboardPunto[]>(
       `${this.api}/dashboard/asistencia/anual`,
+      { params }
+    );
+  }
+
+  getTopAusencias(
+    inicio: string,
+    fin: string,
+    plazaId?: number | null,
+    turnoId?: number | null,
+    limite = 5
+  ): Observable<TopAusencia[]> {
+
+    let params =
+      new HttpParams()
+        .set('inicio', inicio)
+        .set('fin', fin)
+        .set('limite', limite.toString());
+
+    params =
+      this.agregarFiltrosDashboard(
+        params,
+        plazaId,
+        turnoId
+      );
+
+    return this.http.get<TopAusencia[]>(
+      `${this.api}/dashboard/asistencia/top-ausencias`,
+      { params }
+    );
+  }
+
+  buscarAusenciasTrabajador(
+    inicio: string,
+    fin: string,
+    consulta: string,
+    plazaId?: number | null,
+    turnoId?: number | null
+  ): Observable<AusenciaTrabajadorDetalle[]> {
+
+    let params =
+      new HttpParams()
+        .set('inicio', inicio)
+        .set('fin', fin)
+        .set('consulta', consulta);
+
+    params =
+      this.agregarFiltrosDashboard(
+        params,
+        plazaId,
+        turnoId
+      );
+
+    return this.http.get<AusenciaTrabajadorDetalle[]>(
+      `${this.api}/dashboard/asistencia/ausencias-trabajador`,
       { params }
     );
   }

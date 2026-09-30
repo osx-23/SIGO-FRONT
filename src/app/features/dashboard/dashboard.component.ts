@@ -6,7 +6,6 @@ import {
   inject,
   signal
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
@@ -56,8 +55,7 @@ interface ResumenLocal {
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    CommonModule,
-    RouterLink
+    CommonModule
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'

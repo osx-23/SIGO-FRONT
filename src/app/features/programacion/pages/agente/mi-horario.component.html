@@ -1,20 +1,45 @@
 <section class="schedule-page">
-  <header class="agent-head">
-    <div>
-      <span class="eyebrow">MI PROGRAMACIÓN</span>
-      <h1>Mi horario semanal</h1>
-      <p>Consulta tu turno, estado y caseta asignada para cada día.</p>
-    </div>
-    @if(horario){
-      <div class="profile">
-        <div class="avatar">{{horario.nombre.slice(0,1)}}</div>
+  <header
+    class="mb-5 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60 sm:p-8"
+  >
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex items-start gap-4">
+        <div
+          class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600"
+          aria-hidden="true"
+        >
+          <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6" stroke="currentColor" stroke-width="1.9">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 7v5l3.5 2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
         <div>
-          <strong>{{horario.nombre}}</strong>
-          <span>Cód. {{horario.codigo}} · {{horario.plazaCodigo||'Sin plaza'}}</span>
-          <span>Líder: {{horario.lider||'Sin asignar'}}</span>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600">
+            Mi programación
+          </p>
+
+          <h1 class="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+            Mi horario semanal
+          </h1>
+
+          <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+            Consulta tu turno, estado y caseta asignada para cada día.
+          </p>
         </div>
       </div>
-    }
+
+      @if(horario){
+        <div class="profile">
+          <div class="avatar">{{horario.nombre.slice(0,1)}}</div>
+          <div>
+            <strong>{{horario.nombre}}</strong>
+            <span>Cód. {{horario.codigo}} · {{horario.plazaCodigo||'Sin plaza'}}</span>
+            <span>Líder: {{horario.lider||'Sin asignar'}}</span>
+          </div>
+        </div>
+      }
+    </div>
   </header>
 
   @if(error){<div class="alert">{{error}}</div>}

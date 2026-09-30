@@ -528,15 +528,17 @@ export class AsistenciaFormComponent implements OnInit {
             plazaId
           ),
 
-      trabajadores:
+      controladores:
         this.api
-          .getTrabajadores()
+          .getControladoresPorPlaza(
+            null
+          )
 
     }).subscribe({
 
       next: ({
         agentes,
-        trabajadores
+        controladores
       }) => {
 
         this.agentes.set(
@@ -545,18 +547,7 @@ export class AsistenciaFormComponent implements OnInit {
 
 
         this.controladores.set(
-
-          (trabajadores ?? [])
-            .filter(
-              t =>
-                [
-                  'Controlador',
-                  'Controlador ATF'
-                ].includes(
-                  t.puesto?.nombre ?? ''
-                )
-            )
-
+          controladores ?? []
         );
 
 

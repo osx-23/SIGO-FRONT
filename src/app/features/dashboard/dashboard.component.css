@@ -38,5 +38,5 @@ article:has(.donut-chart) .space-y-4::-webkit-scrollbar{width:7px}
 article:has(.donut-chart) .space-y-4::-webkit-scrollbar-track{background:#f1f5f9;border-radius:999px}
 article:has(.donut-chart) .space-y-4::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:999px}
 article:has(.donut-chart) .space-y-4::-webkit-scrollbar-thumb:hover{background:#64748b}
-svg{height:300px;width:100%}
+.dashboard-main-chart{height:300px;width:100%}
 @media(max-width:640px){.period-btn{min-width:68px;padding:.5rem .7rem}.summary-card,.rate-card{min-height:138px;padding:.85rem}.gauge-center{top:63%;min-width:160px}.gauge-center span{margin-bottom:.7rem}.gauge-center strong{font-size:1.7rem}.gauge-center small{margin-top:.85rem}article:has(.donut-chart) .space-y-4{max-height:200px}}

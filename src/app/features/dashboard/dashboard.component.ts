@@ -12,9 +12,11 @@ import { AuthService } from '../../core/auth/auth.service';
 
 import {
   AusenciaMotivo,
+  AusenciaTrabajadorDetalle,
   DashboardPunto,
   Plaza,
   ResumenAsistencia,
+  TopAusencia,
   Turno
 } from '../asistencia/models/asistencia.models';
 
@@ -151,6 +153,24 @@ export class DashboardComponent implements OnInit {
 
   readonly motivosRaw =
     signal<AusenciaMotivo[]>([]);
+
+  readonly topAusencias =
+    signal<TopAusencia[]>([]);
+
+  readonly loadingTopAusencias =
+    signal(false);
+
+  readonly busquedaAusencia =
+    signal('');
+
+  readonly resultadosAusencia =
+    signal<AusenciaTrabajadorDetalle[]>([]);
+
+  readonly buscandoAusencias =
+    signal(false);
+
+  readonly errorBusquedaAusencia =
+    signal('');
 
   /*
    * ============================================================
@@ -859,6 +879,8 @@ export class DashboardComponent implements OnInit {
     }
 
     this.cargarMotivos();
+    this.cargarTopAusencias();
+    this.limpiarBusquedaAusencias();
   }
 
   setPuntoHover(
@@ -925,6 +947,8 @@ export class DashboardComponent implements OnInit {
     ) {
 
       this.cargarMotivos();
+      this.cargarTopAusencias();
+      this.limpiarBusquedaAusencias();
     }
   }
 
@@ -974,6 +998,8 @@ export class DashboardComponent implements OnInit {
      * los KPIs y el gráfico.
      */
     this.cargarDatosPrincipales();
+    this.cargarTopAusencias();
+    this.limpiarBusquedaAusencias();
   }
 
   onTurnoAnaliticaChange(
@@ -1084,6 +1110,8 @@ export class DashboardComponent implements OnInit {
      */
     this.cargarDatosPrincipales();
     this.cargarAnalitica();
+    this.cargarTopAusencias();
+    this.limpiarBusquedaAusencias();
   }
 
   /*
@@ -1329,6 +1357,166 @@ export class DashboardComponent implements OnInit {
         );
       }
     });
+  }
+
+  /*
+   * ============================================================
+   * AUSENCIAS POR TRABAJADOR
+   * ============================================================
+   */
+
+  onBusquedaAusenciaInput(
+    event: Event
+  ): void {
+
+    const valor =
+      (
+        event.target as
+          HTMLInputElement
+      ).value;
+
+    this.busquedaAusencia.set(
+      valor
+    );
+
+    if (
+      valor.trim().length < 2
+    ) {
+      this.resultadosAusencia.set([]);
+      this.errorBusquedaAusencia.set('');
+    }
+  }
+
+  buscarAusencias(): void {
+
+    const consulta =
+      this.busquedaAusencia()
+        .trim();
+
+    if (
+      consulta.length < 2
+    ) {
+      this.resultadosAusencia.set([]);
+      this.errorBusquedaAusencia.set(
+        'Ingresa al menos 2 caracteres del código o nombre.'
+      );
+      return;
+    }
+
+    const rango =
+      this.rangoPeriodoActual();
+
+    this.buscandoAusencias.set(true);
+    this.errorBusquedaAusencia.set('');
+
+    this.api
+      .buscarAusenciasTrabajador(
+        rango.inicio,
+        rango.fin,
+        consulta,
+        this.plazaId(),
+        this.turnoId()
+      )
+      .subscribe({
+
+        next: resultados => {
+          this.resultadosAusencia.set(
+            resultados ?? []
+          );
+
+          this.buscandoAusencias.set(false);
+        },
+
+        error: error => {
+          const x =
+            error as any;
+
+          this.resultadosAusencia.set([]);
+
+          this.errorBusquedaAusencia.set(
+            x?.error?.message ??
+            x?.message ??
+            'No se pudieron consultar las ausencias.'
+          );
+
+          this.buscandoAusencias.set(false);
+        }
+      });
+  }
+
+  verAusenciasTop(
+    item: TopAusencia
+  ): void {
+
+    this.busquedaAusencia.set(
+      String(
+        item.codigo
+      )
+    );
+
+    this.buscarAusencias();
+  }
+
+  limpiarBusquedaAusencias(): void {
+
+    this.busquedaAusencia.set('');
+    this.resultadosAusencia.set([]);
+    this.errorBusquedaAusencia.set('');
+    this.buscandoAusencias.set(false);
+  }
+
+  private cargarTopAusencias(): void {
+
+    const rango =
+      this.rangoPeriodoActual();
+
+    this.loadingTopAusencias.set(true);
+
+    this.api
+      .getTopAusencias(
+        rango.inicio,
+        rango.fin,
+        this.plazaId(),
+        this.turnoId(),
+        5
+      )
+      .subscribe({
+
+        next: items => {
+          this.topAusencias.set(
+            items ?? []
+          );
+
+          this.loadingTopAusencias.set(false);
+        },
+
+        error: () => {
+          this.topAusencias.set([]);
+          this.loadingTopAusencias.set(false);
+        }
+      });
+  }
+
+  private rangoPeriodoActual(): {
+    inicio: string;
+    fin: string;
+  } {
+
+    if (
+      this.periodoVista() ===
+      'SEMANA'
+    ) {
+      return this.weekRange();
+    }
+
+    if (
+      this.periodoVista() ===
+      'ANIO'
+    ) {
+      return this.yearRange();
+    }
+
+    return this.mesRange();
   }
 
   /*

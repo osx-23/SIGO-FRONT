@@ -1,1 +1,21 @@
-<section class="page">@if(item){<div class="page-head"><div><span>RELEVO #{{item.id}}</span><h1>{{item.plazaCodigo}} · Turno {{item.turnoCodigo}}</h1><p>{{item.fecha}} · {{item.hora}}</p></div></div><div class="card"><h3>Observación</h3><p>{{item.observaciones||'Sin observaciones'}}</p><h3>Checklist</h3><p>{{item.checklist.length||0}} registros</p><h3>Vías</h3><p>{{item.vias.length||0}} registros</p></div>}@else{<p>Cargando...</p>}</section>
+<section class="page">
+  @if(item){
+    <header class="mb-5 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60 sm:p-8">
+      <div class="flex items-start gap-4">
+        <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6" stroke="currentColor" stroke-width="1.9">
+            <path d="M12 3a9 9 0 1 0 8.5 12h-2.2a7 7 0 1 1-1.45-7.45L14 10.4h7V3.4l-2.7 2.7A8.96 8.96 0 0 0 12 3Z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600">
+            Relevo #{{item.id}}
+          </p>
+          <h1 class="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+            {{item.plazaCodigo}} · Turno {{item.turnoCodigo}}
+          </h1>
+          <p class="mt-2 text-sm text-slate-500">{{item.fecha}} · {{item.hora}}</p>
+        </div>
+      </div>
+    </header>
+    <div class="card"><h3>Observación</h3><p>{{item.observaciones||'Sin observaciones'}}</p><h3>Checklist</h3><p>{{item.checklist.length||0}} registros</p><h3>Vías</h3><p>{{item.vias.length||0}} registros</p></div>}@else{<p>Cargando...</p>}</section>

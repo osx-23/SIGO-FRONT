@@ -48,29 +48,6 @@
       </div>
     </div>
 
-    <div class="flex flex-wrap gap-2 lg:justify-end">
-      <button
-        type="button"
-        class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-        (click)="actualizar()"
-      >
-        Actualizar
-      </button>
-
-      <a
-        routerLink="/asistencia/historial"
-        class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-800 transition hover:bg-blue-100"
-      >
-        Historial
-      </a>
-
-      <a
-        routerLink="/asistencia/registrar"
-        class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700"
-      >
-        Registrar asistencia
-      </a>
-    </div>
   </div>
 </header>
 <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><label class="space-y-2 text-sm font-medium text-slate-700">Año<select class="filter-select" [value]="anio()" (change)="onAnioChange($event)">@for(x of anios;track x){<option [value]="x">{{x}}</option>}</select></label><label class="space-y-2 text-sm font-medium text-slate-700">Mes<select class="filter-select" [value]="mes()" (change)="onMesChange($event)">@for(x of meses;track x.id){<option [value]="x.id">{{x.nombre}}</option>}</select></label><label class="space-y-2 text-sm font-medium text-slate-700">Plaza<select class="filter-select disabled:bg-slate-100" [value]="plazaId()??''" [disabled]="plazaBloqueada()" (change)="onPlazaChange($event)">@if(!plazaBloqueada()){<option value="">Todas las plazas</option>}@for(x of plazas();track x.id){<option [value]="x.id">{{x.codigo}}</option>}</select></label><label class="space-y-2 text-sm font-medium text-slate-700">Turno<select class="filter-select" [value]="turnoId()??''" (change)="onTurnoChange($event)"><option value="">Todos los turnos</option>@for(x of turnos();track x.id){<option [value]="x.id">Turno {{x.codigo}}</option>}</select></label></div></section>

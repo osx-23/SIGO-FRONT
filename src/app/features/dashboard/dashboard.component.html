@@ -1,5 +1,78 @@
 <div class="mx-auto w-full max-w-[1500px] space-y-6 px-4 py-5 sm:px-6 lg:px-8">
-<section class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">SIGO · Panel operativo</p><h1 class="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">Dashboard de asistencia</h1><p class="mt-2 text-sm text-slate-500">Analiza el comportamiento del personal por semana, mes o año.</p>@if(ultimaActualizacion()){<p class="mt-2 text-xs text-slate-400">Actualizado: {{ultimaActualizacion()|date:'dd/MM/yyyy HH:mm'}}</p>}</div><div class="flex flex-wrap gap-2"><button type="button" class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50" (click)="actualizar()">Actualizar</button><a routerLink="/asistencia/historial" class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-800">Historial</a><a routerLink="/asistencia/registrar" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">Registrar asistencia</a></div></section>
+<header
+  class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60 sm:p-8"
+>
+  <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+    <div class="flex items-start gap-4">
+      <div
+        class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600"
+        aria-hidden="true"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          class="h-6 w-6"
+          stroke="currentColor"
+          stroke-width="1.9"
+        >
+          <path
+            d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+
+      <div>
+        <p
+          class="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-600"
+        >
+          SIGO · Panel operativo
+        </p>
+
+        <h1
+          class="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl"
+        >
+          Dashboard de asistencia
+        </h1>
+
+        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+          Analiza el comportamiento del personal por semana, mes o año.
+        </p>
+
+        @if(ultimaActualizacion()){
+          <p class="mt-2 text-xs text-slate-400">
+            Actualizado: {{ultimaActualizacion()|date:'dd/MM/yyyy HH:mm'}}
+          </p>
+        }
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 lg:justify-end">
+      <button
+        type="button"
+        class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        (click)="actualizar()"
+      >
+        Actualizar
+      </button>
+
+      <a
+        routerLink="/asistencia/historial"
+        class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-800 transition hover:bg-blue-100"
+      >
+        Historial
+      </a>
+
+      <a
+        routerLink="/asistencia/registrar"
+        class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700"
+      >
+        Registrar asistencia
+      </a>
+    </div>
+  </div>
+</header>
 <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><label class="space-y-2 text-sm font-medium text-slate-700">Año<select class="filter-select" [value]="anio()" (change)="onAnioChange($event)">@for(x of anios;track x){<option [value]="x">{{x}}</option>}</select></label><label class="space-y-2 text-sm font-medium text-slate-700">Mes<select class="filter-select" [value]="mes()" (change)="onMesChange($event)">@for(x of meses;track x.id){<option [value]="x.id">{{x.nombre}}</option>}</select></label><label class="space-y-2 text-sm font-medium text-slate-700">Plaza<select class="filter-select disabled:bg-slate-100" [value]="plazaId()??''" [disabled]="plazaBloqueada()" (change)="onPlazaChange($event)">@if(!plazaBloqueada()){<option value="">Todas las plazas</option>}@for(x of plazas();track x.id){<option [value]="x.id">{{x.codigo}}</option>}</select></label><label class="space-y-2 text-sm font-medium text-slate-700">Turno<select class="filter-select" [value]="turnoId()??''" (change)="onTurnoChange($event)"><option value="">Todos los turnos</option>@for(x of turnos();track x.id){<option [value]="x.id">Turno {{x.codigo}}</option>}</select></label></div></section>
 @if(error()){<div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{error()}}</div>}
 @if(loading()){<div class="h-[480px] animate-pulse rounded-3xl bg-slate-200"></div>}@else{

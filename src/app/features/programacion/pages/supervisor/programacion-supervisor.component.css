@@ -540,6 +540,37 @@ tbody tr:hover .group-column{
   background:#fafcff;
 }
 
+/*
+ * La tabla de controladores no tiene columna de posición.
+ * Recolocamos sus columnas fijas para que Código empiece en 0
+ * y Nombre quede inmediatamente después, evitando que los turnos
+ * se vean pasar por debajo al hacer scroll horizontal.
+ */
+.controller-shifts-block .sticky-code{
+  left:0;
+}
+
+.controller-shifts-block .sticky-name{
+  left:78px;
+  box-shadow:5px 0 8px -7px rgba(15,23,42,.35);
+}
+
+.controller-shifts-block thead .sticky-code,
+.controller-shifts-block thead .sticky-name{
+  z-index:8;
+  background:#f8fafc;
+}
+
+.controller-shifts-block tbody .sticky-code,
+.controller-shifts-block tbody .sticky-name{
+  background:#fff;
+}
+
+.controller-shifts-block tbody tr:hover .sticky-code,
+.controller-shifts-block tbody tr:hover .sticky-name{
+  background:#fafcff;
+}
+
 /* Cuando se ocultan los detalles, Pos., Cód. y Nombre
    siguen fijos y los días comienzan inmediatamente después. */
 table.details-hidden .sticky-name{
@@ -997,6 +1028,11 @@ table.details-hidden .sticky-name{
   .sticky-leader-code,
   .sticky-leader-name,
   .group-column{
+    position:static;
+  }
+
+  .controller-shifts-block .sticky-code,
+  .controller-shifts-block .sticky-name{
     position:static;
   }
 

@@ -29,7 +29,7 @@ export interface DistribucionDia{
   nombreTrabajador:string; fecha:string; estado:EstadoProgramacion; ubicacionId:number;
   ubicacionCodigo:string; ubicacionNombre:string; ubicacionTipo:TipoUbicacion; observacion?:string|null;
 }
-export interface DistribucionItemRequest{ programacionTurnoId:number; ubicacionId:number; observacion?:string|null; }
+export interface DistribucionItemRequest{ programacionTurnoId:number; ubicacionId:number|null; observacion?:string|null; }
 export interface GuardarDistribucionRequest{ plazaId:number; distribuciones:DistribucionItemRequest[]; }
 export interface HorarioDia{ fecha:string; estado:EstadoProgramacion|null; ubicacionCodigo:string|null; ubicacionNombre:string|null; }
 export interface MiHorario{

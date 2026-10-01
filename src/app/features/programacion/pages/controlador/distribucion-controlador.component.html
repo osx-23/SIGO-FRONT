@@ -354,13 +354,14 @@
                               [class.location-select-observation]="tieneObservacion(p.programacionId)"
                               [ngModel]="ubicacionActual"
                               (ngModelChange)="cambiar(p.programacionId, $event)"
+                              [disabled]="guardando"
                               [title]="
                                 tieneObservacion(p.programacionId)
                                   ? mensajeObservacion(p.programacionId)
                                   : 'Asignar caseta · Turno ' + p.estado
                               "
                             >
-                              <option [ngValue]="null">-</option>
+                              <option [ngValue]="null">Sin asignar</option>
 
                               @for(ubicacion of ubicacionesParaTurno(p.estado, p.programacionId); track ubicacion.id){
                                 <option
@@ -718,7 +719,7 @@
         <h2>Guardando casetas...</h2>
         <p>
           SIGO está validando y guardando
-          {{ totalAsignacionesGuardando }} asignación(es).
+          {{ totalAsignacionesGuardando }} cambio(s) de distribución.
         </p>
       </div>
 

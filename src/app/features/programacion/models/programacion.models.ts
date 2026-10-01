@@ -30,7 +30,7 @@ export interface DistribucionDia{
   ubicacionCodigo:string; ubicacionNombre:string; ubicacionTipo:TipoUbicacion; observacion?:string|null;
 }
 export interface DistribucionItemRequest{ programacionTurnoId:number; ubicacionId:number|null; observacion?:string|null; }
-export interface GuardarDistribucionRequest{ plazaId:number; distribuciones:DistribucionItemRequest[]; }
+export interface GuardarDistribucionRequest{ plazaId:number; distribuciones:DistribucionItemRequest[]; forzar?:boolean; }
 export interface HorarioDia{ fecha:string; estado:EstadoProgramacion|null; ubicacionCodigo:string|null; ubicacionNombre:string|null; }
 export interface MiHorario{
   trabajadorId:number; codigo:number; nombre:string; plazaId:number|null; plazaCodigo:string|null;

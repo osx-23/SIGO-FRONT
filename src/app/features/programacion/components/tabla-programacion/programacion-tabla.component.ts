@@ -349,6 +349,59 @@ export class ProgramacionTablaComponent {
     );
   }
 
+  esInicioGrupo(
+    indice: number,
+    agenteId: number
+  ): boolean {
+    if (indice <= 0) {
+      return false;
+    }
+
+    const grupoActual =
+      this.secuencias.grupoDe(
+        agenteId
+      );
+
+    const anterior =
+      this.agentes[indice - 1];
+
+    if (!grupoActual || !anterior) {
+      return false;
+    }
+
+    return (
+      this.secuencias.grupoDe(
+        anterior.id
+      ) !== grupoActual
+    );
+  }
+
+  esPartTime(
+    agenteId: number
+  ): boolean {
+    return (
+      this.secuencias.grupoDe(
+        agenteId
+      ) === 'PART_TIME'
+    );
+  }
+
+  esInicioSemana(
+    dia: number
+  ): boolean {
+    if (dia <= 1) {
+      return false;
+    }
+
+    return (
+      new Date(
+        this.anio,
+        this.mes - 1,
+        dia
+      ).getDay() === 1
+    );
+  }
+
   private liderDeAgente(
     agenteId: number
   ): TrabajadorResumen | null {

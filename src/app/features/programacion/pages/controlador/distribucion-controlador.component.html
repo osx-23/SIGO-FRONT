@@ -1174,9 +1174,11 @@
         <div>
           <span>
             {{
-              tipoResultadoDistribucion === 'error'
-                ? 'OPERACIÓN NO COMPLETADA'
-                : 'OPERACIÓN COMPLETADA'
+              guardadoForzadoDisponible
+                ? 'ADVERTENCIA DE DISTRIBUCIÓN'
+                : tipoResultadoDistribucion === 'error'
+                  ? 'OPERACIÓN NO COMPLETADA'
+                  : 'OPERACIÓN COMPLETADA'
             }}
           </span>
 
@@ -1230,13 +1232,33 @@
       }
 
       <div class="distribution-result-actions">
-        <button
-          class="primary"
-          type="button"
-          (click)="cerrarResultadoDistribucion()"
-        >
-          Aceptar
-        </button>
+        @if(guardadoForzadoDisponible){
+          <button
+            class="secondary"
+            type="button"
+            (click)="cerrarResultadoDistribucion()"
+          >
+            Corregir
+          </button>
+
+          <button
+            class="primary unsaved-leave-button"
+            type="button"
+            (click)="guardar(true)"
+            [disabled]="guardando"
+          >
+            Guardar de todos modos
+          </button>
+        }
+        @else{
+          <button
+            class="primary"
+            type="button"
+            (click)="cerrarResultadoDistribucion()"
+          >
+            Aceptar
+          </button>
+        }
       </div>
     </section>
   </div>

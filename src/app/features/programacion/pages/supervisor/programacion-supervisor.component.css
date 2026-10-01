@@ -401,6 +401,27 @@ tbody tr:hover td{
   background:#fafcff;
 }
 
+/*
+ * Separadores visuales de la matriz:
+ * - línea horizontal entre Secuencia 1, 2, 3, 4 y Part Time
+ * - línea vertical al comenzar cada semana dentro de Part Time
+ */
+tbody tr.sequence-divider > td{
+  border-top:3px solid #94a3b8;
+}
+
+tbody tr.part-time-row > td{
+  background:#fcfdff;
+}
+
+tbody tr.part-time-row:hover > td{
+  background:#f8fbff;
+}
+
+tbody tr.part-time-row > td.part-time-week-divider{
+  border-left:3px solid #94a3b8;
+}
+
 .day-column{
   min-width:58px;
   width:58px;

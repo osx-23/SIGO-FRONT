@@ -793,6 +793,11 @@ export class ProgramacionSupervisorComponent
               ...resultado.agentes
             ];
 
+          this.controladores =
+            [
+              ...resultado.controladores
+            ];
+
 
           this.secuencias =
             [

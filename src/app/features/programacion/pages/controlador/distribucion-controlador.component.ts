@@ -303,7 +303,7 @@ export class DistribucionControladorComponent
     new Map<number, number>();
 
   readonly cambios =
-    new Map<number, number>();
+    new Map<number, number | null>();
 
   tieneObservacion(
     programacionTurnoId: number
@@ -1912,10 +1912,56 @@ export class DistribucionControladorComponent
     ubicacionId: number | null
   ): void {
 
+    const valorGuardado =
+      this.asignacionesGuardadas
+        .get(
+          programacionId
+        ) ??
+      null;
+
+    /*
+     * "Sin asignar" es un estado válido.
+     *
+     * - Si la celda nunca estuvo guardada, volver a "-" simplemente
+     *   descarta el cambio pendiente.
+     * - Si la celda tenía una caseta guardada, registramos null para
+     *   que backend elimine esa asignación al pulsar Guardar cambios.
+     */
     if (
       ubicacionId === null ||
       ubicacionId === undefined
     ) {
+      this.error =
+        '';
+
+      this.asignaciones
+        .delete(
+          programacionId
+        );
+
+      if (
+        valorGuardado ===
+          null
+      ) {
+        this.cambios
+          .delete(
+            programacionId
+          );
+      }
+      else {
+        this.cambios
+          .set(
+            programacionId,
+            null
+          );
+      }
+
+      this.observacionesPorProgramacion
+        .delete(
+          programacionId
+        );
+
+      this.cdr.detectChanges();
       return;
     }
 
@@ -1948,9 +1994,7 @@ export class DistribucionControladorComponent
 
     /*
      * En edición manual solo validamos que la caseta exista, esté activa
-     * y pueda usarse en ese turno. Las reglas globales se validan al guardar
-     * la matriz final, porque durante un intercambio pueden existir estados
-     * intermedios temporalmente inválidos.
+     * y pueda usarse en ese turno. Las reglas globales se validan al guardar.
      */
     if (
       !ubicacionNueva ||
@@ -1964,7 +2008,6 @@ export class DistribucionControladorComponent
         'La caseta seleccionada no está disponible para este turno.';
 
       this.cdr.detectChanges();
-
       return;
     }
 
@@ -1976,13 +2019,6 @@ export class DistribucionControladorComponent
         programacionId,
         nuevaUbicacionId
       );
-
-    const valorGuardado =
-      this.asignacionesGuardadas
-        .get(
-          programacionId
-        ) ??
-      null;
 
     if (
       valorGuardado ===
@@ -2001,22 +2037,14 @@ export class DistribucionControladorComponent
         );
     }
 
-    /*
-     * Si el usuario modifica exactamente la celda observada,
-     * quitamos la marca roja de esa observación. Una validación
-     * posterior volverá a marcarla si el problema persiste.
-     */
     this.observacionesPorProgramacion
       .delete(
         programacionId
       );
 
-    /*
-     * Nueva referencia lógica para que el estado del botón y el badge
-     * se reflejen inmediatamente incluso con OnPush/detección manual.
-     */
     this.cdr.detectChanges();
   }
+
 
   cerrarConflicto(): void {
 
@@ -2185,7 +2213,6 @@ export class DistribucionControladorComponent
       this.cambios.size ===
         0
     ) {
-
       return;
     }
 
@@ -2214,49 +2241,37 @@ export class DistribucionControladorComponent
         true;
 
       this.cdr.detectChanges();
-
       return;
     }
 
     /*
-     * Enviamos la matriz FINAL completa, no solo el delta.
+     * Guardado parcial:
+     * enviamos únicamente las celdas que el usuario modificó.
      *
-     * Las reglas de distribución dependen de días vecinos y de la ocupación
-     * completa de cada turno. Enviar solo "cambios" podía hacer que backend
-     * mezclara una fila editada con valores anteriores que seguían en BD.
+     * De esta forma se pueden confirmar solo los días que ya están
+     * definidos y dejar el resto del mes sin caseta hasta que se
+     * actualice la programación de personal.
+     *
+     * ubicacionId = null significa "Sin asignar" y permite retirar una
+     * asignación que ya existía en base de datos.
      */
+    const cambiosEnviados =
+      new Map(
+        this.cambios
+      );
+
     const distribuciones =
-      this.programaciones
-        .filter(
-          programacion =>
-            this.esOperativo(
-              programacion.estado
-            )
-        )
+      [...cambiosEnviados.entries()]
         .map(
-          programacion => ({
-            programacionTurnoId:
-              programacion.programacionId,
-
-            ubicacionId:
-              this.asignacion(
-                programacion.programacionId
-              ),
-
+          ([
+            programacionTurnoId,
+            ubicacionId
+          ]) => ({
+            programacionTurnoId,
+            ubicacionId,
             observacion:
               null
           })
-        )
-        .filter(
-          (
-            item
-          ): item is {
-            programacionTurnoId: number;
-            ubicacionId: number;
-            observacion: null;
-          } =>
-            item.ubicacionId !== null &&
-            item.ubicacionId !== undefined
         );
 
     this.guardando =
@@ -2274,9 +2289,6 @@ export class DistribucionControladorComponent
     this.modalResultadoDistribucionAbierto =
       false;
 
-    /*
-     * Mostramos el modal de carga antes de iniciar la petición.
-     */
     this.cdr.detectChanges();
 
     this.api
@@ -2309,48 +2321,120 @@ export class DistribucionControladorComponent
           guardadas
         ) => {
 
+          /*
+           * Aplicamos también las desasignaciones, que no aparecen en la
+           * respuesta porque ya no existe un registro de distribución.
+           */
+          for (
+            const [
+              programacionTurnoId,
+              ubicacionId
+            ]
+            of cambiosEnviados
+          ) {
+            if (
+              ubicacionId ===
+                null
+            ) {
+              this.asignaciones
+                .delete(
+                  programacionTurnoId
+                );
+
+              this.asignacionesGuardadas
+                .delete(
+                  programacionTurnoId
+                );
+            }
+            else {
+              this.asignaciones
+                .set(
+                  programacionTurnoId,
+                  ubicacionId
+                );
+
+              this.asignacionesGuardadas
+                .set(
+                  programacionTurnoId,
+                  ubicacionId
+                );
+            }
+          }
+
           for (
             const item
             of guardadas
           ) {
-
             this.asignaciones
               .set(
-                item
-                  .programacionTurnoId,
-
-                item
-                  .ubicacionId
+                item.programacionTurnoId,
+                item.ubicacionId
               );
 
             this.asignacionesGuardadas
               .set(
-                item
-                  .programacionTurnoId,
-
-                item
-                  .ubicacionId
+                item.programacionTurnoId,
+                item.ubicacionId
               );
-
           }
 
-          const totalGuardado =
-            guardadas.length;
+          /*
+           * Quitamos solo los cambios incluidos en esta petición.
+           * Si en el futuro la UI permite editar mientras se guarda,
+           * un cambio posterior no se perderá.
+           */
+          for (
+            const [
+              programacionTurnoId,
+              valorEnviado
+            ]
+            of cambiosEnviados
+          ) {
+            if (
+              this.cambios.has(
+                programacionTurnoId
+              ) &&
+              this.cambios.get(
+                programacionTurnoId
+              ) ===
+                valorEnviado
+            ) {
+              this.cambios
+                .delete(
+                  programacionTurnoId
+                );
+            }
+          }
 
-          this.cambios
-            .clear();
+          const totalCambios =
+            cambiosEnviados.size;
+
+          const totalSinAsignar =
+            [...cambiosEnviados.values()]
+              .filter(
+                ubicacionId =>
+                  ubicacionId ===
+                    null
+              )
+              .length;
+
+          const totalAsignadas =
+            totalCambios -
+            totalSinAsignar;
 
           this.mensaje =
-            'Distribución guardada correctamente.';
+            'Cambios de distribución guardados correctamente.';
 
           this.tipoResultadoDistribucion =
             'success';
 
           this.tituloResultadoDistribucion =
-            'Asignaciones guardadas';
+            'Cambios guardados';
 
           this.mensajeResultadoDistribucion =
-            `Se validó y guardó la distribución final con ${totalGuardado} asignación(es). Los cambios manuales quedaron incluidos.`;
+            totalSinAsignar > 0
+              ? `Se guardaron ${totalCambios} cambio(s): ${totalAsignadas} asignación(es) y ${totalSinAsignar} celda(s) quedaron sin caseta. Puedes completar los demás días después.`
+              : `Se guardaron ${totalCambios} asignación(es). Los demás días pueden permanecer sin caseta y completarse después.`;
 
           this.observacionesResultadoDistribucion =
             [];
@@ -2401,6 +2485,7 @@ export class DistribucionControladorComponent
 
       });
   }
+
 
   exportarJsonDiagnostico(): void {
 

@@ -260,6 +260,9 @@ export class DistribucionControladorComponent
   observacionesResultadoDistribucion:
     ConflictoCasetaPropuesta[] = [];
 
+  guardadoForzadoDisponible =
+    false;
+
   /**
    * Observaciones activas por celda de programación.
    * Se mantienen aunque se cierre el modal de resultado.
@@ -2206,7 +2209,9 @@ export class DistribucionControladorComponent
   }
 
 
-  guardar(): void {
+  guardar(
+    forzar = false
+  ): void {
 
     if (
       !this.plazaId ||
@@ -2220,7 +2225,8 @@ export class DistribucionControladorComponent
       this.validarMatrizAntesDeGuardar();
 
     if (
-      errorMatriz
+      errorMatriz &&
+      !forzar
     ) {
       this.error =
         errorMatriz;
@@ -2229,13 +2235,17 @@ export class DistribucionControladorComponent
         'error';
 
       this.tituloResultadoDistribucion =
-        'Revisa la distribución';
+        'La distribución incumple una regla';
 
       this.mensajeResultadoDistribucion =
-        errorMatriz;
+        errorMatriz +
+        ' Puedes corregir la asignación o guardarla de todos modos como una excepción operativa.';
 
       this.observacionesResultadoDistribucion =
         [];
+
+      this.guardadoForzadoDisponible =
+        true;
 
       this.modalResultadoDistribucionAbierto =
         true;
@@ -2243,6 +2253,9 @@ export class DistribucionControladorComponent
       this.cdr.detectChanges();
       return;
     }
+
+    this.guardadoForzadoDisponible =
+      false;
 
     /*
      * Guardado parcial:
@@ -2297,7 +2310,9 @@ export class DistribucionControladorComponent
         plazaId:
           this.plazaId,
 
-        distribuciones
+        distribuciones,
+
+        forzar
 
       })
       .pipe(
@@ -2423,18 +2438,30 @@ export class DistribucionControladorComponent
             totalSinAsignar;
 
           this.mensaje =
-            'Cambios de distribución guardados correctamente.';
+            forzar
+              ? 'Cambios guardados como excepción operativa.'
+              : 'Cambios de distribución guardados correctamente.';
+
+          this.guardadoForzadoDisponible =
+            false;
 
           this.tipoResultadoDistribucion =
             'success';
 
           this.tituloResultadoDistribucion =
-            'Cambios guardados';
+            forzar
+              ? 'Cambios guardados de todos modos'
+              : 'Cambios guardados';
+
+          const detalleGuardado =
+            totalSinAsignar > 0
+              ? `Se guardaron ${totalCambios} cambio(s): ${totalAsignadas} asignación(es) y ${totalSinAsignar} celda(s) quedaron sin caseta.`
+              : `Se guardaron ${totalCambios} asignación(es).`;
 
           this.mensajeResultadoDistribucion =
-            totalSinAsignar > 0
-              ? `Se guardaron ${totalCambios} cambio(s): ${totalAsignadas} asignación(es) y ${totalSinAsignar} celda(s) quedaron sin caseta. Puedes completar los demás días después.`
-              : `Se guardaron ${totalCambios} asignación(es). Los demás días pueden permanecer sin caseta y completarse después.`;
+            forzar
+              ? `${detalleGuardado} El guardado fue forzado y puede incumplir reglas operativas de distribución.`
+              : `${detalleGuardado} Los demás días pueden permanecer sin caseta y completarse después.`;
 
           this.observacionesResultadoDistribucion =
             [];
@@ -2467,11 +2494,19 @@ export class DistribucionControladorComponent
           this.tipoResultadoDistribucion =
             'error';
 
+          this.guardadoForzadoDisponible =
+            !forzar;
+
           this.tituloResultadoDistribucion =
-            'Error al guardar asignaciones';
+            forzar
+              ? 'No se pudo guardar la excepción'
+              : 'La distribución incumple una regla';
 
           this.mensajeResultadoDistribucion =
-            this.error;
+            forzar
+              ? this.error
+              : this.error +
+                ' Puedes corregir la asignación o intentar guardarla de todos modos.';
 
           this.observacionesResultadoDistribucion =
             [];
@@ -3768,6 +3803,9 @@ export class DistribucionControladorComponent
   cerrarResultadoDistribucion(): void {
 
     this.modalResultadoDistribucionAbierto =
+      false;
+
+    this.guardadoForzadoDisponible =
       false;
 
     this.tituloResultadoDistribucion =

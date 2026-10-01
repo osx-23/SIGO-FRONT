@@ -156,10 +156,22 @@
         </thead>
 
         <tbody>
-          @for(agente of agentes; track agente.id){
+          @for(agente of agentes; track agente.id; let indice = $index){
             @let grupoActual = secuencias.grupoDe(agente.id);
 
-            <tr>
+            <tr
+              [class.sequence-divider]="
+                esInicioGrupo(
+                  indice,
+                  agente.id
+                )
+              "
+              [class.part-time-row]="
+                esPartTime(
+                  agente.id
+                )
+              "
+            >
               <td class="order-column">
                 <div class="order-control">
                   <span class="order-number">
@@ -287,7 +299,13 @@
               @for(dia of dias; track dia){
                 @let valor = estado(agente.id, dia);
 
-                <td class="cell">
+                <td
+                  class="cell"
+                  [class.part-time-week-divider]="
+                    esPartTime(agente.id) &&
+                    esInicioSemana(dia)
+                  "
+                >
                   <select
                     class="shift-select"
                     [ngModel]="valor"

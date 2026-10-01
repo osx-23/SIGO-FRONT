@@ -1711,6 +1711,22 @@ export class ProgramacionSupervisorComponent
     this.aplicarCambioEstado(agenteId, dia, estado);
   }
 
+  cambiarEstadoControlador(
+    controladorId: number,
+    dia: number,
+    estado: EstadoProgramacion | null
+  ): void {
+    /*
+     * Los controladores solo reciben un estado de turno.
+     * No participan en secuencias ni excepciones de agentes.
+     */
+    this.aplicarCambioEstado(
+      controladorId,
+      dia,
+      estado
+    );
+  }
+
   cancelarAdvertenciaTurno(): void {
     this.modalAdvertenciaTurnoAbierto = false;
     this.advertenciaTurno = null;

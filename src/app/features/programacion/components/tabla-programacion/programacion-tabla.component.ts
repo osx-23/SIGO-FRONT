@@ -146,6 +146,10 @@ export class ProgramacionTablaComponent {
   readonly turnoChange =
     new EventEmitter<CambioTurnoEvent>();
 
+  @Output()
+  readonly turnoControladorChange =
+    new EventEmitter<CambioTurnoEvent>();
+
   seleccionarDia(
     dia: number
   ): void {
@@ -195,6 +199,18 @@ export class ProgramacionTablaComponent {
   ): void {
     this.turnoChange.emit({
       agenteId,
+      dia,
+      estado
+    });
+  }
+
+  cambiarEstadoControlador(
+    controladorId: number,
+    dia: number,
+    estado: EstadoProgramacion | null
+  ): void {
+    this.turnoControladorChange.emit({
+      agenteId: controladorId,
       dia,
       estado
     });

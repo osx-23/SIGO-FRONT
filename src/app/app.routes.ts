@@ -6,6 +6,7 @@ import { INVENTARIO_ROUTES } from './features/inventario/inventario.routes';
 import { PROGRAMACION_ROUTES } from './features/programacion/programacion.routes';
 import { RELEVOS_ROUTES } from './features/relevos/relevos.routes';
 import { INCIDENCIAS_ROUTES } from './features/incidencias/incidencias.routes';
+import { AVI_ROUTES } from './features/avi/avi.routes';
 import { USUARIOS_ROUTES } from './features/usuarios/usuarios.routes';
 
 export const routes: Routes = [
@@ -52,6 +53,7 @@ export const routes: Routes = [
       ...ASISTENCIA_ROUTES,
       ...RELEVOS_ROUTES,
       ...INCIDENCIAS_ROUTES,
+      ...AVI_ROUTES,
       ...INVENTARIO_ROUTES,
       ...USUARIOS_ROUTES
     ]

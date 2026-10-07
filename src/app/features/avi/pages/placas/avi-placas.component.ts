@@ -184,12 +184,17 @@ export class AviPlacasComponent implements OnInit {
 
     const columnas = [
       'Placa', 'Acción', 'Plaza', 'Vía', 'Código de trabajador',
-      'Trabajador', 'Fecha/hora evento', 'Fecha/hora recepción', 'Texto reconocido', 'UUID'
+      'Trabajador', 'Fecha evento', 'Hora evento', 'Fecha recepción',
+      'Hora recepción', 'Texto reconocido', 'UUID'
     ];
     const filas = datos.map(item => [
       item.placa, item.accion, item.plazaCodigo, item.via,
-      item.usuarioCodigo, item.usuarioNombre, item.fechaHoraEvento,
-      item.fechaHoraRecepcion, item.textoReconocido ?? '', item.id
+      item.usuarioCodigo, item.usuarioNombre,
+      this.formatearFecha(item.fechaHoraEvento),
+      this.formatearHora(item.fechaHoraEvento),
+      this.formatearFecha(item.fechaHoraRecepcion),
+      this.formatearHora(item.fechaHoraRecepcion),
+      item.textoReconocido ?? '', item.id
     ]);
 
     const csv = '\uFEFF' + [columnas, ...filas]
@@ -203,6 +208,29 @@ export class AviPlacasComponent implements OnInit {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+  }
+
+  private formatearFecha(valor: string): string {
+    const fecha = new Date(valor);
+    return Number.isNaN(fecha.getTime())
+      ? valor
+      : fecha.toLocaleDateString('es-PE', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+  }
+
+  private formatearHora(valor: string): string {
+    const fecha = new Date(valor);
+    return Number.isNaN(fecha.getTime())
+      ? valor
+      : fecha.toLocaleTimeString('es-PE', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
   }
 
   private csvCampo(valor: string | number): string {

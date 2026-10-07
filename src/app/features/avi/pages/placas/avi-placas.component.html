@@ -177,18 +177,21 @@
         <table class="min-w-full border-collapse text-left text-sm">
           <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
             <tr>
-              <th class="px-5 py-3">Placa</th>
-              <th class="px-5 py-3">Acción</th>
-              <th class="px-5 py-3">Plaza / vía</th>
-              <th class="px-5 py-3">Registrado por</th>
               <th class="px-5 py-3">Fecha</th>
               <th class="px-5 py-3">Hora</th>
+              <th class="px-5 py-3">Placa</th>
+              <th class="px-5 py-3">Acción</th>
+              <th class="px-5 py-3">Plaza</th>
+              <th class="px-5 py-3">Vía</th>
+              <th class="px-5 py-3">Registrado por</th>
               <th class="px-5 py-3"><span class="sr-only">Acciones</span></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             @for (registro of registrosPagina(); track registro.id) {
               <tr class="hover:bg-slate-50">
+                <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{ registro.fechaHoraEvento | date:'dd/MM/yyyy' }}</td>
+                <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{ registro.fechaHoraEvento | date:'HH:mm:ss' }}</td>
                 <td class="whitespace-nowrap px-5 py-4 font-mono text-base font-black tracking-wider text-blue-800">{{ registro.placa }}</td>
                 <td class="px-5 py-4">
                   <span class="rounded-full px-2.5 py-1 text-xs font-bold"
@@ -199,13 +202,12 @@
                     {{ registro.accion === 'FUGA' ? 'Fuga' : 'Derivado' }}
                   </span>
                 </td>
-                <td class="whitespace-nowrap px-5 py-4 text-slate-700">{{ registro.plazaCodigo }} · Vía {{ registro.via }}</td>
+                <td class="whitespace-nowrap px-5 py-4 text-slate-700">{{ registro.plazaCodigo }}</td>
+                <td class="whitespace-nowrap px-5 py-4 text-slate-700">{{ registro.via }}</td>
                 <td class="px-5 py-4 text-slate-700">
                   {{ registro.usuarioNombre }}
                   <span class="block text-xs text-slate-400">Código {{ registro.usuarioCodigo }}</span>
                 </td>
-                <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{ registro.fechaHoraEvento | date:'dd/MM/yyyy' }}</td>
-                <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{ registro.fechaHoraEvento | date:'HH:mm:ss' }}</td>
                 <td class="px-5 py-4 text-right">
                   <button type="button" (click)="abrirDetalle(registro)"
                     class="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50">

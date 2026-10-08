@@ -156,10 +156,22 @@
         </thead>
 
         <tbody>
-          @for(agente of agentes; track agente.id){
+          @for(agente of agentes; track agente.id; let indice = $index){
             @let grupoActual = secuencias.grupoDe(agente.id);
 
-            <tr>
+            <tr
+              [class.sequence-divider]="
+                esInicioGrupo(
+                  indice,
+                  agente.id
+                )
+              "
+              [class.part-time-row]="
+                esPartTime(
+                  agente.id
+                )
+              "
+            >
               <td class="order-column">
                 <div class="order-control">
                   <span class="order-number">
@@ -287,7 +299,13 @@
               @for(dia of dias; track dia){
                 @let valor = estado(agente.id, dia);
 
-                <td class="cell">
+                <td
+                  class="cell"
+                  [class.part-time-week-divider]="
+                    esPartTime(agente.id) &&
+                    esInicioSemana(dia)
+                  "
+                >
                   <select
                     class="shift-select"
                     [ngModel]="valor"
@@ -304,6 +322,115 @@
                       guardandoOrden ||
                       generador.procesando ||
                       agentesProcesando.size > 0
+                    "
+                  >
+                    <option [ngValue]="null">
+                      -
+                    </option>
+
+                    @for(estadoItem of estados; track estadoItem){
+                      <option [ngValue]="estadoItem">
+                        {{ estadoItem }}
+                      </option>
+                    }
+                  </select>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<section class="card sequence-block controller-shifts-block">
+  <div class="sequence-head">
+    <div class="sequence-title">
+      <div>
+        <span class="sequence-label">CONTROLADORES</span>
+        <h2>Programación de turnos</h2>
+      </div>
+
+      <span class="sequence-count">
+        {{ controladores.length }} controladores
+      </span>
+    </div>
+
+    <div class="table-actions">
+      <span class="saving-order">
+        Solo asignación de turno · sin caseta
+      </span>
+    </div>
+  </div>
+
+  @if(controladores.length === 0){
+    <div class="empty">
+      No hay controladores activos en esta plaza.
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="sticky-code">Cód.</th>
+            <th class="sticky-name">Nombre</th>
+
+            @for(dia of dias; track dia){
+              <th
+                class="day-column"
+                [class.day-selected]="diaSeleccionado === dia"
+                (click)="seleccionarDia(dia)"
+                title="Seleccionar día"
+              >
+                <div class="day-header">
+                  <span class="day-name">
+                    {{ diaSemana(dia) }}
+                  </span>
+
+                  <strong class="day-number">
+                    {{ dia }}
+                  </strong>
+                </div>
+              </th>
+            }
+          </tr>
+        </thead>
+
+        <tbody>
+          @for(controlador of controladores; track controlador.id){
+            <tr>
+              <td class="sticky-code">
+                {{ controlador.codigo }}
+              </td>
+
+              <td class="sticky-name">
+                <div class="agent-cell">
+                  <strong>
+                    {{ controlador.nombreCompleto }}
+                  </strong>
+                </div>
+              </td>
+
+              @for(dia of dias; track dia){
+                @let valor = estado(controlador.id, dia);
+
+                <td class="cell">
+                  <select
+                    class="shift-select"
+                    [ngModel]="valor"
+                    (ngModelChange)="
+                      cambiarEstadoControlador(
+                        controlador.id,
+                        dia,
+                        $event
+                      )
+                    "
+                    [class]="'shift-select ' + claseEstado(valor)"
+                    [disabled]="
+                      guardandoTurnos ||
+                      guardandoOrden ||
+                      generador.procesando
                     "
                   >
                     <option [ngValue]="null">

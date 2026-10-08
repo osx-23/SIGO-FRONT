@@ -25,7 +25,7 @@
           </h1>
 
           <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-            Organiza a los agentes por secuencias, define su orden y asigna los turnos del mes.
+            Organiza a los agentes por secuencias y asigna los turnos mensuales de agentes y controladores.
           </p>
         </div>
       </div>
@@ -258,6 +258,7 @@
       (subirAgente)="subir($event.grupo, $event.agenteId)"
       (bajarAgente)="bajar($event.grupo, $event.agenteId)"
       (turnoChange)="cambiarEstado($event.agenteId, $event.dia, $event.estado)"
+      (turnoControladorChange)="cambiarEstadoControlador($event.agenteId, $event.dia, $event.estado)"
     />
 
 

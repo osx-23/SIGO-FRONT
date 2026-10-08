@@ -146,6 +146,10 @@ export class ProgramacionTablaComponent {
   readonly turnoChange =
     new EventEmitter<CambioTurnoEvent>();
 
+  @Output()
+  readonly turnoControladorChange =
+    new EventEmitter<CambioTurnoEvent>();
+
   seleccionarDia(
     dia: number
   ): void {
@@ -195,6 +199,18 @@ export class ProgramacionTablaComponent {
   ): void {
     this.turnoChange.emit({
       agenteId,
+      dia,
+      estado
+    });
+  }
+
+  cambiarEstadoControlador(
+    controladorId: number,
+    dia: number,
+    estado: EstadoProgramacion | null
+  ): void {
+    this.turnoControladorChange.emit({
+      agenteId: controladorId,
       dia,
       estado
     });
@@ -330,6 +346,59 @@ export class ProgramacionTablaComponent {
   ): boolean {
     return this.agentesProcesando.has(
       agenteId
+    );
+  }
+
+  esInicioGrupo(
+    indice: number,
+    agenteId: number
+  ): boolean {
+    if (indice <= 0) {
+      return false;
+    }
+
+    const grupoActual =
+      this.secuencias.grupoDe(
+        agenteId
+      );
+
+    const anterior =
+      this.agentes[indice - 1];
+
+    if (!grupoActual || !anterior) {
+      return false;
+    }
+
+    return (
+      this.secuencias.grupoDe(
+        anterior.id
+      ) !== grupoActual
+    );
+  }
+
+  esPartTime(
+    agenteId: number
+  ): boolean {
+    return (
+      this.secuencias.grupoDe(
+        agenteId
+      ) === 'PART_TIME'
+    );
+  }
+
+  esInicioSemana(
+    dia: number
+  ): boolean {
+    if (dia <= 1) {
+      return false;
+    }
+
+    return (
+      new Date(
+        this.anio,
+        this.mes - 1,
+        dia
+      ).getDay() === 1
     );
   }
 

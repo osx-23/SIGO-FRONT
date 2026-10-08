@@ -469,24 +469,6 @@
 
       }
 
-
-      <!-- Historial de placas registradas desde la aplicación AVI -->
-      @if (auth.tieneRol('SUPERVISOR', 'CONTROLADOR', 'OPERADOR')) {
-        <a
-          routerLink="/avi/placas"
-          routerLinkActive="active"
-          (click)="close()"
-          data-tooltip="Placas AVI"
-        >
-          <span class="nav-icon">
-            <svg viewBox="0 0 24 24">
-              <path d="M4 7h16v10H4V7Zm2 2v6h12V9H6Zm2 1h4v2H8v-2Zm6 0h3v2h-3v-2ZM8 13h9v1H8v-1Z"/>
-            </svg>
-          </span>
-          <span class="nav-label">Placas AVI</span>
-        </a>
-      }
-
       <!-- ===================================================
            INVENTARIO
            =================================================== -->

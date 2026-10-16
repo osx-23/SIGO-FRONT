@@ -225,10 +225,20 @@
                   <input type="text" [(ngModel)]="notaRecepcion" (ngModelChange)="resetearClaveRecepcion()"
                     placeholder="Observación de recepción (opcional)" maxlength="1000"
                     class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm">
-                  <button type="button" (click)="recibir()" [disabled]="guardando"
-                    class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50">
-                    {{ guardando ? 'Registrando...' : 'Confirmar recepción e ingresar al stock' }}
-                  </button>
+                  <div class="flex flex-col gap-3 sm:flex-row">
+                    <button type="button" (click)="recibir()" [disabled]="guardando"
+                      class="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-extrabold text-blue-700 hover:bg-blue-50 disabled:opacity-50">
+                      Registrar recepción parcial
+                    </button>
+                    <button type="button" (click)="recibirCompleto()" [disabled]="guardando || pendienteRecepcion <= 0"
+                      class="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50">
+                      {{ guardando ? 'Procesando...' : 'Recibí todo' }}
+                    </button>
+                  </div>
+                  <p class="text-xs text-slate-500">
+                    «Recibí todo» registra automáticamente todas las cantidades pendientes y actualiza el stock.
+                    Si la entrega fue parcial, usa los campos «Recibir ahora».
+                  </p>
                 </div>
               }
             </article>

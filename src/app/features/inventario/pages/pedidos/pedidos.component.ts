@@ -184,7 +184,7 @@ export class PedidosComponent implements OnInit {
       if (!this.sugerencias.some(s => s.productoId === i.productoId)) {
         this.sugerencias.push({
           productoId: i.productoId, producto: i.producto, unidadMedida: i.unidad,
-          stockActual: i.stock ?? 0, stockMinimo: 0,
+          stockActual: i.stock ?? 0, stockVerificado: i.stock !== null, stockMinimo: 0,
           promedioMensual: i.promedio, sugerido: i.sugerida,
           conHistorico: i.promedio !== null, cantidad: Number(i.cantidad)
         });

@@ -134,7 +134,7 @@ export class PedidosComponent implements OnInit {
       return;
     }
     if (datos.items.some(x => !Number.isFinite(x.cantidad) ||
-        x.cantidad < 0 || Math.round(x.cantidad * 100) !== x.cantidad * 100)) {
+        x.cantidad < 0 || Math.abs(Math.round(x.cantidad * 100) - x.cantidad * 100) > 0.000001)) {
       this.error = 'Las cantidades deben ser positivas y tener como máximo dos decimales.';
       return;
     }
@@ -143,6 +143,7 @@ export class PedidosComponent implements OnInit {
       let creado = this.editandoId
         ? await firstValueFrom(this.api.editar(this.editandoId, datos))
         : await firstValueFrom(this.api.crear(datos));
+      this.editandoId = creado.id; // conserva el borrador si falla el envío
       if (enviar) creado = await firstValueFrom(this.api.enviar(creado.id));
       this.editandoId = null;
       this.seleccionado = creado;
@@ -221,7 +222,7 @@ export class PedidosComponent implements OnInit {
     const valido = items.every(x => {
       const pedido = this.seleccionado?.items.find(p => p.productoId === x.productoId);
       return Number.isFinite(x.cantidad) && x.cantidad <= Number(pedido?.pendiente ?? 0) &&
-        Math.round(x.cantidad * 100) === x.cantidad * 100;
+        Math.abs(Math.round(x.cantidad * 100) - x.cantidad * 100) < 0.000001;
     });
     if (!valido || items.length === 0) {
       this.error = 'Ingresa cantidades válidas que no superen lo pendiente.';
@@ -250,7 +251,7 @@ export class PedidosComponent implements OnInit {
     this.guardando = true; this.error = ''; this.exito = '';
     try {
       this.consolidado = await firstValueFrom(this.api.consolidar(this.mes));
-      this.exito = 'Consolidado generado y pedidos aprobados marcados como enviados.';
+      this.exito = 'Consolidado generado. Compártelo con Planificación por el canal habitual.';
       await this.cargar();
     } catch (e: any) { this.error = this.obtenerError(e); }
     finally { this.guardando = false; this.cdr.detectChanges(); }
@@ -258,7 +259,7 @@ export class PedidosComponent implements OnInit {
 
   readonly etiquetaEstado: Record<string,string> = {
     BORRADOR:'Borrador', PENDIENTE:'Pendiente de aprobación', APROBADO:'Aprobado',
-    ENVIADO:'Enviado a planificación', PARCIAL:'Recibido parcialmente',
+    ENVIADO:'Consolidado para Planificación', PARCIAL:'Recibido parcialmente',
     COMPLETADO:'Completado', CERRADO_FALTANTES:'Cerrado con faltantes', RECHAZADO:'Rechazado'
   };
   private obtenerError(e: any): string {

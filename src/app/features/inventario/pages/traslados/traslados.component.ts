@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -8,6 +8,8 @@ import { environment } from '../../../../../environments/environment';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { InventarioApiService } from '../../services/inventario-api.service';
 import { CatalogoItem, StockActual } from '../../models/inventario.models';
+
+type EstadoTraslado = 'EN_TRANSITO' | 'RECIBIDO';
 
 interface Traslado {
   id: number;
@@ -19,7 +21,7 @@ interface Traslado {
   producto: string;
   unidad: string;
   cantidad: number;
-  estado: 'EN_TRANSITO' | 'RECIBIDO';
+  estado: EstadoTraslado;
   enviadoEn: string;
   recibidoEn: string | null;
   observacion: string | null;
@@ -29,141 +31,35 @@ interface Traslado {
   selector: 'app-traslados',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
-  template: `
-  <main class="min-h-full bg-slate-50 px-4 py-6 sm:px-6">
-    <div class="mx-auto max-w-7xl space-y-6">
-      <header class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <a routerLink="/inventario/stock" class="text-sm font-semibold text-blue-700 hover:underline">← Volver a Stock</a>
-          <h1 class="mt-2 text-2xl font-extrabold text-slate-900">Transferencias entre plazas</h1>
-          <p class="mt-1 text-sm text-slate-500">Controla el envío, el tránsito y la recepción de materiales sin confundir traslados con consumo.</p>
-        </div>
-        <button type="button" (click)="cargar()" [disabled]="cargando" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100">Actualizar información</button>
-      </header>
-
-      @if (error) {
-        <p role="alert" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{{ error }}</p>
-      }
-      @if (mensaje) {
-        <p role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{{ mensaje }}</p>
-      }
-
-      <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 class="text-lg font-bold text-slate-900">Mover material a otra plaza</h2>
-          <p class="mt-1 text-sm text-slate-500">El descuento del origen se hará cuando confirmes el envío.</p>
-
-          <form (ngSubmit)="enviar()" class="mt-5 space-y-4">
-            <div>
-              <label for="origen" class="mb-1 block text-sm font-semibold text-slate-700">Plaza de origen</label>
-              <select id="origen" [(ngModel)]="origenPlazaId" (ngModelChange)="cambiarOrigen()" name="origen" [disabled]="!esSupervisor() || enviando" required class="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-                @for (p of plazas; track p.id) {
-                  <option [ngValue]="p.id">{{ p.codigo || p.nombre }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label for="material" class="mb-1 block text-sm font-semibold text-slate-700">Material</label>
-              <select id="material" [(ngModel)]="productoId" name="material" [disabled]="enviando" required class="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-                <option [ngValue]="null">Selecciona el material</option>
-                @for (item of productosOrigen(); track item.productoId) {
-                  <option [ngValue]="item.productoId">{{ item.producto }}</option>
-                }
-              </select>
-            </div>
-            @if (productoSeleccionado()) {
-              <p class="rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-900">
-                Saldo registrado: <strong>{{ productoSeleccionado()?.cantidadActual }} {{ productoSeleccionado()?.unidadMedida }}</strong>.
-                @if (productoSeleccionado()?.inventarioId === 0) {
-                  <span class="block pt-1 text-xs">Puede provenir de la referencia de septiembre; comprueba físicamente la cantidad antes de transferir.</span>
-                }
-              </p>
-            }
-            <div>
-              <label for="destino" class="mb-1 block text-sm font-semibold text-slate-700">Plaza de destino</label>
-              <select id="destino" [(ngModel)]="destinoPlazaId" name="destino" [disabled]="enviando" required class="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-                <option [ngValue]="null">Selecciona la plaza</option>
-                @for (p of plazasDestino(); track p.id) {
-                  <option [ngValue]="p.id">{{ p.codigo || p.nombre }}</option>
-                }
-              </select>
-            </div>
-            <div>
-              <label for="cantidad" class="mb-1 block text-sm font-semibold text-slate-700">Cantidad a enviar</label>
-              <input id="cantidad" [(ngModel)]="cantidad" name="cantidad" type="number" min="0.01" step="0.01" required [disabled]="enviando" class="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"/>
-            </div>
-            <div>
-              <label for="nota" class="mb-1 block text-sm font-semibold text-slate-700">Observación (opcional)</label>
-              <textarea id="nota" [(ngModel)]="observacion" name="nota" rows="2" maxlength="1000" [disabled]="enviando" class="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm" placeholder="Motivo del traslado"></textarea>
-            </div>
-            <button type="submit" [disabled]="enviando || cargando || !productoSeleccionado() || !destinoPlazaId || !cantidad || cantidad <= 0"
-              class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
-              {{ enviando ? 'Registrando...' : 'Confirmar envío a otra plaza' }}
-            </button>
-          </form>
-        </section>
-
-        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 class="text-lg font-bold text-slate-900">Seguimiento de transferencias</h2>
-              <p class="mt-1 text-sm text-slate-500">La plaza receptora confirma lo recibido para aumentar su stock.</p>
-            </div>
-            <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">{{ pendientes() }} en tránsito</span>
-          </div>
-          @if (cargando) {
-            <p class="py-8 text-center text-sm text-slate-500">Cargando movimientos…</p>
-          } @else if (traslados.length === 0) {
-            <p class="mt-6 rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">Todavía no hay traslados registrados.</p>
-          } @else {
-            <div class="mt-5 max-h-[680px] space-y-3 overflow-auto pr-1">
-              @for (t of traslados; track t.id) {
-                <article class="rounded-xl border border-slate-200 p-4">
-                  <div class="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p class="text-sm font-bold text-slate-900">{{ t.producto }}</p>
-                      <p class="mt-1 text-xs text-slate-500">#{{ t.id }} · {{ t.origen }} → {{ t.destino }}</p>
-                    </div>
-                    <span class="rounded-full px-2.5 py-1 text-xs font-bold"
-                      [class.bg-amber-100]="t.estado === 'EN_TRANSITO'" [class.text-amber-800]="t.estado === 'EN_TRANSITO'"
-                      [class.bg-emerald-100]="t.estado === 'RECIBIDO'" [class.text-emerald-800]="t.estado === 'RECIBIDO'">
-                      {{ t.estado === 'EN_TRANSITO' ? 'En tránsito' : 'Recibido' }}
-                    </span>
-                  </div>
-                  <p class="mt-2 text-sm"><strong>{{ t.cantidad }} {{ t.unidad }}</strong></p>
-                  <p class="mt-1 text-xs text-slate-500">Enviado: {{ t.enviadoEn | date:'dd/MM/yyyy HH:mm' }}</p>
-                  @if (t.recibidoEn) {
-                    <p class="mt-1 text-xs text-slate-500">Recibido: {{ t.recibidoEn | date:'dd/MM/yyyy HH:mm' }}</p>
-                  }
-                  @if (t.observacion) { <p class="mt-2 text-xs text-slate-600">{{ t.observacion }}</p> }
-                  @if (t.estado === 'EN_TRANSITO' && puedeRecibir(t)) {
-                    <button type="button" (click)="recibir(t)" [disabled]="enviando"
-                      class="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
-                      Confirmar recepción completa
-                    </button>
-                  }
-                </article>
-              }
-            </div>
-          }
-        </section>
-      </div>
-    </div>
-  </main>
-  `
+  templateUrl: './traslados.component.html'
 })
 export class TrasladosComponent implements OnInit {
   plazas: CatalogoItem[] = [];
   stock: StockActual[] = [];
   traslados: Traslado[] = [];
+
+  // La lista es la vista principal; el formulario se utiliza en un modal.
+  modalAbierto = false;
   origenPlazaId: number | null = null;
   destinoPlazaId: number | null = null;
   productoId: number | null = null;
   cantidad: number | null = null;
   observacion = '';
+
+  // Filtros locales de los últimos 300 registros que devuelve la API.
+  origenFiltro: number | null = null;
+  destinoFiltro: number | null = null;
+  estadoFiltro: 'TODOS' | EstadoTraslado = 'TODOS';
+  textoBusqueda = '';
+  fechaDesde = '';
+  fechaHasta = '';
+  pagina = 1;
+  readonly tamanoPagina = 10;
+
   cargando = true;
   enviando = false;
   error = '';
+  errorModal = '';
   mensaje = '';
 
   constructor(
@@ -178,81 +74,207 @@ export class TrasladosComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     this.origenPlazaId = this.auth.usuario()?.plazaId ?? null;
-    if (this.esSupervisor()) {
-      const valor = Number(this.route.snapshot.queryParamMap.get('plazaId'));
-      if (valor > 0) this.origenPlazaId = valor;
-    }
-    const material = Number(this.route.snapshot.queryParamMap.get('productoId'));
-    if (material > 0) this.productoId = material;
+
+    const plazaParametro = Number(this.route.snapshot.queryParamMap.get('plazaId'));
+    if (this.esSupervisor() && plazaParametro > 0) this.origenPlazaId = plazaParametro;
+
+    const materialParametro = Number(this.route.snapshot.queryParamMap.get('productoId'));
+    if (materialParametro > 0) this.productoId = materialParametro;
+
     await this.cargar();
+    // Mantiene el acceso desde el botón «Mover a otra plaza» en Stock.
+    if (materialParametro > 0 && this.productoSeleccionado()) this.abrirModal();
   }
 
   productosOrigen(): StockActual[] {
-    return this.stock.filter(i => i.plazaId === this.origenPlazaId && Number(i.cantidadActual) > 0);
+    return this.stock
+      .filter(item => item.plazaId === this.origenPlazaId && Number(item.cantidadActual) > 0)
+      .sort((a, b) => a.producto.localeCompare(b.producto));
   }
+
   productoSeleccionado(): StockActual | undefined {
-    return this.productosOrigen().find(i => i.productoId === this.productoId);
+    return this.productosOrigen().find(item => item.productoId === this.productoId);
   }
-  plazasDestino(): CatalogoItem[] { return this.plazas.filter(p => p.id !== this.origenPlazaId); }
+
+  plazasDestino(): CatalogoItem[] {
+    return this.plazas.filter(plaza => plaza.id !== this.origenPlazaId);
+  }
+
   cambiarOrigen(): void {
     if (!this.productoSeleccionado()) this.productoId = null;
     if (this.destinoPlazaId === this.origenPlazaId) this.destinoPlazaId = null;
+    const disponible = Number(this.productoSeleccionado()?.cantidadActual ?? 0);
+    if (this.cantidad !== null && this.cantidad > disponible) this.cantidad = null;
   }
-  pendientes(): number { return this.traslados.filter(t => t.estado === 'EN_TRANSITO').length; }
+
+  abrirModal(): void {
+    if (this.cargando || this.enviando) return;
+    this.errorModal = '';
+    this.modalAbierto = true;
+    this.cdr.detectChanges();
+  }
+
+  cerrarModal(): void {
+    if (this.enviando) return;
+    this.modalAbierto = false;
+    this.errorModal = '';
+  }
+
+  @HostListener('document:keydown.escape')
+  alPresionarEscape(): void {
+    if (this.modalAbierto) this.cerrarModal();
+  }
+
+  get listaFiltrada(): Traslado[] {
+    const busqueda = this.textoBusqueda.toLocaleLowerCase('es-PE').trim();
+    return this.traslados.filter(t => {
+      if (this.origenFiltro !== null && t.origenPlazaId !== this.origenFiltro) return false;
+      if (this.destinoFiltro !== null && t.destinoPlazaId !== this.destinoFiltro) return false;
+      if (this.estadoFiltro !== 'TODOS' && t.estado !== this.estadoFiltro) return false;
+      if (busqueda && ![t.producto, t.origen, t.destino, String(t.id)]
+        .some(valor => valor.toLocaleLowerCase('es-PE').includes(busqueda))) return false;
+      const fecha = this.fechaLocal(t.enviadoEn);
+      if (this.fechaDesde && fecha < this.fechaDesde) return false;
+      if (this.fechaHasta && fecha > this.fechaHasta) return false;
+      return true;
+    });
+  }
+
+  private fechaLocal(valor: string): string {
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return valor.slice(0, 10);
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    return anio + '-' + mes + '-' + dia;
+  }
+
+  get totalPaginas(): number { return Math.max(1, Math.ceil(this.listaFiltrada.length / this.tamanoPagina)); }
+  get listaPagina(): Traslado[] {
+    return this.listaFiltrada.slice((this.pagina - 1) * this.tamanoPagina, this.pagina * this.tamanoPagina);
+  }
+  get primerResultado(): number {
+    return this.listaFiltrada.length ? (this.pagina - 1) * this.tamanoPagina + 1 : 0;
+  }
+  get ultimoResultado(): number {
+    return Math.min(this.pagina * this.tamanoPagina, this.listaFiltrada.length);
+  }
+
+  cambiarFiltros(): void { this.pagina = 1; }
+  limpiarFiltros(): void {
+    this.origenFiltro = null;
+    this.destinoFiltro = null;
+    this.estadoFiltro = 'TODOS';
+    this.textoBusqueda = '';
+    this.fechaDesde = '';
+    this.fechaHasta = '';
+    this.pagina = 1;
+  }
+  anterior(): void { if (this.pagina > 1) this.pagina--; }
+  siguiente(): void { if (this.pagina < this.totalPaginas) this.pagina++; }
+
+  get totalTraslados(): number { return this.traslados.length; }
+  get totalEnTransito(): number { return this.traslados.filter(t => t.estado === 'EN_TRANSITO').length; }
+  get totalRecibidos(): number { return this.traslados.filter(t => t.estado === 'RECIBIDO').length; }
+  get totalPorRecibir(): number {
+    return this.traslados.filter(t => t.estado === 'EN_TRANSITO' && this.puedeRecibir(t)).length;
+  }
   puedeRecibir(t: Traslado): boolean {
     return this.esSupervisor() || this.auth.usuario()?.plazaId === t.destinoPlazaId;
   }
 
   async cargar(): Promise<void> {
-    this.cargando = true; this.error = '';
+    this.cargando = true;
+    this.error = '';
     try {
       const plazaFiltro = this.esSupervisor() ? null : this.auth.usuario()?.plazaId ?? null;
       const [plazas, stock, traslados] = await Promise.all([
         firstValueFrom(this.api.catalogo('plazas')),
         firstValueFrom(this.api.stock({ plazaId: plazaFiltro })),
-        firstValueFrom(this.http.get<Traslado[]>(`${environment.apiUrl}/inventario/traslados`))
+        firstValueFrom(this.http.get<Traslado[]>(environment.apiUrl + '/inventario/traslados'))
       ]);
       this.plazas = plazas;
       this.stock = stock;
       this.traslados = traslados;
-      if (this.origenPlazaId === null && plazas.length > 0) this.origenPlazaId = plazas[0].id;
+      if (this.origenPlazaId === null && this.esSupervisor() && plazas.length > 0) {
+        this.origenPlazaId = plazas[0].id;
+      }
       this.cambiarOrigen();
-    } catch (e: any) { this.error = this.errorApi(e); }
-    finally { this.cargando = false; this.cdr.detectChanges(); }
+      if (this.pagina > this.totalPaginas) this.pagina = this.totalPaginas;
+    } catch (e: any) {
+      this.error = this.errorApi(e);
+    } finally {
+      this.cargando = false;
+      this.cdr.detectChanges();
+    }
   }
 
   async enviar(): Promise<void> {
+    if (this.enviando) return;
     const item = this.productoSeleccionado();
-    if (!item || !this.origenPlazaId || !this.destinoPlazaId || !this.cantidad
-        || this.cantidad <= 0 || this.cantidad > Number(item.cantidadActual)) {
-      this.error = 'Revisa las plazas, el material y la cantidad disponible.'; return;
+    const cantidad = Number(this.cantidad);
+    if (!item || !this.origenPlazaId || !this.destinoPlazaId
+        || this.destinoPlazaId === this.origenPlazaId
+        || !Number.isFinite(cantidad) || cantidad <= 0
+        || Math.abs(Math.round(cantidad * 100) - cantidad * 100) > 0.000001
+        || cantidad > Number(item.cantidadActual)) {
+      this.errorModal = 'Revisa las plazas, el material y la cantidad disponible (máximo dos decimales).';
+      return;
     }
-    if (!window.confirm(`¿Enviar ${this.cantidad} ${item.unidadMedida} de ${item.producto} a otra plaza? Se descontará del origen.`)) return;
-    this.enviando = true; this.error = ''; this.mensaje = '';
+    if (!window.confirm(
+      '¿Enviar ' + cantidad + ' ' + item.unidadMedida + ' de ' + item.producto +
+      ' a la plaza de destino? La cantidad se descontará del origen.'
+    )) return;
+
+    this.enviando = true;
+    this.errorModal = '';
+    this.error = '';
+    this.mensaje = '';
     try {
-      await firstValueFrom(this.http.post(`${environment.apiUrl}/inventario/traslados`, {
-        origenPlazaId: this.origenPlazaId, destinoPlazaId: this.destinoPlazaId,
-        productoId: this.productoId, cantidad: this.cantidad, observacion: this.observacion.trim()
+      await firstValueFrom(this.http.post(environment.apiUrl + '/inventario/traslados', {
+        origenPlazaId: this.origenPlazaId,
+        destinoPlazaId: this.destinoPlazaId,
+        productoId: this.productoId,
+        cantidad,
+        observacion: this.observacion.trim()
       }));
-      this.mensaje = 'Traslado enviado. La plaza destino debe confirmar su recepción.';
-      this.cantidad = null; this.observacion = '';
+      this.modalAbierto = false;
+      this.cantidad = null;
+      this.destinoPlazaId = null;
+      this.observacion = '';
       await this.cargar();
-    } catch (e: any) { this.error = this.errorApi(e); }
-    finally { this.enviando = false; this.cdr.detectChanges(); }
+      this.mensaje = 'Traslado registrado. Se descontó del origen y quedó pendiente de recepción.';
+    } catch (e: any) {
+      this.errorModal = this.errorApi(e);
+    } finally {
+      this.enviando = false;
+      this.cdr.detectChanges();
+    }
   }
 
   async recibir(t: Traslado): Promise<void> {
-    if (!window.confirm(`¿Confirmas que llegaron ${t.cantidad} ${t.unidad} de ${t.producto} a ${t.destino}?`)) return;
-    this.enviando = true; this.error = ''; this.mensaje = '';
+    if (this.enviando || !this.puedeRecibir(t) || t.estado !== 'EN_TRANSITO') return;
+    if (!window.confirm(
+      '¿Confirmas que llegaron ' + t.cantidad + ' ' + t.unidad + ' de ' +
+      t.producto + ' a ' + t.destino + '? Se sumarán al stock de destino.'
+    )) return;
+    this.enviando = true;
+    this.error = '';
+    this.mensaje = '';
     try {
-      await firstValueFrom(this.http.post(`${environment.apiUrl}/inventario/traslados/${t.id}/recibir`, {}));
-      this.mensaje = 'Recepción confirmada. Las unidades ya se sumaron al stock destino.';
+      await firstValueFrom(this.http.post(environment.apiUrl + '/inventario/traslados/' + t.id + '/recibir', {}));
       await this.cargar();
-    } catch (e: any) { this.error = this.errorApi(e); }
-    finally { this.enviando = false; this.cdr.detectChanges(); }
+      this.mensaje = 'Recepción confirmada. Se sumaron las unidades al stock de destino.';
+    } catch (e: any) {
+      this.error = this.errorApi(e);
+    } finally {
+      this.enviando = false;
+      this.cdr.detectChanges();
+    }
   }
 
   private errorApi(e: any): string {
-    return e?.error?.message || e?.error?.detail || e?.error?.error || 'No se pudo completar la operación.';
+    const detalle = e?.error?.detail || e?.error?.message || e?.error?.error;
+    return typeof detalle === 'string' ? detalle : 'No se pudo completar la operación.';
   }
 }

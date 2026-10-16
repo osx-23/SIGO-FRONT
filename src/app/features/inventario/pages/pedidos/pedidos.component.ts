@@ -75,12 +75,12 @@ export class PedidosComponent implements OnInit {
   }
 
   requiereReposicion(item: SugerenciaPedido): boolean {
-    return item.stockVerificado && item.conHistorico &&
+    return item.stockOrigen !== 'SIN_REGISTRO' && item.conHistorico &&
       item.promedioMensual !== null && Number(item.promedioMensual) > Number(item.stockActual);
   }
 
   tieneCobertura(item: SugerenciaPedido): boolean {
-    return item.stockVerificado && item.conHistorico && item.promedioMensual !== null;
+    return item.stockOrigen !== 'SIN_REGISTRO' && item.conHistorico && item.promedioMensual !== null;
   }
 
   cobertura(item: SugerenciaPedido): number | null {
@@ -211,6 +211,15 @@ export class PedidosComponent implements OnInit {
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   }
   get sinHistorico(): number { return this.sugerencias.filter(s => !s.conHistorico).length; }
+  stockDisponible(item: SugerenciaPedido): boolean {
+    return item.stockOrigen !== 'SIN_REGISTRO';
+  }
+  etiquetaOrigen(item: SugerenciaPedido): string {
+    if (item.stockOrigen === 'EXCEL_SEPTIEMBRE') return 'Referencia septiembre 2026';
+    if (item.stockOrigen === 'CONTEO') return 'Conteo confirmado';
+    return item.stockOrigen === 'RECEPCION' ? 'Recepción registrada' : 'Sin registro';
+  }
+
   get totalSolicitado(): number {
     return this.itemsParaRevision.reduce((total, s) => total + (Number(s.cantidad) || 0), 0);
   }

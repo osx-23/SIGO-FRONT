@@ -80,7 +80,7 @@
         </div>
         @if (sinHistorico > 0) {
           <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            {{ sinHistorico }} materiales aún no tienen consumo histórico verificable. Indica manualmente las cantidades.
+            {{ sinHistorico }} materiales aún no tienen consumo histórico verificable. Registra un conteo inicial cuando sea necesario e indica manualmente las cantidades.
             No se calcularán promedios inventados.
           </p>
         }
@@ -103,7 +103,7 @@
                   <tr class="hover:bg-slate-50">
                     <td class="px-4 py-3"><strong class="text-slate-900">{{ s.producto }}</strong>
                       <span class="block text-xs text-slate-500">{{ s.unidadMedida }}</span></td>
-                    <td class="px-4 py-3 font-semibold">{{ s.stockActual | number:'1.0-2' }}</td>
+                    <td class="px-4 py-3 font-semibold">{{ s.stockVerificado ? (s.stockActual | number:'1.0-2') : 'Sin conteo' }}</td>
                     <td class="px-4 py-3">{{ s.conHistorico ? (s.promedioMensual | number:'1.0-2') : 'Sin datos' }}</td>
                     <td class="px-4 py-3">{{ s.sugerido === null ? 'Manual' : (s.sugerido | number:'1.0-2') }}</td>
                     <td class="px-4 py-3">

@@ -426,5 +426,72 @@
         </div>
       </section>
     }
+
+    @if (vista === 'nuevo' && revisionAbierta) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 sm:p-6" role="presentation">
+        <section role="dialog" aria-modal="true" aria-labelledby="titulo-revisar-pedido"
+          class="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" style="max-height: min(88vh, 850px)">
+          <div class="flex items-start justify-between gap-4 border-b border-slate-100 p-5 sm:p-6">
+            <div>
+              <p class="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-blue-600">Confirmación del requerimiento</p>
+              <h2 id="titulo-revisar-pedido" class="text-xl font-extrabold text-[#152945]">
+                {{ editandoId ? 'Actualizar pedido #' + editandoId : 'Revisar pedido mensual' }}
+              </h2>
+              <p class="mt-1 text-xs text-slate-500">{{ plazaSeleccionadaTexto }} · {{ mes }}</p>
+            </div>
+            <button type="button" (click)="revisionAbierta=false" [disabled]="guardando"
+              aria-label="Cerrar revisión" class="rounded-lg p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-50">
+              <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current stroke-2" aria-hidden="true">
+                <path d="m5 5 14 14M19 5 5 19" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 sm:p-6">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="rounded-xl bg-slate-50 p-4">
+                <p class="text-xs text-slate-500">Materiales seleccionados</p>
+                <strong class="mt-1 block text-2xl font-extrabold text-slate-900">{{ totalLineas }}</strong>
+              </div>
+              <div class="rounded-xl bg-blue-50 p-4">
+                <p class="text-xs text-blue-600">Unidades a pedir</p>
+                <strong class="mt-1 block text-2xl font-extrabold text-blue-700">{{ totalSolicitado | number:'1.0-2' }}</strong>
+              </div>
+            </div>
+            <div class="overflow-hidden rounded-xl border border-slate-200">
+              @for (s of itemsParaRevision; track s.productoId) {
+                <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 last:border-b-0">
+                  <div class="min-w-0">
+                    <p class="truncate text-xs font-bold text-slate-800">{{ s.producto }}</p>
+                    <p class="mt-0.5 text-[10px] text-slate-400">{{ codigoDe(s) }} · {{ s.unidadMedida }}</p>
+                  </div>
+                  <strong class="shrink-0 text-sm text-blue-700">{{ s.cantidad | number:'1.0-2' }}</strong>
+                </div>
+              }
+            </div>
+            <label class="block text-xs font-bold text-slate-600">
+              Observaciones del pedido
+              <textarea [(ngModel)]="observacion" rows="3" maxlength="1000"
+                placeholder="Motivo del pedido o necesidades especiales (opcional)"
+                class="mt-2 block w-full resize-y rounded-xl border border-slate-200 p-3 text-sm font-normal text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"></textarea>
+            </label>
+            <p class="text-[11px] text-slate-500">Puedes guardar como borrador o enviar el requerimiento para aprobación.</p>
+          </div>
+          <div class="flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-slate-50 p-4 sm:p-5">
+            <button type="button" (click)="revisionAbierta=false" [disabled]="guardando"
+              class="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50">
+              Volver a editar
+            </button>
+            <button type="button" (click)="guardar(false)" [disabled]="guardando"
+              class="rounded-lg border border-blue-200 bg-white px-4 py-2.5 text-xs font-extrabold text-blue-700 hover:bg-blue-50 disabled:opacity-50">
+              Guardar borrador
+            </button>
+            <button type="button" (click)="guardar(true)" [disabled]="guardando"
+              class="rounded-lg bg-[#2563eb] px-5 py-2.5 text-xs font-extrabold text-white hover:bg-blue-700 disabled:opacity-50">
+              {{ guardando ? 'Enviando...' : 'Enviar a aprobación' }}
+            </button>
+          </div>
+        </section>
+      </div>
+    }
   </div>
 </main>

@@ -1,0 +1,314 @@
+<main class="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-7xl space-y-6">
+    <header class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <span class="text-xs font-extrabold uppercase tracking-widest text-blue-600">SIGO · Inventario</span>
+          <h1 class="mt-2 text-3xl font-extrabold text-slate-900">Pedidos de materiales</h1>
+          <p class="mt-2 text-sm text-slate-500">Solicitudes mensuales, sugerencias históricas, aprobación y recepción por plaza.</p>
+        </div>
+        <button type="button" (click)="cargar()" [disabled]="cargando"
+          class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+          {{ cargando ? 'Actualizando...' : 'Actualizar información' }}
+        </button>
+      </div>
+      <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <label class="block text-sm font-semibold text-slate-700">
+          Mes del requerimiento
+          <input type="month" [(ngModel)]="mes" (change)="cargar()"
+            class="mt-2 block h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-slate-800">
+        </label>
+        @if (esSupervisor()) {
+          <label class="block text-sm font-semibold text-slate-700">
+            Plaza para sugerencias
+            <select [(ngModel)]="plazaId" (ngModelChange)="cargar()"
+              class="mt-2 block h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-slate-800">
+              @for (plaza of plazas; track plaza.id) {
+                <option [ngValue]="plaza.id">{{ plaza.codigo || plaza.nombre }}</option>
+              }
+            </select>
+          </label>
+        } @else {
+          <div class="text-sm font-semibold text-slate-700">Plaza asignada
+            <div class="mt-2 flex h-11 items-center rounded-xl border border-slate-200 bg-slate-100 px-3">
+              {{ auth.usuario()?.plaza || 'Sin plaza' }}
+            </div>
+          </div>
+        }
+        <div class="flex items-center rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          Fecha límite referencial: día 8 de cada mes.
+          @if (fueraDePlazo()) { <span class="ml-1 font-extrabold">Fuera del plazo habitual.</span> }
+        </div>
+      </div>
+    </header>
+
+    <nav class="flex flex-wrap gap-2" aria-label="Secciones de pedidos">
+      <button type="button" (click)="vista='nuevo'" [class.bg-blue-600]="vista==='nuevo'"
+        [class.text-white]="vista==='nuevo'"
+        class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">Nuevo pedido</button>
+      <button type="button" (click)="vista='seguimiento'" [class.bg-blue-600]="vista==='seguimiento'"
+        [class.text-white]="vista==='seguimiento'"
+        class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">Seguimiento y recepción</button>
+      <button type="button" (click)="vista='historico'" [class.bg-blue-600]="vista==='historico'"
+        [class.text-white]="vista==='historico'"
+        class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">Consumo histórico</button>
+      @if (esSupervisor()) {
+        <button type="button" (click)="vista='consolidado'" [class.bg-blue-600]="vista==='consolidado'"
+          [class.text-white]="vista==='consolidado'"
+          class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">Consolidado general</button>
+      }
+    </nav>
+
+    @if (error) {
+      <div role="alert" class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">{{ error }}</div>
+    }
+    @if (exito) {
+      <div role="status" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">{{ exito }}</div>
+    }
+
+    @if (vista === 'nuevo') {
+      <section class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5">
+          <div>
+            <h2 class="text-xl font-extrabold text-slate-900">{{ editandoId ? 'Editar pedido #' + editandoId : 'Preparar requerimiento mensual' }}</h2>
+            <p class="mt-1 text-sm text-slate-500">Las sugerencias son referenciales. El controlador puede modificar cada cantidad.</p>
+          </div>
+          <div class="rounded-xl bg-slate-100 px-4 py-3 text-right">
+            <span class="block text-xs font-bold text-slate-500">Total de unidades propuestas</span>
+            <strong class="text-2xl text-slate-900">{{ totalSolicitado | number:'1.0-2' }}</strong>
+          </div>
+        </div>
+        @if (sinHistorico > 0) {
+          <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {{ sinHistorico }} materiales aún no tienen consumo histórico verificable. Indica manualmente las cantidades.
+            No se calcularán promedios inventados.
+          </p>
+        }
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div class="p-4">
+            <input type="search" [(ngModel)]="busqueda" placeholder="Buscar material..."
+              class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500">
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+              <thead class="bg-slate-50 text-xs font-extrabold uppercase text-slate-500">
+                <tr>
+                  <th class="px-4 py-3">Material</th><th class="px-4 py-3">Stock</th>
+                  <th class="px-4 py-3">Promedio mensual</th><th class="px-4 py-3">Sugerencia</th>
+                  <th class="px-4 py-3">Cantidad a pedir</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                @for (s of productosFiltrados; track s.productoId) {
+                  <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-3"><strong class="text-slate-900">{{ s.producto }}</strong>
+                      <span class="block text-xs text-slate-500">{{ s.unidadMedida }}</span></td>
+                    <td class="px-4 py-3 font-semibold">{{ s.stockActual | number:'1.0-2' }}</td>
+                    <td class="px-4 py-3">{{ s.conHistorico ? (s.promedioMensual | number:'1.0-2') : 'Sin datos' }}</td>
+                    <td class="px-4 py-3">{{ s.sugerido === null ? 'Manual' : (s.sugerido | number:'1.0-2') }}</td>
+                    <td class="px-4 py-3">
+                      <input type="number" min="0" step="1" [(ngModel)]="s.cantidad"
+                        class="w-28 rounded-lg border border-slate-200 px-3 py-2 text-right font-bold focus:border-blue-500"
+                        [attr.aria-label]="'Cantidad de ' + s.producto">
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="5" class="p-6 text-center text-slate-500">No hay materiales para mostrar en esta plaza.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="space-y-3 border-t border-slate-200 p-4">
+            <label class="block text-sm font-bold text-slate-600">Observación del pedido
+              <textarea [(ngModel)]="observacion" rows="2" maxlength="1000"
+                placeholder="Justificación o necesidades especiales..."
+                class="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 font-normal"></textarea>
+            </label>
+            <div class="flex flex-wrap justify-end gap-3">
+              <button type="button" (click)="guardar(false)" [disabled]="guardando || cargando"
+                class="rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-bold text-blue-700 disabled:opacity-50">
+                Guardar borrador
+              </button>
+              <button type="button" (click)="guardar(true)" [disabled]="guardando || cargando"
+                class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50">
+                {{ guardando ? 'Guardando...' : 'Enviar a aprobación' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+
+    @if (vista === 'seguimiento') {
+      <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div class="border-b border-slate-100 p-5"><h2 class="text-lg font-extrabold">Pedidos del mes</h2>
+            <p class="text-sm text-slate-500">Selecciona un pedido para revisar su detalle.</p></div>
+          <div class="max-h-[550px] divide-y divide-slate-100 overflow-y-auto">
+            @for (p of pedidos; track p.id) {
+              <button type="button" (click)="abrir(p.id)"
+                class="block w-full p-4 text-left hover:bg-blue-50"
+                [class.bg-blue-50]="seleccionado?.id===p.id">
+                <div class="flex items-center justify-between gap-2">
+                  <strong class="text-slate-900">#{{ p.id }} · {{ p.plaza }}</strong>
+                  <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{{ etiquetaEstado[p.estado] }}</span>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">{{ p.periodo }} · Pedido {{ p.totalSolicitado | number:'1.0-2' }} · Recibido {{ p.totalRecibido | number:'1.0-2' }}</p>
+              </button>
+            } @empty {
+              <p class="p-5 text-sm text-slate-500">Todavía no existen pedidos del mes.</p>
+            }
+          </div>
+        </div>
+        @if (seleccionado) {
+          <div class="space-y-4">
+            <article class="rounded-2xl border border-slate-200 bg-white p-5">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div><h2 class="text-xl font-extrabold">Pedido #{{ seleccionado.id }}</h2>
+                  <p class="text-sm text-slate-500">{{ seleccionado.plaza }} · {{ seleccionado.periodo }}</p></div>
+                <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-extrabold text-blue-700">
+                  {{ etiquetaEstado[seleccionado.estado] }}
+                </span>
+              </div>
+              @if (seleccionado.observacion) {
+                <p class="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">{{ seleccionado.observacion }}</p>
+              }
+              <div class="mt-4 flex flex-wrap gap-2">
+                @if (seleccionado.estado === 'BORRADOR' || seleccionado.estado === 'RECHAZADO') {
+                  <button type="button" (click)="editar(seleccionado)" class="rounded-lg border border-blue-200 px-4 py-2 text-sm font-bold text-blue-700">Editar borrador</button>
+                }
+                @if (esSupervisor() && seleccionado.estado === 'PENDIENTE') {
+                  <button type="button" (click)="cambiarEstado('aprobar')" [disabled]="guardando"
+                    class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Aprobar</button>
+                  <button type="button" (click)="cambiarEstado('rechazar')" [disabled]="guardando"
+                    class="rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700">Rechazar</button>
+                }
+                @if (esSupervisor() && (seleccionado.estado === 'PARCIAL' || seleccionado.estado === 'ENVIADO' || seleccionado.estado === 'APROBADO')) {
+                  <button type="button" (click)="cambiarEstado('cerrar')" [disabled]="guardando"
+                    class="rounded-lg border border-amber-300 px-4 py-2 text-sm font-bold text-amber-800">Cerrar con faltantes</button>
+                }
+              </div>
+            </article>
+            <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div class="p-5"><h3 class="text-lg font-extrabold">Materiales y recepción</h3>
+                <p class="mt-1 text-sm text-slate-500">Pendiente total: {{ pendienteRecepcion | number:'1.0-2' }} unidades</p></div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                  <thead class="bg-slate-50 text-xs font-bold uppercase text-slate-500">
+                    <tr><th class="p-3">Material</th><th class="p-3">Pedido</th><th class="p-3">Recibido</th><th class="p-3">Pendiente</th>
+                      @if (seleccionado.estado === 'APROBADO' || seleccionado.estado === 'ENVIADO' || seleccionado.estado === 'PARCIAL') {
+                        <th class="p-3">Recibir ahora</th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    @for (i of seleccionado.items; track i.productoId) {
+                      <tr><td class="p-3"><strong>{{ i.producto }}</strong><span class="block text-xs text-slate-400">{{ i.unidad }}</span></td>
+                        <td class="p-3">{{ i.cantidad | number:'1.0-2' }}</td>
+                        <td class="p-3 text-emerald-700">{{ i.recibida | number:'1.0-2' }}</td>
+                        <td class="p-3 font-bold">{{ i.pendiente | number:'1.0-2' }}</td>
+                        @if (seleccionado.estado === 'APROBADO' || seleccionado.estado === 'ENVIADO' || seleccionado.estado === 'PARCIAL') {
+                          <td class="p-3">
+                            <input type="number" min="0" [max]="i.pendiente" step="1"
+                              [(ngModel)]="cantidadesRecibir[i.productoId]" (ngModelChange)="resetearClaveRecepcion()"
+                              class="w-24 rounded-lg border border-slate-200 px-2 py-2 text-right"
+                              [attr.aria-label]="'Recibir ' + i.producto">
+                          </td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              @if (seleccionado.estado === 'APROBADO' || seleccionado.estado === 'ENVIADO' || seleccionado.estado === 'PARCIAL') {
+                <div class="space-y-3 border-t border-slate-100 p-4">
+                  <input type="text" [(ngModel)]="notaRecepcion" (ngModelChange)="resetearClaveRecepcion()"
+                    placeholder="Observación de recepción (opcional)" maxlength="1000"
+                    class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm">
+                  <button type="button" (click)="recibir()" [disabled]="guardando"
+                    class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-extrabold text-white disabled:opacity-50">
+                    {{ guardando ? 'Registrando...' : 'Confirmar recepción e ingresar al stock' }}
+                  </button>
+                </div>
+              }
+            </article>
+            @if (seleccionado.recepciones.length) {
+              <article class="rounded-2xl border border-slate-200 bg-white p-5">
+                <h3 class="mb-3 text-lg font-extrabold">Historial de entregas</h3>
+                <div class="space-y-2">
+                  @for (r of seleccionado.recepciones; track r.id + '-' + r.productoId) {
+                    <div class="flex justify-between gap-4 rounded-lg bg-slate-50 p-3 text-sm">
+                      <div><strong>{{ r.producto }}</strong>
+                        <p class="text-xs text-slate-500">{{ r.fecha | date:'dd/MM/yyyy HH:mm' }} · Registrado por #{{ r.recibidoPor }}</p>
+                        @if (r.observacion) { <p class="text-xs text-slate-500">{{ r.observacion }}</p> }
+                      </div>
+                      <strong class="text-emerald-700">+{{ r.cantidad | number:'1.0-2' }}</strong>
+                    </div>
+                  }
+                </div>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
+            Selecciona un pedido del listado para continuar.
+          </div>
+        }
+      </section>
+    }
+
+    @if (vista === 'consolidado' && esSupervisor()) {
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div class="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div><h2 class="text-lg font-extrabold">Consolidado para Planificación</h2>
+            <p class="mt-1 text-sm text-slate-500">Agrupa pedidos aprobados y entregados de todas las plazas, sin repetir cantidades por recepción.</p></div>
+          <button type="button" (click)="elevar()" [disabled]="guardando || cargando"
+            class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
+            Consolidar y marcar enviados
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs font-bold uppercase text-slate-500">
+              <tr><th class="p-4">Material</th><th class="p-4">Unidad</th><th class="p-4">Plazas</th><th class="p-4">Cantidad total</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (item of consolidado; track item.productoId) {
+                <tr><td class="p-4 font-semibold">{{ item.producto }}</td><td class="p-4">{{ item.unidad }}</td>
+                  <td class="p-4">{{ item.plazas }}</td><td class="p-4 font-extrabold">{{ item.cantidadTotal | number:'1.0-2' }}</td></tr>
+              } @empty {
+                <tr><td colspan="4" class="p-6 text-center text-slate-500">No hay pedidos aprobados para este mes.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @if (vista === 'historico') {
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div class="p-5">
+          <h2 class="text-xl font-extrabold">Histórico de consumo por plaza</h2>
+          <p class="mt-2 text-sm text-slate-500">Consumo calculado entre dos conteos finalizados, considerando los materiales recibidos durante el periodo. No se generan datos cuando falta evidencia.</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs font-bold uppercase text-slate-500">
+              <tr><th class="p-4">Mes</th><th class="p-4">Material</th><th class="p-4">Consumo registrado</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (x of consumo; track x.periodo + '-' + x.productoId) {
+                <tr><td class="p-4">{{ x.periodo }}</td><td class="p-4 font-semibold">{{ x.producto }}</td>
+                  <td class="p-4">{{ x.consumo | number:'1.0-2' }}</td></tr>
+              } @empty {
+                <tr><td colspan="3" class="p-6 text-center text-slate-500">
+                  Aún no existen dos conteos consecutivos finalizados para calcular consumos verificables.
+                </td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  </div>
+</main>

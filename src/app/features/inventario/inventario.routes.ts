@@ -33,6 +33,16 @@ export const INVENTARIO_ROUTES: Routes = [
         .then(m => m.StockComponent)
   },
   {
+    path: 'inventario/pedidos',
+    canActivate: [
+      moduleGuard('INVENTARIO'),
+      roleGuard('SUPERVISOR', 'CONTROLADOR')
+    ],
+    loadComponent: () =>
+      import('./pages/pedidos/pedidos.component')
+        .then(m => m.PedidosComponent)
+  },
+  {
     path: 'inventario/productos',
     canActivate: [
       moduleGuard('ADMIN_PRODUCTOS'),

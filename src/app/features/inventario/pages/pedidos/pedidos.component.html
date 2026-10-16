@@ -107,7 +107,7 @@
                     <td class="px-4 py-3">{{ s.conHistorico ? (s.promedioMensual | number:'1.0-2') : 'Sin datos' }}</td>
                     <td class="px-4 py-3">{{ s.sugerido === null ? 'Manual' : (s.sugerido | number:'1.0-2') }}</td>
                     <td class="px-4 py-3">
-                      <input type="number" min="0" step="1" [(ngModel)]="s.cantidad"
+                      <input type="number" min="0" step="0.01" [(ngModel)]="s.cantidad"
                         class="w-28 rounded-lg border border-slate-200 px-3 py-2 text-right font-bold focus:border-blue-500"
                         [attr.aria-label]="'Cantidad de ' + s.producto">
                     </td>
@@ -264,7 +264,7 @@
             <p class="mt-1 text-sm text-slate-500">Agrupa pedidos aprobados y entregados de todas las plazas, sin repetir cantidades por recepción.</p></div>
           <button type="button" (click)="elevar()" [disabled]="guardando || cargando"
             class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
-            Consolidar y marcar enviados
+            Consolidar requerimientos
           </button>
         </div>
         <div class="overflow-x-auto">

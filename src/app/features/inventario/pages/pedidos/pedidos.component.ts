@@ -3,7 +3,7 @@ import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { CatalogoItem } from '../../models/inventario.models';
+import { CatalogoItem, ProductoAdmin } from '../../models/inventario.models';
 import {
   ConsumoHistorico, ItemPedidoPayload, MaterialConsolidado,
   PedidoDetalle, PedidoLista, PedidoPayload, SugerenciaPedido
@@ -28,6 +28,11 @@ export class PedidosComponent implements OnInit {
   consolidado: MaterialConsolidado[] = [];
   consumo: ConsumoHistorico[] = [];
   busqueda = '';
+  categoriaFiltro = 'TODAS';
+  filtroStock: 'TODOS' | 'REPOSICION' | 'SUFICIENTE' | 'SIN_DATOS' = 'TODOS';
+  productosMeta: ProductoAdmin[] = [];
+  seleccionados = new Set<number>();
+  revisionAbierta = false;
   observacion = '';
   notaRecepcion = '';
   cantidadesRecibir: Record<number, number> = {};
@@ -47,9 +52,160 @@ export class PedidosComponent implements OnInit {
   ) {}
 
   esSupervisor(): boolean { return this.auth.tieneRol('SUPERVISOR'); }
+  private get metadata(): Map<number, ProductoAdmin> {
+    return new Map(this.productosMeta.map(p => [p.id, p]));
+  }
+
+  codigoDe(item: SugerenciaPedido): string {
+    return this.metadata.get(item.productoId)?.codigo ?? ('#' + item.productoId);
+  }
+
+  categoriaDe(item: SugerenciaPedido): string {
+    return this.metadata.get(item.productoId)?.categoria ?? 'Sin categoría';
+  }
+
+  get categoriasDisponibles(): string[] {
+    return [...new Set(this.sugerencias.map(s => this.categoriaDe(s)))].sort((a, b) => a.localeCompare(b));
+  }
+
+  get productosBase(): SugerenciaPedido[] {
+    return this.sugerencias.filter(s =>
+      this.categoriaFiltro === 'TODAS' || this.categoriaDe(s) === this.categoriaFiltro
+    );
+  }
+
+  requiereReposicion(item: SugerenciaPedido): boolean {
+    return item.stockVerificado && item.conHistorico &&
+      item.promedioMensual !== null && Number(item.promedioMensual) > Number(item.stockActual);
+  }
+
+  tieneCobertura(item: SugerenciaPedido): boolean {
+    return item.stockVerificado && item.conHistorico &&
+      item.promedioMensual !== null && Number(item.promedioMensual) > 0;
+  }
+
+  cobertura(item: SugerenciaPedido): number | null {
+    if (!this.tieneCobertura(item)) return null;
+    return Math.max(0, Number(item.stockActual) / Number(item.promedioMensual) * 100);
+  }
+
+  anchoCobertura(item: SugerenciaPedido): number {
+    return Math.min(100, this.cobertura(item) ?? 0);
+  }
+
+  get materialesEvaluados(): number { return this.productosBase.length; }
+  get materialesReposicion(): number { return this.productosBase.filter(s => this.requiereReposicion(s)).length; }
+  get materialesSuficientes(): number {
+    return this.productosBase.filter(s => this.tieneCobertura(s) && !this.requiereReposicion(s)).length;
+  }
+  get materialesSinDatos(): number {
+    return this.productosBase.filter(s => !this.tieneCobertura(s)).length;
+  }
   get productosFiltrados(): SugerenciaPedido[] {
     const q = this.busqueda.trim().toLowerCase();
-    return this.sugerencias.filter(s => s.producto.toLowerCase().includes(q));
+    return this.productosBase.filter(s => {
+      if (this.filtroStock === 'REPOSICION' && !this.requiereReposicion(s)) return false;
+      if (this.filtroStock === 'SUFICIENTE' && (!this.tieneCobertura(s) || this.requiereReposicion(s))) return false;
+      if (this.filtroStock === 'SIN_DATOS' && this.tieneCobertura(s)) return false;
+      return !q || [s.producto, this.codigoDe(s), this.categoriaDe(s)]
+        .some(valor => valor.toLowerCase().includes(q));
+    });
+  }
+
+  estaSeleccionado(id: number): boolean { return this.seleccionados.has(id); }
+  seleccionar(id: number, activo: boolean): void {
+    const nuevo = new Set(this.seleccionados);
+    if (activo) nuevo.add(id); else nuevo.delete(id);
+    this.seleccionados = nuevo;
+  }
+  get todosVisiblesSeleccionados(): boolean {
+    return this.productosFiltrados.length > 0 &&
+      this.productosFiltrados.every(s => this.estaSeleccionado(s.productoId));
+  }
+  seleccionarVisibles(activado: boolean): void {
+    const nuevo = new Set(this.seleccionados);
+    for (const s of this.productosFiltrados) {
+      if (activado) nuevo.add(s.productoId); else nuevo.delete(s.productoId);
+    }
+    this.seleccionados = nuevo;
+  }
+  alCambiarCantidad(item: SugerenciaPedido): void {
+    if (Number(item.cantidad) > 0) this.seleccionar(item.productoId, true);
+  }
+  aplicarSugerencias(): void {
+    let aplicadas = 0;
+    const nuevo = new Set(this.seleccionados);
+    for (const item of this.productosFiltrados) {
+      if (item.sugerido !== null && Number(item.sugerido) > 0) {
+        item.cantidad = Number(item.sugerido);
+        nuevo.add(item.productoId);
+        aplicadas++;
+      }
+    }
+    this.seleccionados = nuevo;
+    this.exito = aplicadas
+      ? 'Se aplicaron ' + aplicadas + ' sugerencias verificables. Puedes ajustar las cantidades.'
+      : '';
+    if (!aplicadas) this.error = 'No hay sugerencias históricas positivas para los materiales visibles.';
+    else this.error = '';
+  }
+  get itemsParaRevision(): SugerenciaPedido[] {
+    return this.sugerencias.filter(s => this.estaSeleccionado(s.productoId) && Number(s.cantidad) > 0);
+  }
+  get totalLineas(): number { return this.itemsParaRevision.length; }
+  revisarPedido(): void {
+    this.error = ''; this.exito = '';
+    if (this.guardando || this.cargando) return;
+    if (!this.plazaId || this.totalLineas === 0) {
+      this.error = 'Selecciona al menos un material e indica su cantidad para revisar el pedido.';
+      return;
+    }
+    if (this.itemsParaRevision.some(s => !Number.isFinite(Number(s.cantidad)) ||
+      Number(s.cantidad) <= 0 ||
+      Math.abs(Math.round(Number(s.cantidad) * 100) - Number(s.cantidad) * 100) > 0.000001)) {
+      this.error = 'Revisa las cantidades. Deben ser mayores a cero y tener como máximo dos decimales.';
+      return;
+    }
+    this.revisionAbierta = true;
+  }
+  get plazaSeleccionadaTexto(): string {
+    if (!this.esSupervisor()) return this.auth.usuario()?.plaza ?? 'Plaza asignada';
+    const plaza = this.plazas.find(p => p.id === this.plazaId);
+    return plaza ? (plaza.codigo ?? plaza.nombre) : 'Plaza';
+  }
+  async cambiarContexto(): Promise<void> {
+    this.editandoId = null;
+    this.revisionAbierta = false;
+    this.categoriaFiltro = 'TODAS';
+    this.filtroStock = 'TODOS';
+    this.busqueda = '';
+    await this.cargar();
+  }
+  exportarVista(): void {
+    const columnas = ['Material', 'Codigo', 'Categoria', 'Stock actual', 'Consumo mensual',
+      'Cobertura (%)', 'Sugerido', 'Cantidad a pedir', 'Seleccionado'];
+    const proteger = (valor: string | number): string => {
+      const texto = String(valor);
+      const seguro = /^[\s]*[=+@-]/.test(texto) ? "'" + texto : texto;
+      return '"' + seguro.replace(/"/g, '""') + '"';
+    };
+    const filas = this.productosFiltrados.map(item => [
+      item.producto, this.codigoDe(item), this.categoriaDe(item),
+      item.stockVerificado ? Number(item.stockActual) : 'Sin conteo',
+      item.conHistorico ? Number(item.promedioMensual) : 'Sin histórico',
+      this.cobertura(item) === null ? 'Sin datos' : Math.round(this.cobertura(item)!),
+      item.sugerido ?? 'Sin sugerencia',
+      Number(item.cantidad) || 0,
+      this.estaSeleccionado(item.productoId) ? 'Si' : 'No'
+    ].map(v => proteger(v)).join(';'));
+    const blob = new Blob(['\uFEFF' + [columnas.map(v => proteger(v)).join(';'), ...filas].join('\r\n')],
+      { type: 'text/csv;charset=utf-8' });
+    const enlace = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    enlace.href = url;
+    enlace.download = 'SIGO-pedido-' + this.mes + '-' + this.plazaSeleccionadaTexto.replace(/[^a-zA-Z0-9-]/g, '-') + '.csv';
+    enlace.click();
+    URL.revokeObjectURL(url);
   }
   private mesActual(): string {
     const d = new Date();
@@ -57,7 +213,7 @@ export class PedidosComponent implements OnInit {
   }
   get sinHistorico(): number { return this.sugerencias.filter(s => !s.conHistorico).length; }
   get totalSolicitado(): number {
-    return this.sugerencias.reduce((total, s) => total + (Number(s.cantidad) || 0), 0);
+    return this.itemsParaRevision.reduce((total, s) => total + (Number(s.cantidad) || 0), 0);
   }
   get pendienteRecepcion(): number {
     return this.seleccionado?.items.reduce((n, x) => n + Number(x.pendiente), 0) ?? 0;
@@ -77,6 +233,11 @@ export class PedidosComponent implements OnInit {
         this.error = this.obtenerError(e);
       }
     }
+    try {
+      this.productosMeta = await firstValueFrom(this.catalogos.productosAdmin());
+    } catch {
+      this.productosMeta = [];
+    }
     await this.cargar();
   }
 
@@ -93,11 +254,15 @@ export class PedidosComponent implements OnInit {
         tareas.push(firstValueFrom(this.api.sugerencias(p, this.mes))
           .then(datos => {
             this.sugerencias = datos.map(s => ({ ...s, cantidad: Number(s.sugerido ?? 0) }));
+            this.seleccionados = new Set(this.sugerencias
+              .filter(s => Number(s.sugerido ?? 0) > 0)
+              .map(s => s.productoId));
           }));
         tareas.push(firstValueFrom(this.api.consumo(p))
           .then(datos => { this.consumo = datos; }));
       } else {
         this.sugerencias = [];
+        this.seleccionados = new Set();
         this.consumo = [];
       }
       if (this.esSupervisor()) {
@@ -114,8 +279,7 @@ export class PedidosComponent implements OnInit {
   }
 
   private payload(): PedidoPayload {
-    const items: ItemPedidoPayload[] = this.sugerencias
-      .filter(s => Number(s.cantidad) > 0)
+    const items: ItemPedidoPayload[] = this.itemsParaRevision
       .map(s => ({
         productoId: s.productoId,
         cantidad: Number(s.cantidad),
@@ -147,6 +311,7 @@ export class PedidosComponent implements OnInit {
       this.editandoId = creado.id; // conserva el borrador si falla el envío
       if (enviar) creado = await firstValueFrom(this.api.enviar(creado.id));
       this.editandoId = null;
+      this.revisionAbierta = false;
       this.seleccionado = creado;
       this.observacion = '';
       this.exito = enviar ? 'Pedido enviado a revisión del supervisor.' : 'Borrador guardado.';
@@ -193,6 +358,7 @@ export class PedidosComponent implements OnInit {
       }
     }
     this.editandoId = pedido.id;
+    this.seleccionados = new Set(pedido.items.map(i => i.productoId));
     this.observacion = pedido.observacion ?? '';
     this.vista = 'nuevo';
   }

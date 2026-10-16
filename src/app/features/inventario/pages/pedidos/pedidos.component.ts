@@ -359,9 +359,13 @@ export class PedidosComponent implements OnInit {
       if (!this.sugerencias.some(s => s.productoId === i.productoId)) {
         this.sugerencias.push({
           productoId: i.productoId, producto: i.producto, unidadMedida: i.unidad,
-          stockActual: i.stock ?? 0, stockVerificado: i.stock !== null, stockMinimo: 0,
-          promedioMensual: i.promedio, sugerido: i.sugerida,
-          conHistorico: i.promedio !== null, cantidad: Number(i.cantidad)
+          stockActual: i.stock ?? 0, stockVerificado: i.stock !== null,
+          stockOrigen: i.stock !== null ? 'CONTEO' : 'SIN_REGISTRO',
+          stockMinimo: 0, promedioMensual: i.promedio, sugerido: i.sugerida,
+          fuenteConsumo: i.promedio !== null ? 'CONTEOS' : 'SIN_DATOS',
+          fuenteSugerencia: i.sugerida !== null ? 'CONSUMO_CALCULADO' : 'SIN_DATOS',
+          periodoReferencia: null, conHistorico: i.promedio !== null,
+          cantidad: Number(i.cantidad)
         });
       }
     }

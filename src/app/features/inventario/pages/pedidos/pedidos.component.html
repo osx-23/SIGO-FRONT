@@ -203,7 +203,11 @@
                           </div>
                           <span class="min-w-10 text-[10px] font-semibold text-slate-400">{{ cobertura(s) | number:'1.0-0' }}%</span>
                         </div>
-                      } @else { <span class="text-[10px] text-slate-400">Sin datos confiables</span> }
+                      } @else {
+                        <span class="text-[10px] text-slate-400">
+                          {{ tieneCobertura(s) ? 'Sin consumo mensual' : 'Sin datos confiables' }}
+                        </span>
+                      }
                     </td>
                     <td class="px-3 py-3 text-xs font-extrabold text-[#6080a8]">
                       {{ s.sugerido === null ? '—' : (s.sugerido | number:'1.0-2') }}
@@ -474,6 +478,9 @@
                 placeholder="Motivo del pedido o necesidades especiales (opcional)"
                 class="mt-2 block w-full resize-y rounded-xl border border-slate-200 p-3 text-sm font-normal text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"></textarea>
             </label>
+            @if (error) {
+              <div role="alert" class="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">{{ error }}</div>
+            }
             <p class="text-[11px] text-slate-500">Puedes guardar como borrador o enviar el requerimiento para aprobación.</p>
           </div>
           <div class="flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-slate-50 p-4 sm:p-5">

@@ -80,12 +80,11 @@ export class PedidosComponent implements OnInit {
   }
 
   tieneCobertura(item: SugerenciaPedido): boolean {
-    return item.stockVerificado && item.conHistorico &&
-      item.promedioMensual !== null && Number(item.promedioMensual) > 0;
+    return item.stockVerificado && item.conHistorico && item.promedioMensual !== null;
   }
 
   cobertura(item: SugerenciaPedido): number | null {
-    if (!this.tieneCobertura(item)) return null;
+    if (!this.tieneCobertura(item) || Number(item.promedioMensual) <= 0) return null;
     return Math.max(0, Number(item.stockActual) / Number(item.promedioMensual) * 100);
   }
 

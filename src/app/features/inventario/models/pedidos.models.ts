@@ -7,6 +7,10 @@ export interface SugerenciaPedido {
   unidadMedida: string;
   stockActual: number;
   stockVerificado: boolean;
+  stockOrigen: string;
+  fuenteConsumo: string;
+  fuenteSugerencia: string;
+  periodoReferencia: string | null;
   stockMinimo: number;
   promedioMensual: number | null;
   sugerido: number | null;

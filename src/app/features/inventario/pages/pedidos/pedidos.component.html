@@ -86,6 +86,10 @@
               class="h-[43px] w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
           </div>
         </div>
+        <div class="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] text-blue-800">
+          <strong>Datos de referencia (setiembre 2026):</strong> las cantidades sugeridas reproducen el requerimiento del Excel.
+          El stock reportado no equivale a un conteo actualizado a la fecha.
+        </div>
         @if (fueraDePlazo()) {
           <p class="mt-3 text-xs font-semibold text-amber-700">La fecha límite habitual del pedido mensual es el día 8.</p>
         }
@@ -121,7 +125,7 @@
         <div class="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             <h2 class="text-[15px] font-extrabold text-[#152945]">Consolidado de materiales · {{ plazaSeleccionadaTexto }}</h2>
-            <p class="mt-1 text-[11px] text-slate-400">La sugerencia es una propuesta calculada y se puede ajustar antes de enviar.</p>
+            <p class="mt-1 text-[11px] text-slate-400">La sugerencia usa la solicitud de septiembre como referencia. Puedes ajustar cualquier cantidad antes de enviar.</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <button type="button" (click)="aplicarSugerencias()" [disabled]="cargando"
@@ -146,7 +150,7 @@
                 class="rounded-full px-4 py-2 text-[11px] font-bold text-slate-500 hover:bg-amber-50">Sin histórico: {{ materialesSinDatos }}</button>
             }
           </div>
-          <span class="text-[10px] text-slate-400">Cobertura = stock actual / consumo mensual</span>
+          <span class="text-[10px] text-slate-400">Cobertura = stock reportado / consumo mensual disponible</span>
         </div>
 
         @if (cargando) {
@@ -164,7 +168,7 @@
                       class="h-4 w-4 cursor-pointer rounded border-slate-300 accent-blue-600">
                   </th>
                   <th class="min-w-[250px] px-3 py-3">Material / Código</th>
-                  <th class="px-3 py-3">Stock actual</th>
+                  <th class="px-3 py-3">Stock reportado</th>
                   <th class="px-3 py-3">Consumo mensual</th>
                   <th class="min-w-[180px] px-3 py-3">Cobertura estimada</th>
                   <th class="px-3 py-3">Sugerido</th>
@@ -186,10 +190,16 @@
                     </td>
                     <td class="px-3 py-3 text-xs font-extrabold" [class.text-rose-500]="requiereReposicion(s)"
                       [class.text-slate-800]="!requiereReposicion(s)">
-                      {{ s.stockVerificado ? (s.stockActual | number:'1.0-2') : 'Sin conteo' }}
+                      <div>{{ stockDisponible(s) ? (s.stockActual | number:'1.0-2') : 'Sin registro' }}</div>
+                      @if (s.stockOrigen === 'EXCEL_SEPTIEMBRE') {
+                        <span class="mt-1 block text-[9px] font-semibold text-amber-600">Excel · set. 2026</span>
+                      }
                     </td>
                     <td class="px-3 py-3 text-xs font-extrabold text-slate-700">
-                      {{ s.conHistorico ? (s.promedioMensual | number:'1.0-2') : 'Sin datos' }}
+                      <div>{{ s.conHistorico ? (s.promedioMensual | number:'1.0-2') : 'Sin datos' }}</div>
+                      @if (s.fuenteConsumo === 'EXCEL_SEPTIEMBRE') {
+                        <span class="mt-1 block text-[9px] font-semibold text-slate-400">Reportado set. 2026</span>
+                      }
                     </td>
                     <td class="px-3 py-3">
                       @if (cobertura(s) !== null) {
@@ -210,7 +220,10 @@
                       }
                     </td>
                     <td class="px-3 py-3 text-xs font-extrabold text-[#6080a8]">
-                      {{ s.sugerido === null ? '—' : (s.sugerido | number:'1.0-2') }}
+                      <div>{{ s.sugerido === null ? '—' : (s.sugerido | number:'1.0-2') }}</div>
+                      @if (s.fuenteSugerencia === 'SOLICITUD_SEPTIEMBRE') {
+                        <span class="mt-1 block text-[9px] font-semibold text-blue-500">Pedido set. 2026</span>
+                      }
                     </td>
                     <td class="px-4 py-3">
                       <input type="number" min="0" step="0.01" [(ngModel)]="s.cantidad"
@@ -244,7 +257,7 @@
         <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800">
           <span aria-hidden="true">⚠</span>
           <p><strong>Información incompleta:</strong> {{ sinHistorico }} materiales no tienen consumo histórico suficiente.
-            Se pueden solicitar manualmente. SIGO no inventará sugerencias para ellos.</p>
+            Se pueden solicitar manualmente. Los valores sin respaldo se dejan vacíos; las solicitudes de septiembre se identifican por su origen.</p>
         </div>
       }
     }

@@ -68,6 +68,13 @@
           </div>
 
 
+          <a routerLink="/inventario/tendencias" class="inline-flex h-11 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-700 hover:bg-blue-100">
+            Ver tendencias
+          </a>
+          <a routerLink="/inventario/traslados" class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">
+            Traslados
+          </a>
+
           <!-- ACTUALIZAR -->
 
           <button
@@ -817,7 +824,7 @@
 
 
                 <div
-                  class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1.5fr)_180px_230px_170px] lg:items-center"
+                  class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1.5fr)_150px_190px_150px_130px] lg:items-center"
                 >
 
                   <!-- IDENTIDAD -->
@@ -972,6 +979,16 @@
 
                   </div>
 
+
+                  <!-- ACCIONES -->
+
+                  <div class="flex items-center lg:justify-end">
+                    <a [routerLink]="['/inventario/traslados']"
+                       [queryParams]="{plazaId: s.plazaId, productoId: s.productoId}"
+                       class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100">
+                      Mover a otra plaza
+                    </a>
+                  </div>
 
                   <!-- ESTADO -->
 

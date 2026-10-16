@@ -37,6 +37,7 @@ export class PedidosComponent implements OnInit {
   error = '';
   exito = '';
   private claveRecepcion: string | null = null;
+  private claveRecepcionCompleta: string | null = null;
 
   constructor(
     public readonly auth: AuthService,
@@ -165,6 +166,7 @@ export class PedidosComponent implements OnInit {
       this.cantidadesRecibir = {};
       this.notaRecepcion = '';
       this.claveRecepcion = null;
+      this.claveRecepcionCompleta = null;
       this.vista = 'seguimiento';
     } catch (e: any) {
       this.error = this.obtenerError(e);
@@ -243,6 +245,53 @@ export class PedidosComponent implements OnInit {
     } catch (e: any) { this.error = this.obtenerError(e); }
     finally { this.guardando = false; this.cdr.detectChanges(); }
   }
+  async recibirCompleto(): Promise<void> {
+    const pedido = this.seleccionado;
+    if (!pedido || this.guardando || !['APROBADO', 'ENVIADO', 'PARCIAL'].includes(pedido.estado)) return;
+
+    // En pedidos parciales se recibe solo el saldo faltante, nunca lo ya registrado.
+    const items = pedido.items
+      .map(item => ({ productoId: item.productoId, cantidad: Number(item.pendiente) }))
+      .filter(item => item.cantidad > 0);
+
+    if (!items.length || items.some(item => !Number.isFinite(item.cantidad))) {
+      this.error = 'No hay materiales pendientes para registrar.';
+      return;
+    }
+
+    const total = items.reduce((suma, item) => suma + item.cantidad, 0);
+    const mensaje = '¿Confirmas que recibiste todos los materiales pendientes del pedido #' +
+      pedido.id + '? Se agregarán ' + total.toLocaleString('es-PE') +
+      ' unidades de ' + items.length + ' materiales al stock de ' + pedido.plaza +
+      '. Esta operación registra una recepción real.';
+    if (!confirm(mensaje)) return;
+
+    this.guardando = true;
+    this.error = '';
+    this.exito = '';
+    // Conservar la clave en caso de error de red para no duplicar la entrega al reintentar.
+    this.claveRecepcionCompleta ??= crypto.randomUUID();
+    try {
+      this.seleccionado = await firstValueFrom(this.api.recibir(
+        pedido.id,
+        this.claveRecepcionCompleta,
+        items,
+        'Recepción completa de los materiales pendientes'
+      ));
+      this.cantidadesRecibir = {};
+      this.notaRecepcion = '';
+      this.claveRecepcion = null;
+      this.claveRecepcionCompleta = null;
+      this.exito = 'Pedido completado. Todos los materiales pendientes se sumaron al stock.';
+      await this.cargar();
+    } catch (e: any) {
+      this.error = this.obtenerError(e);
+    } finally {
+      this.guardando = false;
+      this.cdr.detectChanges();
+    }
+  }
+
   resetearClaveRecepcion(): void { this.claveRecepcion = null; }
 
   async elevar(): Promise<void> {

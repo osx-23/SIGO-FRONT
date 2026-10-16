@@ -13,6 +13,7 @@ type EstadoTraslado = 'EN_TRANSITO' | 'RECIBIDO';
 
 interface Traslado {
   id: number;
+  grupoId: string;
   origenPlazaId: number;
   origen: string;
   destinoPlazaId: number;
@@ -25,6 +26,25 @@ interface Traslado {
   enviadoEn: string;
   recibidoEn: string | null;
   observacion: string | null;
+}
+
+interface MaterialEnvio {
+  productoId: number;
+  cantidad: number;
+}
+
+interface GrupoTraslado {
+  grupoId: string;
+  referencia: number;
+  origenPlazaId: number;
+  destinoPlazaId: number;
+  origen: string;
+  destino: string;
+  enviadoEn: string;
+  recibidoEn: string | null;
+  estado: 'EN_TRANSITO' | 'RECIBIDO';
+  observacion: string | null;
+  items: Traslado[];
 }
 
 @Component({
@@ -45,6 +65,9 @@ export class TrasladosComponent implements OnInit {
   productoId: number | null = null;
   cantidad: number | null = null;
   observacion = '';
+  carrito: MaterialEnvio[] = [];
+  claveLote: string | null = null;
+  gruposExpandidos = new Set<string>();
 
   // Filtros locales de los últimos 300 registros que devuelve la API.
   origenFiltro: number | null = null;
@@ -103,8 +126,66 @@ export class TrasladosComponent implements OnInit {
   cambiarOrigen(): void {
     if (!this.productoSeleccionado()) this.productoId = null;
     if (this.destinoPlazaId === this.origenPlazaId) this.destinoPlazaId = null;
-    const disponible = Number(this.productoSeleccionado()?.cantidadActual ?? 0);
-    if (this.cantidad !== null && this.cantidad > disponible) this.cantidad = null;
+    this.cantidad = null;
+    this.carrito = [];
+    this.claveLote = null;
+  }
+
+  get opcionesMateriales(): StockActual[] {
+    return this.productosOrigen().filter(item =>
+      !this.carrito.some(seleccion => seleccion.productoId === item.productoId));
+  }
+
+  detalleMaterial(productoId: number): StockActual | undefined {
+    return this.stock.find(item =>
+      item.plazaId === this.origenPlazaId && item.productoId === productoId);
+  }
+
+  agregarMaterial(): void {
+    const material = this.productoSeleccionado();
+    const cantidad = Number(this.cantidad);
+    if (!material || !Number.isFinite(cantidad) || cantidad <= 0 ||
+        cantidad > Number(material.cantidadActual) ||
+        Math.abs(cantidad * 100 - Math.round(cantidad * 100)) > 0.000001) {
+      this.errorModal = 'Selecciona un material y una cantidad válida según el stock disponible.';
+      return;
+    }
+    if (this.carrito.some(item => item.productoId === material.productoId)) {
+      this.errorModal = 'Ese material ya está en la transferencia.';
+      return;
+    }
+    if (this.carrito.length >= 50) {
+      this.errorModal = 'Se permiten como máximo 50 materiales por transferencia.';
+      return;
+    }
+    this.carrito = [...this.carrito, { productoId: material.productoId, cantidad }];
+    this.claveLote = null;
+    this.productoId = null;
+    this.cantidad = null;
+    this.errorModal = '';
+  }
+
+  quitarMaterial(productoId: number): void {
+    this.carrito = this.carrito.filter(item => item.productoId !== productoId);
+    this.claveLote = null;
+  }
+
+  cambiarCantidadCarrito(): void { this.claveLote = null; }
+  cambiarDestino(): void { this.claveLote = null; }
+  cambiarObservacion(): void { this.claveLote = null; }
+
+  get itemsCarrito(): number { return this.carrito.length; }
+
+  validarCarrito(): boolean {
+    if (!this.origenPlazaId || !this.destinoPlazaId ||
+      this.origenPlazaId === this.destinoPlazaId || !this.carrito.length) return false;
+    return this.carrito.every(item => {
+      const stock = this.detalleMaterial(item.productoId);
+      const cantidad = Number(item.cantidad);
+      return stock && Number.isFinite(cantidad) && cantidad > 0 &&
+        Math.abs(cantidad * 100 - Math.round(cantidad * 100)) <= 0.000001 &&
+        cantidad <= Number(stock.cantidadActual);
+    });
   }
 
   abrirModal(): void {
@@ -125,19 +206,55 @@ export class TrasladosComponent implements OnInit {
     if (this.modalAbierto) this.cerrarModal();
   }
 
-  get listaFiltrada(): Traslado[] {
+  get grupos(): GrupoTraslado[] {
+    const encontrados = new Map<string, GrupoTraslado>();
+    for (const t of this.traslados) {
+      const id = t.grupoId || 'antiguo-' + t.id;
+      let grupo = encontrados.get(id);
+      if (!grupo) {
+        grupo = {
+          grupoId: id,
+          referencia: t.id,
+          origenPlazaId: t.origenPlazaId,
+          destinoPlazaId: t.destinoPlazaId,
+          origen: t.origen,
+          destino: t.destino,
+          enviadoEn: t.enviadoEn,
+          recibidoEn: t.recibidoEn,
+          estado: t.estado,
+          observacion: t.observacion,
+          items: []
+        };
+        encontrados.set(id, grupo);
+      }
+      grupo.items.push(t);
+    }
+    return [...encontrados.values()]
+      .sort((a, b) => new Date(b.enviadoEn).getTime() - new Date(a.enviadoEn).getTime());
+  }
+
+  get listaFiltrada(): GrupoTraslado[] {
     const busqueda = this.textoBusqueda.toLocaleLowerCase('es-PE').trim();
-    return this.traslados.filter(t => {
+    return this.grupos.filter(t => {
       if (this.origenFiltro !== null && t.origenPlazaId !== this.origenFiltro) return false;
       if (this.destinoFiltro !== null && t.destinoPlazaId !== this.destinoFiltro) return false;
       if (this.estadoFiltro !== 'TODOS' && t.estado !== this.estadoFiltro) return false;
-      if (busqueda && ![t.producto, t.origen, t.destino, String(t.id)]
+      if (busqueda && ![t.origen, t.destino, String(t.referencia), t.grupoId,
+        ...t.items.map(item => item.producto)]
         .some(valor => valor.toLocaleLowerCase('es-PE').includes(busqueda))) return false;
       const fecha = this.fechaLocal(t.enviadoEn);
       if (this.fechaDesde && fecha < this.fechaDesde) return false;
       if (this.fechaHasta && fecha > this.fechaHasta) return false;
       return true;
     });
+  }
+
+  expandido(grupoId: string): boolean { return this.gruposExpandidos.has(grupoId); }
+  alternarDetalle(grupoId: string): void {
+    const nuevos = new Set(this.gruposExpandidos);
+    if (nuevos.has(grupoId)) nuevos.delete(grupoId);
+    else nuevos.add(grupoId);
+    this.gruposExpandidos = nuevos;
   }
 
   private fechaLocal(valor: string): string {
@@ -150,7 +267,7 @@ export class TrasladosComponent implements OnInit {
   }
 
   get totalPaginas(): number { return Math.max(1, Math.ceil(this.listaFiltrada.length / this.tamanoPagina)); }
-  get listaPagina(): Traslado[] {
+  get listaPagina(): GrupoTraslado[] {
     return this.listaFiltrada.slice((this.pagina - 1) * this.tamanoPagina, this.pagina * this.tamanoPagina);
   }
   get primerResultado(): number {
@@ -173,13 +290,13 @@ export class TrasladosComponent implements OnInit {
   anterior(): void { if (this.pagina > 1) this.pagina--; }
   siguiente(): void { if (this.pagina < this.totalPaginas) this.pagina++; }
 
-  get totalTraslados(): number { return this.traslados.length; }
-  get totalEnTransito(): number { return this.traslados.filter(t => t.estado === 'EN_TRANSITO').length; }
-  get totalRecibidos(): number { return this.traslados.filter(t => t.estado === 'RECIBIDO').length; }
+  get totalTraslados(): number { return this.grupos.length; }
+  get totalEnTransito(): number { return this.grupos.filter(t => t.estado === 'EN_TRANSITO').length; }
+  get totalRecibidos(): number { return this.grupos.filter(t => t.estado === 'RECIBIDO').length; }
   get totalPorRecibir(): number {
-    return this.traslados.filter(t => t.estado === 'EN_TRANSITO' && this.puedeRecibir(t)).length;
+    return this.grupos.filter(t => t.estado === 'EN_TRANSITO' && this.puedeRecibir(t)).length;
   }
-  puedeRecibir(t: Traslado): boolean {
+  puedeRecibir(t: GrupoTraslado): boolean {
     return this.esSupervisor() || this.auth.usuario()?.plazaId === t.destinoPlazaId;
   }
 
@@ -211,39 +328,45 @@ export class TrasladosComponent implements OnInit {
 
   async enviar(): Promise<void> {
     if (this.enviando) return;
-    const item = this.productoSeleccionado();
-    const cantidad = Number(this.cantidad);
-    if (!item || !this.origenPlazaId || !this.destinoPlazaId
-        || this.destinoPlazaId === this.origenPlazaId
-        || !Number.isFinite(cantidad) || cantidad <= 0
-        || Math.abs(Math.round(cantidad * 100) - cantidad * 100) > 0.000001
-        || cantidad > Number(item.cantidadActual)) {
-      this.errorModal = 'Revisa las plazas, el material y la cantidad disponible (máximo dos decimales).';
+    if (!this.validarCarrito()) {
+      this.errorModal = 'Selecciona plaza de destino, agrega materiales y revisa cada cantidad.';
       return;
     }
+    const resumen = this.carrito.map(item => {
+      const producto = this.detalleMaterial(item.productoId);
+      return item.cantidad + ' ' + (producto?.unidadMedida || '') + ' de ' +
+        (producto?.producto || 'material #' + item.productoId);
+    }).join('\n• ');
     if (!window.confirm(
-      '¿Enviar ' + cantidad + ' ' + item.unidadMedida + ' de ' + item.producto +
-      ' a la plaza de destino? La cantidad se descontará del origen.'
+      '¿Enviar ' + this.carrito.length + ' materiales a la plaza de destino?\n\n• ' +
+      resumen + '\n\nSe descontarán del origen en una sola operación.'
     )) return;
 
     this.enviando = true;
     this.errorModal = '';
     this.error = '';
     this.mensaje = '';
+    this.claveLote ??= crypto.randomUUID();
     try {
-      await firstValueFrom(this.http.post(environment.apiUrl + '/inventario/traslados', {
+      await firstValueFrom(this.http.post(environment.apiUrl + '/inventario/traslados/lotes', {
+        grupoId: this.claveLote,
         origenPlazaId: this.origenPlazaId,
         destinoPlazaId: this.destinoPlazaId,
-        productoId: this.productoId,
-        cantidad,
+        items: this.carrito.map(item => ({
+          productoId: item.productoId,
+          cantidad: Number(item.cantidad)
+        })),
         observacion: this.observacion.trim()
       }));
       this.modalAbierto = false;
+      this.carrito = [];
+      this.claveLote = null;
+      this.productoId = null;
       this.cantidad = null;
       this.destinoPlazaId = null;
       this.observacion = '';
       await this.cargar();
-      this.mensaje = 'Traslado registrado. Se descontó del origen y quedó pendiente de recepción.';
+      this.mensaje = 'Envío registrado. Todos los materiales se descontaron del origen y quedaron en tránsito.';
     } catch (e: any) {
       this.errorModal = this.errorApi(e);
     } finally {
@@ -252,19 +375,21 @@ export class TrasladosComponent implements OnInit {
     }
   }
 
-  async recibir(t: Traslado): Promise<void> {
+  async recibir(t: GrupoTraslado): Promise<void> {
     if (this.enviando || !this.puedeRecibir(t) || t.estado !== 'EN_TRANSITO') return;
     if (!window.confirm(
-      '¿Confirmas que llegaron ' + t.cantidad + ' ' + t.unidad + ' de ' +
-      t.producto + ' a ' + t.destino + '? Se sumarán al stock de destino.'
+      '¿Confirmas la recepción completa de los ' + t.items.length +
+      ' materiales enviados desde ' + t.origen + ' hacia ' + t.destino +
+      '? Se sumarán al stock de destino.'
     )) return;
     this.enviando = true;
     this.error = '';
     this.mensaje = '';
     try {
-      await firstValueFrom(this.http.post(environment.apiUrl + '/inventario/traslados/' + t.id + '/recibir', {}));
+      await firstValueFrom(this.http.post(
+        environment.apiUrl + '/inventario/traslados/lotes/' + t.grupoId + '/recibir', {}));
       await this.cargar();
-      this.mensaje = 'Recepción confirmada. Se sumaron las unidades al stock de destino.';
+      this.mensaje = 'Recepción completa confirmada. Se sumaron todos los materiales al stock de destino.';
     } catch (e: any) {
       this.error = this.errorApi(e);
     } finally {

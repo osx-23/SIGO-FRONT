@@ -1,0 +1,405 @@
+import { ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../../environments/environment';
+import { AuthService } from '../../../../core/auth/auth.service';
+import { InventarioApiService } from '../../services/inventario-api.service';
+import { CatalogoItem, StockActual } from '../../models/inventario.models';
+
+type EstadoTraslado = 'EN_TRANSITO' | 'RECIBIDO';
+
+interface Traslado {
+  id: number;
+  grupoId: string;
+  origenPlazaId: number;
+  origen: string;
+  destinoPlazaId: number;
+  destino: string;
+  productoId: number;
+  producto: string;
+  unidad: string;
+  cantidad: number;
+  estado: EstadoTraslado;
+  enviadoEn: string;
+  recibidoEn: string | null;
+  observacion: string | null;
+}
+
+interface MaterialEnvio {
+  productoId: number;
+  cantidad: number;
+}
+
+interface GrupoTraslado {
+  grupoId: string;
+  referencia: number;
+  origenPlazaId: number;
+  destinoPlazaId: number;
+  origen: string;
+  destino: string;
+  enviadoEn: string;
+  recibidoEn: string | null;
+  estado: 'EN_TRANSITO' | 'RECIBIDO';
+  observacion: string | null;
+  items: Traslado[];
+}
+
+@Component({
+  selector: 'app-traslados',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterLink],
+  templateUrl: './traslados.component.html'
+})
+export class TrasladosComponent implements OnInit {
+  plazas: CatalogoItem[] = [];
+  stock: StockActual[] = [];
+  traslados: Traslado[] = [];
+
+  // La lista es la vista principal; el formulario se utiliza en un modal.
+  modalAbierto = false;
+  origenPlazaId: number | null = null;
+  destinoPlazaId: number | null = null;
+  productoId: number | null = null;
+  cantidad: number | null = null;
+  observacion = '';
+  carrito: MaterialEnvio[] = [];
+  claveLote: string | null = null;
+  gruposExpandidos = new Set<string>();
+
+  // Filtros locales de los últimos 300 registros que devuelve la API.
+  origenFiltro: number | null = null;
+  destinoFiltro: number | null = null;
+  estadoFiltro: 'TODOS' | EstadoTraslado = 'TODOS';
+  textoBusqueda = '';
+  fechaDesde = '';
+  fechaHasta = '';
+  pagina = 1;
+  readonly tamanoPagina = 10;
+
+  cargando = true;
+  enviando = false;
+  error = '';
+  errorModal = '';
+  mensaje = '';
+
+  constructor(
+    private readonly api: InventarioApiService,
+    private readonly http: HttpClient,
+    private readonly route: ActivatedRoute,
+    public readonly auth: AuthService,
+    private readonly cdr: ChangeDetectorRef
+  ) {}
+
+  esSupervisor(): boolean { return this.auth.tieneRol('SUPERVISOR'); }
+
+  async ngOnInit(): Promise<void> {
+    this.origenPlazaId = this.auth.usuario()?.plazaId ?? null;
+
+    const plazaParametro = Number(this.route.snapshot.queryParamMap.get('plazaId'));
+    if (this.esSupervisor() && plazaParametro > 0) this.origenPlazaId = plazaParametro;
+
+    const materialParametro = Number(this.route.snapshot.queryParamMap.get('productoId'));
+    if (materialParametro > 0) this.productoId = materialParametro;
+
+    await this.cargar();
+    // Mantiene el acceso desde el botón «Mover a otra plaza» en Stock.
+    if (materialParametro > 0 && this.productoSeleccionado()) this.abrirModal();
+  }
+
+  productosOrigen(): StockActual[] {
+    return this.stock
+      .filter(item => item.plazaId === this.origenPlazaId && Number(item.cantidadActual) > 0)
+      .sort((a, b) => a.producto.localeCompare(b.producto));
+  }
+
+  productoSeleccionado(): StockActual | undefined {
+    return this.productosOrigen().find(item => item.productoId === this.productoId);
+  }
+
+  plazasDestino(): CatalogoItem[] {
+    return this.plazas.filter(plaza => plaza.id !== this.origenPlazaId);
+  }
+
+  cambiarOrigen(): void {
+    if (!this.productoSeleccionado()) this.productoId = null;
+    if (this.destinoPlazaId === this.origenPlazaId) this.destinoPlazaId = null;
+    this.cantidad = null;
+    this.carrito = [];
+    this.claveLote = null;
+  }
+
+  get opcionesMateriales(): StockActual[] {
+    return this.productosOrigen().filter(item =>
+      !this.carrito.some(seleccion => seleccion.productoId === item.productoId));
+  }
+
+  detalleMaterial(productoId: number): StockActual | undefined {
+    return this.stock.find(item =>
+      item.plazaId === this.origenPlazaId && item.productoId === productoId);
+  }
+
+  agregarMaterial(): void {
+    const material = this.productoSeleccionado();
+    const cantidad = Number(this.cantidad);
+    if (!material || !Number.isFinite(cantidad) || cantidad <= 0 ||
+        cantidad > Number(material.cantidadActual) ||
+        Math.abs(cantidad * 100 - Math.round(cantidad * 100)) > 0.000001) {
+      this.errorModal = 'Selecciona un material y una cantidad válida según el stock disponible.';
+      return;
+    }
+    if (this.carrito.some(item => item.productoId === material.productoId)) {
+      this.errorModal = 'Ese material ya está en la transferencia.';
+      return;
+    }
+    if (this.carrito.length >= 50) {
+      this.errorModal = 'Se permiten como máximo 50 materiales por transferencia.';
+      return;
+    }
+    this.carrito = [...this.carrito, { productoId: material.productoId, cantidad }];
+    this.claveLote = null;
+    this.productoId = null;
+    this.cantidad = null;
+    this.errorModal = '';
+  }
+
+  quitarMaterial(productoId: number): void {
+    this.carrito = this.carrito.filter(item => item.productoId !== productoId);
+    this.claveLote = null;
+  }
+
+  cambiarCantidadCarrito(): void { this.claveLote = null; }
+  cambiarDestino(): void { this.claveLote = null; }
+  cambiarObservacion(): void { this.claveLote = null; }
+
+  get itemsCarrito(): number { return this.carrito.length; }
+
+  validarCarrito(): boolean {
+    if (!this.origenPlazaId || !this.destinoPlazaId ||
+      this.origenPlazaId === this.destinoPlazaId || !this.carrito.length) return false;
+    return this.carrito.every(item => {
+      const stock = this.detalleMaterial(item.productoId);
+      const cantidad = Number(item.cantidad);
+      return stock && Number.isFinite(cantidad) && cantidad > 0 &&
+        Math.abs(cantidad * 100 - Math.round(cantidad * 100)) <= 0.000001 &&
+        cantidad <= Number(stock.cantidadActual);
+    });
+  }
+
+  abrirModal(): void {
+    if (this.cargando || this.enviando) return;
+    this.errorModal = '';
+    this.modalAbierto = true;
+    this.cdr.detectChanges();
+  }
+
+  cerrarModal(): void {
+    if (this.enviando) return;
+    this.modalAbierto = false;
+    this.errorModal = '';
+  }
+
+  @HostListener('document:keydown.escape')
+  alPresionarEscape(): void {
+    if (this.modalAbierto) this.cerrarModal();
+  }
+
+  get grupos(): GrupoTraslado[] {
+    const encontrados = new Map<string, GrupoTraslado>();
+    for (const t of this.traslados) {
+      const id = t.grupoId || 'antiguo-' + t.id;
+      let grupo = encontrados.get(id);
+      if (!grupo) {
+        grupo = {
+          grupoId: id,
+          referencia: t.id,
+          origenPlazaId: t.origenPlazaId,
+          destinoPlazaId: t.destinoPlazaId,
+          origen: t.origen,
+          destino: t.destino,
+          enviadoEn: t.enviadoEn,
+          recibidoEn: t.recibidoEn,
+          estado: t.estado,
+          observacion: t.observacion,
+          items: []
+        };
+        encontrados.set(id, grupo);
+      }
+      grupo.items.push(t);
+    }
+    return [...encontrados.values()]
+      .sort((a, b) => new Date(b.enviadoEn).getTime() - new Date(a.enviadoEn).getTime());
+  }
+
+  get listaFiltrada(): GrupoTraslado[] {
+    const busqueda = this.textoBusqueda.toLocaleLowerCase('es-PE').trim();
+    return this.grupos.filter(t => {
+      if (this.origenFiltro !== null && t.origenPlazaId !== this.origenFiltro) return false;
+      if (this.destinoFiltro !== null && t.destinoPlazaId !== this.destinoFiltro) return false;
+      if (this.estadoFiltro !== 'TODOS' && t.estado !== this.estadoFiltro) return false;
+      if (busqueda && ![t.origen, t.destino, String(t.referencia), t.grupoId,
+        ...t.items.map(item => item.producto)]
+        .some(valor => valor.toLocaleLowerCase('es-PE').includes(busqueda))) return false;
+      const fecha = this.fechaLocal(t.enviadoEn);
+      if (this.fechaDesde && fecha < this.fechaDesde) return false;
+      if (this.fechaHasta && fecha > this.fechaHasta) return false;
+      return true;
+    });
+  }
+
+  expandido(grupoId: string): boolean { return this.gruposExpandidos.has(grupoId); }
+  alternarDetalle(grupoId: string): void {
+    const nuevos = new Set(this.gruposExpandidos);
+    if (nuevos.has(grupoId)) nuevos.delete(grupoId);
+    else nuevos.add(grupoId);
+    this.gruposExpandidos = nuevos;
+  }
+
+  private fechaLocal(valor: string): string {
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return valor.slice(0, 10);
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    return anio + '-' + mes + '-' + dia;
+  }
+
+  get totalPaginas(): number { return Math.max(1, Math.ceil(this.listaFiltrada.length / this.tamanoPagina)); }
+  get listaPagina(): GrupoTraslado[] {
+    return this.listaFiltrada.slice((this.pagina - 1) * this.tamanoPagina, this.pagina * this.tamanoPagina);
+  }
+  get primerResultado(): number {
+    return this.listaFiltrada.length ? (this.pagina - 1) * this.tamanoPagina + 1 : 0;
+  }
+  get ultimoResultado(): number {
+    return Math.min(this.pagina * this.tamanoPagina, this.listaFiltrada.length);
+  }
+
+  cambiarFiltros(): void { this.pagina = 1; }
+  limpiarFiltros(): void {
+    this.origenFiltro = null;
+    this.destinoFiltro = null;
+    this.estadoFiltro = 'TODOS';
+    this.textoBusqueda = '';
+    this.fechaDesde = '';
+    this.fechaHasta = '';
+    this.pagina = 1;
+  }
+  anterior(): void { if (this.pagina > 1) this.pagina--; }
+  siguiente(): void { if (this.pagina < this.totalPaginas) this.pagina++; }
+
+  get totalTraslados(): number { return this.grupos.length; }
+  get totalEnTransito(): number { return this.grupos.filter(t => t.estado === 'EN_TRANSITO').length; }
+  get totalRecibidos(): number { return this.grupos.filter(t => t.estado === 'RECIBIDO').length; }
+  get totalPorRecibir(): number {
+    return this.grupos.filter(t => t.estado === 'EN_TRANSITO' && this.puedeRecibir(t)).length;
+  }
+  puedeRecibir(t: GrupoTraslado): boolean {
+    return this.esSupervisor() || this.auth.usuario()?.plazaId === t.destinoPlazaId;
+  }
+
+  async cargar(): Promise<void> {
+    this.cargando = true;
+    this.error = '';
+    try {
+      const plazaFiltro = this.esSupervisor() ? null : this.auth.usuario()?.plazaId ?? null;
+      const [plazas, stock, traslados] = await Promise.all([
+        firstValueFrom(this.api.catalogo('plazas')),
+        firstValueFrom(this.api.stock({ plazaId: plazaFiltro })),
+        firstValueFrom(this.http.get<Traslado[]>(environment.apiUrl + '/inventario/traslados'))
+      ]);
+      this.plazas = plazas;
+      this.stock = stock;
+      this.traslados = traslados;
+      if (this.origenPlazaId === null && this.esSupervisor() && plazas.length > 0) {
+        this.origenPlazaId = plazas[0].id;
+      }
+      this.cambiarOrigen();
+      if (this.pagina > this.totalPaginas) this.pagina = this.totalPaginas;
+    } catch (e: any) {
+      this.error = this.errorApi(e);
+    } finally {
+      this.cargando = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async enviar(): Promise<void> {
+    if (this.enviando) return;
+    if (!this.validarCarrito()) {
+      this.errorModal = 'Selecciona plaza de destino, agrega materiales y revisa cada cantidad.';
+      return;
+    }
+    const resumen = this.carrito.map(item => {
+      const producto = this.detalleMaterial(item.productoId);
+      return item.cantidad + ' ' + (producto?.unidadMedida || '') + ' de ' +
+        (producto?.producto || 'material #' + item.productoId);
+    }).join('\n• ');
+    if (!window.confirm(
+      '¿Enviar ' + this.carrito.length + ' materiales a la plaza de destino?\n\n• ' +
+      resumen + '\n\nSe descontarán del origen en una sola operación.'
+    )) return;
+
+    this.enviando = true;
+    this.errorModal = '';
+    this.error = '';
+    this.mensaje = '';
+    this.claveLote ??= crypto.randomUUID();
+    try {
+      await firstValueFrom(this.http.post(environment.apiUrl + '/inventario/traslados/lotes', {
+        grupoId: this.claveLote,
+        origenPlazaId: this.origenPlazaId,
+        destinoPlazaId: this.destinoPlazaId,
+        items: this.carrito.map(item => ({
+          productoId: item.productoId,
+          cantidad: Number(item.cantidad)
+        })),
+        observacion: this.observacion.trim()
+      }));
+      this.modalAbierto = false;
+      this.carrito = [];
+      this.claveLote = null;
+      this.productoId = null;
+      this.cantidad = null;
+      this.destinoPlazaId = null;
+      this.observacion = '';
+      await this.cargar();
+      this.mensaje = 'Envío registrado. Todos los materiales se descontaron del origen y quedaron en tránsito.';
+    } catch (e: any) {
+      this.errorModal = this.errorApi(e);
+    } finally {
+      this.enviando = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  async recibir(t: GrupoTraslado): Promise<void> {
+    if (this.enviando || !this.puedeRecibir(t) || t.estado !== 'EN_TRANSITO') return;
+    if (!window.confirm(
+      '¿Confirmas la recepción completa de los ' + t.items.length +
+      ' materiales enviados desde ' + t.origen + ' hacia ' + t.destino +
+      '? Se sumarán al stock de destino.'
+    )) return;
+    this.enviando = true;
+    this.error = '';
+    this.mensaje = '';
+    try {
+      await firstValueFrom(this.http.post(
+        environment.apiUrl + '/inventario/traslados/lotes/' + t.grupoId + '/recibir', {}));
+      await this.cargar();
+      this.mensaje = 'Recepción completa confirmada. Se sumaron todos los materiales al stock de destino.';
+    } catch (e: any) {
+      this.error = this.errorApi(e);
+    } finally {
+      this.enviando = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  private errorApi(e: any): string {
+    const detalle = e?.error?.detail || e?.error?.message || e?.error?.error;
+    return typeof detalle === 'string' ? detalle : 'No se pudo completar la operación.';
+  }
+}

@@ -1,0 +1,434 @@
+<main class="min-h-full bg-[#f5f7fb] px-4 pb-10 pt-6 text-slate-800 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-[1440px] space-y-5">
+    <header class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <div class="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-400">
+          <a routerLink="/inventario/stock" class="hover:text-blue-700">Inventario</a>
+          <span>/</span>
+          <span class="text-blue-700">Transferencias entre plazas</span>
+        </div>
+        <h1 class="text-2xl font-extrabold tracking-tight text-[#172c4d] sm:text-3xl">
+          Seguimiento de transferencias
+        </h1>
+        <p class="mt-2 text-sm text-slate-500">
+          Consulta los envíos entre plazas, su estado y las recepciones pendientes.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" (click)="cargar()" [disabled]="cargando || enviando"
+          class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50">
+          <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current stroke-2" aria-hidden="true">
+            <path d="M20 7v5h-5M4 17v-5h5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 9a7 7 0 0 1 12-2l2 5M4 12l2 5a7 7 0 0 0 12-2" stroke-linecap="round"/>
+          </svg>
+          {{ cargando ? 'Actualizando…' : 'Actualizar' }}
+        </button>
+        <button type="button" (click)="abrirModal()" [disabled]="cargando || enviando"
+          class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50">
+          <svg viewBox="0 0 24 24" class="h-4 w-4 fill-none stroke-current stroke-2" aria-hidden="true">
+            <path d="M12 4v16M4 12h16" stroke-linecap="round"/>
+          </svg>
+          Nueva transferencia
+        </button>
+      </div>
+    </header>
+
+    @if (error) {
+      <div role="alert" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+        {{ error }}
+      </div>
+    }
+    @if (mensaje) {
+      <div role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+        {{ mensaje }}
+      </div>
+    }
+
+    <section class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Resumen de transferencias">
+      <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <p class="text-xs font-bold text-slate-500">Transferencias registradas</p>
+        <div class="mt-3 text-3xl font-extrabold text-slate-900">{{ totalTraslados }}</div>
+        <p class="mt-2 text-xs text-slate-400">En el historial cargado</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <p class="text-xs font-bold text-slate-500">En tránsito</p>
+        <div class="mt-3 text-3xl font-extrabold text-amber-600">{{ totalEnTransito }}</div>
+        <p class="mt-2 text-xs text-slate-400">Esperando recepción</p>
+      </article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <p class="text-xs font-bold text-slate-500">Recibidas</p>
+        <div class="mt-3 text-3xl font-extrabold text-emerald-600">{{ totalRecibidos }}</div>
+        <p class="mt-2 text-xs text-slate-400">Con stock de destino actualizado</p>
+      </article>
+      <article class="rounded-2xl border border-blue-100 bg-blue-50 p-4 shadow-sm sm:p-5">
+        <p class="text-xs font-bold text-blue-700">Pendientes por confirmar</p>
+        <div class="mt-3 text-3xl font-extrabold text-blue-800">{{ totalPorRecibir }}</div>
+        <p class="mt-2 text-xs text-blue-600">
+          {{ esSupervisor() ? 'En las plazas supervisadas' : 'Dirigidas a tu plaza' }}
+        </p>
+      </article>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-label="Filtros de transferencias">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-sm font-extrabold text-[#172c4d]">Filtrar transferencias</h2>
+          <p class="mt-1 text-xs text-slate-400">Filtra por origen, destino, estado, material o fecha de envío.</p>
+        </div>
+        <button type="button" (click)="limpiarFiltros()" class="text-xs font-bold text-blue-700 hover:underline">
+          Limpiar filtros
+        </button>
+      </div>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <label class="block">
+          <span class="mb-1.5 block text-xs font-bold text-slate-600">Plaza de origen</span>
+          <select [(ngModel)]="origenFiltro" (ngModelChange)="cambiarFiltros()"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-blue-500">
+            <option [ngValue]="null">Todas las plazas</option>
+            @for (p of plazas; track p.id) {
+              <option [ngValue]="p.id">{{ p.codigo || p.nombre }}</option>
+            }
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-1.5 block text-xs font-bold text-slate-600">Plaza de destino</span>
+          <select [(ngModel)]="destinoFiltro" (ngModelChange)="cambiarFiltros()"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-blue-500">
+            <option [ngValue]="null">Todas las plazas</option>
+            @for (p of plazas; track p.id) {
+              <option [ngValue]="p.id">{{ p.codigo || p.nombre }}</option>
+            }
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-1.5 block text-xs font-bold text-slate-600">Estado</span>
+          <select [(ngModel)]="estadoFiltro" (ngModelChange)="cambiarFiltros()"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-blue-500">
+            <option value="TODOS">Todos los estados</option>
+            <option value="EN_TRANSITO">En tránsito</option>
+            <option value="RECIBIDO">Recibido</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-1.5 block text-xs font-bold text-slate-600">Buscar material o N.º</span>
+          <input type="search" [(ngModel)]="textoBusqueda" (ngModelChange)="cambiarFiltros()"
+            placeholder="Bobinas, #25, destino…" autocomplete="off"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500">
+        </label>
+        <label class="block">
+          <span class="mb-1.5 block text-xs font-bold text-slate-600">Enviado desde</span>
+          <input type="date" [(ngModel)]="fechaDesde" (ngModelChange)="cambiarFiltros()"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-blue-500">
+        </label>
+        <label class="block">
+          <span class="mb-1.5 block text-xs font-bold text-slate-600">Enviado hasta</span>
+          <input type="date" [(ngModel)]="fechaHasta" (ngModelChange)="cambiarFiltros()"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-blue-500">
+        </label>
+      </div>
+    </section>
+
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="Listado de transferencias">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div>
+          <h2 class="text-base font-extrabold text-[#172c4d]">Lista de seguimiento</h2>
+          <p class="mt-1 text-xs text-slate-500">
+            {{ listaFiltrada.length }} envíos · Historial de los 300 envíos más recientes.
+          </p>
+        </div>
+        <span class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
+          {{ primerResultado }}–{{ ultimoResultado }} de {{ listaFiltrada.length }}
+        </span>
+      </div>
+
+      @if (cargando) {
+        <div class="space-y-3 px-5 py-8" aria-live="polite">
+          @for (i of [1, 2, 3, 4]; track i) {
+            <div class="h-14 animate-pulse rounded-xl bg-slate-100"></div>
+          }
+        </div>
+      } @else if (listaFiltrada.length === 0) {
+        <div class="px-6 py-16 text-center">
+          <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current stroke-2" aria-hidden="true">
+              <path d="M3 7h18M7 12h10M10 17h4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3 class="text-sm font-extrabold text-slate-800">No se encontraron transferencias</h3>
+          <p class="mt-2 text-xs text-slate-500">Prueba otros filtros o registra una nueva transferencia.</p>
+          <button type="button" (click)="limpiarFiltros()" class="mt-4 rounded-lg border border-blue-200 px-4 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50">
+            Quitar filtros
+          </button>
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[980px] text-left text-sm">
+            <thead class="bg-slate-50 text-[11px] font-extrabold uppercase tracking-wide text-slate-500">
+              <tr>
+                <th class="px-5 py-3">N.º / Fecha</th>
+                <th class="px-4 py-3">Materiales</th>
+                <th class="px-4 py-3">Movimiento</th>
+                <th class="px-4 py-3">Productos</th>
+                <th class="px-4 py-3">Estado</th>
+                <th class="px-4 py-3">Recepción</th>
+                <th class="px-5 py-3 text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (t of listaPagina; track t.grupoId) {
+                <tr class="hover:bg-slate-50/80">
+                  <td class="whitespace-nowrap px-5 py-4">
+                    <strong class="block text-xs text-slate-900">Envío #{{ t.referencia }}</strong>
+                    <span class="mt-1 block text-[11px] text-slate-500">{{ t.enviadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <strong class="block text-xs text-slate-900">
+                      {{ t.items[0]?.producto || 'Material' }}
+                      @if (t.items.length > 1) {
+                        <span class="font-bold text-blue-600">+ {{ t.items.length - 1 }} más</span>
+                      }
+                    </strong>
+                    <button type="button" (click)="alternarDetalle(t.grupoId)"
+                      [attr.aria-expanded]="expandido(t.grupoId)" class="mt-1 text-[11px] font-bold text-blue-700 hover:underline">
+                      {{ expandido(t.grupoId) ? 'Ocultar materiales' : 'Ver materiales y cantidades' }}
+                    </button>
+                    @if (t.observacion) {
+                      <span class="mt-1 block max-w-56 break-words text-[11px] text-slate-500">{{ t.observacion }}</span>
+                    }
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="inline-flex items-center gap-2 text-xs font-bold text-slate-700">
+                      <span class="rounded-lg bg-slate-100 px-2 py-1">{{ t.origen }}</span>
+                      <span class="text-blue-600">→</span>
+                      <span class="rounded-lg bg-blue-50 px-2 py-1 text-blue-700">{{ t.destino }}</span>
+                    </span>
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-4">
+                    <strong class="text-xs text-slate-900">{{ t.items.length }} materiales</strong>
+                    <span class="block text-[11px] text-slate-500">Un solo envío</span>
+                  </td>
+                  <td class="px-4 py-4">
+                    <span class="inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-extrabold"
+                      [class.bg-amber-50]="t.estado === 'EN_TRANSITO'"
+                      [class.text-amber-700]="t.estado === 'EN_TRANSITO'"
+                      [class.bg-emerald-50]="t.estado === 'RECIBIDO'"
+                      [class.text-emerald-700]="t.estado === 'RECIBIDO'">
+                      {{ t.estado === 'EN_TRANSITO' ? 'En tránsito' : 'Recibido' }}
+                    </span>
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-4 text-xs text-slate-500">
+                    {{ t.recibidoEn ? (t.recibidoEn | date:'dd/MM/yyyy HH:mm') : 'Pendiente' }}
+                  </td>
+                  <td class="whitespace-nowrap px-5 py-4 text-right">
+                    @if (t.estado === 'EN_TRANSITO' && puedeRecibir(t)) {
+                      <button type="button" (click)="recibir(t)" [disabled]="enviando"
+                        class="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50">
+                        Recibir todo
+                      </button>
+                    } @else {
+                      <span class="text-[11px] font-semibold text-slate-400">
+                        {{ t.estado === 'RECIBIDO' ? 'Finalizada' : 'Espera de destino' }}
+                      </span>
+                    }
+                  </td>
+                </tr>
+                @if (expandido(t.grupoId)) {
+                  <tr class="bg-blue-50/40">
+                    <td colspan="7" class="px-5 py-4">
+                      <div class="rounded-xl border border-blue-100 bg-white p-4">
+                        <p class="mb-3 text-xs font-extrabold text-slate-700">
+                          Detalle del envío #{{ t.referencia }} · {{ t.items.length }} materiales
+                        </p>
+                        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          @for (item of t.items; track item.id) {
+                            <div class="rounded-lg bg-slate-50 px-3 py-2">
+                              <p class="text-xs font-bold text-slate-800">{{ item.producto }}</p>
+                              <p class="mt-1 text-xs text-blue-700">
+                                {{ item.cantidad | number:'1.0-2' }} {{ item.unidad }}
+                              </p>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 px-5 py-4">
+          <span class="text-xs text-slate-500">
+            {{ primerResultado }}–{{ ultimoResultado }} de {{ listaFiltrada.length }} transferencias
+          </span>
+          <div class="flex items-center gap-2">
+            <button type="button" (click)="anterior()" [disabled]="pagina <= 1"
+              class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-40">
+              Anterior
+            </button>
+            <span class="min-w-16 text-center text-xs font-bold text-slate-700">{{ pagina }} / {{ totalPaginas }}</span>
+            <button type="button" (click)="siguiente()" [disabled]="pagina >= totalPaginas"
+              class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-40">
+              Siguiente
+            </button>
+          </div>
+        </div>
+      }
+    </section>
+
+    <p class="text-xs text-slate-500">
+      Al registrar un envío, la cantidad se descuenta de la plaza de origen.
+      El stock del destino aumenta solo al confirmar su recepción.
+    </p>
+  </div>
+</main>
+
+@if (modalAbierto) {
+  <div class="fixed inset-0 z-[100] flex items-center justify-center px-3 py-5 sm:px-6" role="presentation">
+    <button type="button" tabindex="-1" (click)="cerrarModal()" aria-label="Cerrar ventana de transferencia"
+      class="absolute inset-0 cursor-default bg-slate-950/55"></button>
+    <section role="dialog" aria-modal="true" aria-labelledby="titulo-transferencia"
+      class="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <header class="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+        <div>
+          <p class="text-[11px] font-extrabold uppercase tracking-wide text-blue-600">Inventario · Nuevo movimiento</p>
+          <h2 id="titulo-transferencia" class="mt-1 text-xl font-extrabold text-[#172c4d]">
+            Enviar materiales a otra plaza
+          </h2>
+          <p class="mt-1 text-xs text-slate-500">Selecciona varios materiales para enviarlos juntos a la misma plaza.</p>
+        </div>
+        <button type="button" (click)="cerrarModal()" [disabled]="enviando" aria-label="Cerrar formulario"
+          class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-40">
+          <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current stroke-2" aria-hidden="true">
+            <path d="M5 5l14 14M19 5L5 19" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </header>
+
+      <form (ngSubmit)="enviar()" class="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
+          @if (errorModal) {
+            <div role="alert" class="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+              {{ errorModal }}
+            </div>
+          }
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label class="block">
+              <span class="mb-1.5 block text-xs font-bold text-slate-700">Plaza de origen</span>
+              <select [(ngModel)]="origenPlazaId" (ngModelChange)="cambiarOrigen()" name="origen"
+                [disabled]="!esSupervisor() || enviando" required
+                class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-blue-500 disabled:opacity-70">
+                @for (p of plazas; track p.id) {
+                  @if (esSupervisor() || auth.usuario()?.plazaId === p.id) {
+                    <option [ngValue]="p.id">{{ p.codigo || p.nombre }}</option>
+                  }
+                }
+              </select>
+            </label>
+            <label class="block">
+              <span class="mb-1.5 block text-xs font-bold text-slate-700">Plaza de destino</span>
+              <select [(ngModel)]="destinoPlazaId" (ngModelChange)="cambiarDestino()" name="destino" [disabled]="enviando" required
+                class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-blue-500">
+                <option [ngValue]="null">Selecciona plaza</option>
+                @for (p of plazasDestino(); track p.id) {
+                  <option [ngValue]="p.id">{{ p.codigo || p.nombre }}</option>
+                }
+              </select>
+            </label>
+          </div>
+          <div class="rounded-xl border border-slate-200 p-4">
+            <h3 class="text-sm font-extrabold text-slate-800">Agregar materiales</h3>
+            <div class="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_110px_auto] sm:items-end">
+              <label class="block">
+                <span class="mb-1.5 block text-xs font-bold text-slate-700">Material</span>
+                <select [(ngModel)]="productoId" (ngModelChange)="cantidad=null" name="material"
+                  [disabled]="enviando" class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-blue-500">
+                  <option [ngValue]="null">Selecciona un material</option>
+                  @for (item of opcionesMateriales; track item.productoId) {
+                    <option [ngValue]="item.productoId">{{ item.producto }}</option>
+                  }
+                </select>
+              </label>
+              <label class="block">
+                <span class="mb-1.5 block text-xs font-bold text-slate-700">Cantidad</span>
+                <input [(ngModel)]="cantidad" name="cantidad" type="number" min="0.01" step="0.01"
+                  [max]="productoSeleccionado()?.cantidadActual || null" [disabled]="enviando"
+                  placeholder="0" class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-blue-500">
+              </label>
+              <button type="button" (click)="agregarMaterial()"
+                [disabled]="enviando || !productoSeleccionado() || !cantidad || cantidad <= 0"
+                class="h-11 rounded-xl border border-blue-200 bg-blue-50 px-4 text-xs font-extrabold text-blue-700 hover:bg-blue-100 disabled:opacity-40">
+                + Agregar
+              </button>
+            </div>
+            @if (productoSeleccionado(); as material) {
+              <p class="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                Disponible: <strong>{{ material.cantidadActual | number:'1.0-2' }} {{ material.unidadMedida }}</strong>
+                @if (material.inventarioId === 0) {
+                  <span class="block pt-1 text-amber-700">Saldo posiblemente basado en el Excel de septiembre. Verifica físicamente antes de enviar.</span>
+                }
+              </p>
+            }
+          </div>
+          <div class="rounded-xl border border-slate-200">
+            <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
+              <h3 class="text-sm font-extrabold text-slate-800">Materiales del envío</h3>
+              <span class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700">
+                {{ itemsCarrito }} seleccionados
+              </span>
+            </div>
+            @if (carrito.length === 0) {
+              <p class="px-4 py-8 text-center text-xs text-slate-500">
+                Agrega uno o más materiales para preparar esta transferencia.
+              </p>
+            } @else {
+              <div class="divide-y divide-slate-100">
+                @for (linea of carrito; track linea.productoId) {
+                  <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs font-bold text-slate-800">{{ detalleMaterial(linea.productoId)?.producto }}</p>
+                      <p class="mt-1 text-[11px] text-slate-500">
+                        Disponible: {{ detalleMaterial(linea.productoId)?.cantidadActual | number:'1.0-2' }}
+                        {{ detalleMaterial(linea.productoId)?.unidadMedida }}
+                      </p>
+                    </div>
+                    <input type="number" [(ngModel)]="linea.cantidad" [ngModelOptions]="{standalone: true}"
+                      (ngModelChange)="cambiarCantidadCarrito()" min="0.01" step="0.01"
+                      [max]="detalleMaterial(linea.productoId)?.cantidadActual || null"
+                      [disabled]="enviando" [attr.aria-label]="'Cantidad para ' + detalleMaterial(linea.productoId)?.producto"
+                      class="h-9 w-24 rounded-lg border border-slate-200 bg-white px-2 text-center text-xs font-bold text-blue-700">
+                    <button type="button" (click)="quitarMaterial(linea.productoId)" [disabled]="enviando"
+                      [attr.aria-label]="'Quitar ' + detalleMaterial(linea.productoId)?.producto"
+                      class="rounded-lg px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">
+                      Quitar
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          <label class="block">
+            <span class="mb-1.5 block text-xs font-bold text-slate-700">Observación (opcional)</span>
+            <textarea [(ngModel)]="observacion" (ngModelChange)="cambiarObservacion()" name="observacion" rows="2" maxlength="1000"
+              [disabled]="enviando" placeholder="Motivo del traslado"
+              class="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm outline-none focus:border-blue-500"></textarea>
+          </label>
+          <p class="rounded-xl bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
+            Todos los materiales se descuentan juntos de la plaza de origen. Si alguno no tiene stock, no se realizará el envío. El destino confirmará la recepción de todo el lote.
+          </p>
+        </div>
+        <footer class="flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:px-6">
+          <button type="button" (click)="cerrarModal()" [disabled]="enviando"
+            class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40">
+            Cancelar
+          </button>
+          <button type="submit"
+            [disabled]="enviando || cargando || !validarCarrito()"
+            class="rounded-xl bg-blue-600 px-5 py-3 text-xs font-extrabold text-white hover:bg-blue-700 disabled:opacity-40">
+            {{ enviando ? 'Registrando…' : 'Enviar ' + itemsCarrito + ' materiales' }}
+          </button>
+        </footer>
+      </form>
+    </section>
+  </div>
+}

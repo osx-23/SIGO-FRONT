@@ -1350,12 +1350,12 @@ await this.dibujarEvidencia(
       /*
        * =====================================================
        * PÁGINA COMPLETA DE AUSENCIAS
-       * Solo cuando existen más de 4.
+       * Solo cuando existen más de 5.
        * =====================================================
        */
 
       if (
-        registro.ausencias.length > 4
+        registro.ausencias.length > 5
       ) {
 
         await this.dibujarListadoCompletoAusencias(
@@ -2232,7 +2232,9 @@ await this.dibujarEvidencia(
     pdf.setFontSize(7.5);
 
     pdf.text(
-      `Listado de ausencias (${registro.ausencias.length})`,
+      registro.ausencias.length > 5
+        ? `Listado de ausencias (${registro.ausencias.length}) - ver página siguiente`
+        : `Listado de ausencias (${registro.ausencias.length})`,
       x + ancho / 2,
       y + 5,
       {
@@ -2358,13 +2360,13 @@ await this.dibujarEvidencia(
     }
 
     /*
-     * Hasta 4.
+     * Hasta 5 ausencias en el resumen.
      */
 
     const mostrar =
       registro.ausencias.slice(
         0,
-        4
+        5
       );
 
     const espacioFilas =
@@ -2374,7 +2376,7 @@ await this.dibujarEvidencia(
 
     const rowHeight =
       espacioFilas /
-      4;
+      5;
 
     mostrar.forEach(
       (
@@ -2453,7 +2455,7 @@ await this.dibujarEvidencia(
           codigoWidth / 2,
           rowY +
           rowHeight / 2 +
-          1.6,
+          0.75,
           {
             align: 'center'
           }
@@ -2488,7 +2490,7 @@ await this.dibujarEvidencia(
           1.5,
           rowY +
           rowHeight / 2 +
-          1.6,
+          0.75,
           {
             maxWidth:
               nombreWidth - 3
@@ -2520,7 +2522,7 @@ await this.dibujarEvidencia(
           1.5,
           rowY +
           rowHeight / 2 +
-          1.6,
+          0.75,
           {
             maxWidth:
               motivoWidth - 3
@@ -2529,35 +2531,8 @@ await this.dibujarEvidencia(
       }
     );
 
-    /*
-     * Si hay más de cuatro,
-     * indicamos que continúa.
-     */
-
-    if (
-      registro.ausencias.length > 4
-    ) {
-
-      pdf.setTextColor(
-        ...navy
-      );
-
-      pdf.setFont(
-        'helvetica',
-        'bold'
-      );
-
-      pdf.setFontSize(4.5);
-
-      pdf.text(
-        `Listado completo en la página siguiente`,
-        x + ancho - 1.5,
-        y + alto - 1,
-        {
-          align: 'right'
-        }
-      );
-    }
+    // La indicación de continuación va en el encabezado
+    // para no superponerse a la quinta fila.
   }
 
   /*

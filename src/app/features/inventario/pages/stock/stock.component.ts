@@ -1,3 +1,4 @@
+import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -10,7 +11,7 @@ import { InventarioApiService } from '../../services/inventario-api.service';
 @Component({
   selector: 'app-stock',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, InventarioSectionTabsComponent],
   templateUrl: './stock.component.html',
   styleUrl: './stock.component.css'
 })

@@ -1,3 +1,4 @@
+import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -50,7 +51,7 @@ interface GrupoTraslado {
 @Component({
   selector: 'app-traslados',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, InventarioSectionTabsComponent],
   templateUrl: './traslados.component.html'
 })
 export class TrasladosComponent implements OnInit {

@@ -1,3 +1,4 @@
+import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -13,7 +14,7 @@ type EstadoFiltro = '' | 'EN_PROCESO' | 'FINALIZADO' | 'ANULADO';
 @Component({
   selector: 'app-historial',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, InventarioSectionTabsComponent],
   templateUrl: './historial.component.html',
   styleUrl: './historial.component.css'
 })

@@ -29,21 +29,70 @@
       }
     </header>
 
-    <nav class="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3" aria-label="Secciones de pedidos">
-      <button type="button" (click)="vista='nuevo'" [class.bg-blue-50]="vista==='nuevo'"
-        [class.border-blue-200]="vista==='nuevo'" [class.text-blue-700]="vista==='nuevo'"
-        class="rounded-lg border border-transparent px-4 py-2 text-xs font-bold text-slate-500 transition hover:bg-white">Planificar pedido</button>
-      <button type="button" (click)="vista='seguimiento'" [class.bg-blue-50]="vista==='seguimiento'"
-        [class.border-blue-200]="vista==='seguimiento'" [class.text-blue-700]="vista==='seguimiento'"
-        class="rounded-lg border border-transparent px-4 py-2 text-xs font-bold text-slate-500 transition hover:bg-white">Seguimiento y recepción</button>
-      <button type="button" (click)="vista='historico'" [class.bg-blue-50]="vista==='historico'"
-        [class.border-blue-200]="vista==='historico'" [class.text-blue-700]="vista==='historico'"
-        class="rounded-lg border border-transparent px-4 py-2 text-xs font-bold text-slate-500 transition hover:bg-white">Consumo histórico</button>
-      @if (esSupervisor()) {
-        <button type="button" (click)="vista='consolidado'" [class.bg-blue-50]="vista==='consolidado'"
-          [class.border-blue-200]="vista==='consolidado'" [class.text-blue-700]="vista==='consolidado'"
-          class="rounded-lg border border-transparent px-4 py-2 text-xs font-bold text-slate-500 transition hover:bg-white">Consolidado general</button>
-      }
+    <nav class="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-3" aria-label="Secciones de pedidos">
+      <div class="grid grid-cols-2 gap-2" [ngClass]="esSupervisor() ? 'xl:grid-cols-4' : 'xl:grid-cols-3'">
+        <button type="button" (click)="vista='nuevo'" [attr.aria-pressed]="vista === 'nuevo'"
+          [ngClass]="vista === 'nuevo' ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-100' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'"
+          class="group flex min-h-[76px] min-w-0 items-center gap-2.5 rounded-xl border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:gap-3 sm:px-4">
+          <span [ngClass]="vista === 'nuevo' ? 'bg-white/15 text-white' : 'bg-blue-50 text-blue-600'"
+            class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:flex">
+            <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current stroke-[1.8]" aria-hidden="true">
+              <rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 11h6M9 15h4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="min-w-0">
+            <span class="block text-[11px] font-extrabold leading-snug sm:text-[13px]">Planificar pedido</span>
+            <span class="mt-1 hidden text-[11px] font-medium opacity-80 xl:block">Prepara tu requerimiento</span>
+          </span>
+        </button>
+        <button type="button" (click)="vista='seguimiento'" [attr.aria-pressed]="vista === 'seguimiento'"
+          [ngClass]="vista === 'seguimiento' ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-100' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'"
+          class="group flex min-h-[76px] min-w-0 items-center gap-2.5 rounded-xl border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:gap-3 sm:px-4">
+          <span [ngClass]="vista === 'seguimiento' ? 'bg-white/15 text-white' : 'bg-blue-50 text-blue-600'"
+            class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:flex">
+            <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current stroke-[1.8]" aria-hidden="true">
+              <path d="m3 8 9-5 9 5v9l-9 5-9-5V8Z" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="m3 8 9 5 9-5M12 13v9m-4-12 9-5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="min-w-0">
+            <span class="block text-[11px] font-extrabold leading-snug sm:text-[13px]">Seguimiento y recepción</span>
+            <span class="mt-1 hidden text-[11px] font-medium opacity-80 xl:block">Pedidos y entregas</span>
+          </span>
+        </button>
+        <button type="button" (click)="vista='historico'" [attr.aria-pressed]="vista === 'historico'"
+          [ngClass]="[vista === 'historico' ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-100' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700', !esSupervisor() ? 'col-span-2 xl:col-span-1' : '']"
+          class="group flex min-h-[76px] min-w-0 items-center gap-2.5 rounded-xl border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:gap-3 sm:px-4">
+          <span [ngClass]="vista === 'historico' ? 'bg-white/15 text-white' : 'bg-blue-50 text-blue-600'"
+            class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:flex">
+            <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current stroke-[1.8]" aria-hidden="true">
+              <path d="M4 4v15h16M8 15l4-5 3 2 5-7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M16.5 5H20v3.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="min-w-0">
+            <span class="block text-[11px] font-extrabold leading-snug sm:text-[13px]">Consumo histórico</span>
+            <span class="mt-1 hidden text-[11px] font-medium opacity-80 xl:block">Consulta el consumo mensual</span>
+          </span>
+        </button>
+        @if (esSupervisor()) {
+          <button type="button" (click)="vista='consolidado'" [attr.aria-pressed]="vista === 'consolidado'"
+            [ngClass]="vista === 'consolidado' ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-100' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'"
+            class="group flex min-h-[76px] min-w-0 items-center gap-2.5 rounded-xl border px-3 py-3 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:gap-3 sm:px-4">
+            <span [ngClass]="vista === 'consolidado' ? 'bg-white/15 text-white' : 'bg-blue-50 text-blue-600'"
+              class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:flex">
+              <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current stroke-[1.8]" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+              </svg>
+            </span>
+            <span class="min-w-0">
+              <span class="block text-[11px] font-extrabold leading-snug sm:text-[13px]">Consolidado general</span>
+              <span class="mt-1 hidden text-[11px] font-medium opacity-80 xl:block">Resumen por plazas</span>
+            </span>
+          </button>
+        }
+      </div>
     </nav>
 
     @if (error) {

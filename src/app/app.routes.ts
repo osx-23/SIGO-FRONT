@@ -1,4 +1,6 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
+import { AuthService } from './core/auth/auth.service';
 import { authGuard, moduleGuard, passwordChangedGuard } from './core/auth/guards';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { ASISTENCIA_ROUTES } from './features/asistencia/asistencia.routes';
@@ -29,6 +31,13 @@ export const routes: Routes = [
         .then(m => m.ForbiddenComponent)
   },
   {
+    path: 'acceso-pendiente',
+    canActivate: [authGuard, passwordChangedGuard],
+    loadComponent: () =>
+      import('./features/acceso-pendiente/acceso-pendiente.component')
+        .then(m => m.AccesoPendienteComponent)
+  },
+  {
     path: '',
     component: MainLayoutComponent,
     canActivate: [
@@ -39,7 +48,7 @@ export const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: 'dashboard'
+        redirectTo: () => inject(AuthService).rutaInicio()
       },
       {
         path: 'dashboard',

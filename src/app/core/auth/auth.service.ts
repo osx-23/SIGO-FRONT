@@ -123,6 +123,42 @@ export class AuthService {
     return this.usuario()?.requiereCambioPassword === true;
   }
 
+  /**
+   * Selecciona una pantalla de entrada que cumpla con rol y módulo habilitado.
+   * La navegación nunca debe asumir que todos tienen acceso a Dashboard.
+   */
+  rutaInicio(): string {
+    if (!this.estaLogueado()) return '/login';
+    if (this.requiereCambio()) return '/cambiar-password';
+
+    if (this.tieneRol('OPERADOR')) {
+      if (this.tieneModulo('MI_HORARIO')) return '/programacion/mi-horario';
+      if (this.tieneModulo('RELEVOS')) return '/relevos/nuevo';
+      if (this.tieneModulo('INVENTARIO')) return '/inventario/nuevo';
+      if (this.tieneModulo('INCIDENCIAS')) return '/incidencias/nueva';
+      return '/acceso-pendiente';
+    }
+
+    if (this.tieneRol('SUPERVISOR', 'CONTROLADOR')) {
+      if (this.tieneModulo('DASHBOARD')) return '/dashboard';
+      if (this.tieneModulo('MI_HORARIO')) return '/programacion/mi-horario';
+      if (this.tieneModulo('ASISTENCIA')) return '/asistencia/registrar';
+      if (this.tieneModulo('DISTRIBUCION')) return '/programacion/distribucion';
+      if (this.tieneRol('SUPERVISOR') && this.tieneModulo('PROGRAMACION')) {
+        return '/programacion/turnos';
+      }
+      if (this.tieneModulo('RELEVOS')) return '/relevos/nuevo';
+      if (this.tieneModulo('INVENTARIO')) return '/inventario/nuevo';
+      if (this.tieneModulo('INCIDENCIAS')) return '/incidencias/nueva';
+      if (this.tieneModulo('ADMIN_PRODUCTOS')) return '/inventario/productos';
+      if (this.tieneRol('SUPERVISOR') && this.tieneModulo('TRABAJADORES')) {
+        return '/usuarios/contrasenas';
+      }
+    }
+
+    return '/acceso-pendiente';
+  }
+
   private persistirUsuario(usuario: UsuarioSesion): void {
     localStorage.setItem(
       this.userKey,

@@ -43,13 +43,10 @@ export class LoginComponent {
         this.password
       );
 
-      if (this.auth.requiereCambio()) {
-        this.router.navigateByUrl('/cambiar-password');
-      } else if (this.auth.tieneRol('OPERADOR')) {
-        this.router.navigateByUrl('/programacion/mi-horario');
-      } else {
-        this.router.navigateByUrl('/');
-      }
+      await this.router.navigateByUrl(
+        this.auth.rutaInicio(),
+        { replaceUrl: true }
+      );
     } catch (e: any) {
       this.error.set(
         e?.error?.message

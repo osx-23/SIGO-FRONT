@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 
@@ -14,10 +14,13 @@ import { InventarioApiService } from '../../services/inventario-api.service';
   templateUrl: './nuevo-inventario.component.html',
   styleUrl: './nuevo-inventario.component.css'
 })
-export class NuevoInventarioComponent implements OnInit {
+export class NuevoInventarioComponent implements OnInit, OnDestroy {
   private readonly api = inject(InventarioApiService);
   private readonly cdr = inject(ChangeDetectorRef);
   readonly auth = inject(AuthService);
+
+  private intervaloTurno: ReturnType<typeof setInterval> | null = null;
+  private destruido = false;
 
   inventario: InventarioResumen | null = null;
   productos: ProductoInventario[] = [];
@@ -39,7 +42,32 @@ export class NuevoInventarioComponent implements OnInit {
   get usuario() { return this.auth.usuario(); }
   get plazaNombre(): string { return this.inventario?.plaza || this.usuario?.plaza || 'Sin plaza asignada'; }
 
-  ngOnInit(): void { void this.recuperarInventarioEnProceso(); }
+  ngOnInit(): void {
+    void this.recuperarInventarioEnProceso();
+    this.intervaloTurno = setInterval(() => void this.verificarEstadoTurno(), 60_000);
+  }
+
+  ngOnDestroy(): void {
+    this.destruido = true;
+    if (this.intervaloTurno) clearInterval(this.intervaloTurno);
+  }
+
+  private async verificarEstadoTurno(): Promise<void> {
+    const id = this.inventarioId;
+    if (!id || this.guardando || this.finalizando || this.anulando) return;
+    try {
+      const estado = await firstValueFrom(this.api.detalle(id));
+      if (this.destruido || this.inventarioId !== id || estado.estado !== 'ANULADO') return;
+      this.reiniciarConteo();
+      this.confirmarFinalizacion = false;
+      this.confirmarCancelacion = false;
+      this.mensaje = '';
+      this.error = 'El inventario se anuló automáticamente al cumplirse las 8 horas del turno. Puedes iniciar un nuevo conteo.';
+      this.refrescarVista();
+    } catch {
+      // Un error de red no cambia el estado local; el servidor seguirá validando el vencimiento.
+    }
+  }
 
   async iniciar(): Promise<void> {
     if (this.cargando || this.inventarioId) return;

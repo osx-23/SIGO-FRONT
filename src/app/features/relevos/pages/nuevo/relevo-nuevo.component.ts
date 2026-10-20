@@ -117,6 +117,9 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
   readonly guardando =
     signal(false);
 
+  private intervaloTurno: ReturnType<typeof setInterval> | null = null;
+  private destruido = false;
+
   readonly sesion = signal<RelevoSesion | null>(null);
   readonly ultimoFinalizado = signal<RelevoSesion | null>(null);
   readonly recuperandoSesion = signal(true);
@@ -264,6 +267,7 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
 
     this.cargarDatos();
+    this.intervaloTurno = setInterval(() => this.verificarEstadoTurno(), 60_000);
 
 
     /*
@@ -302,7 +306,29 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
   }
 
 
+  private verificarEstadoTurno(): void {
+    const id = this.sesion()?.id;
+    if (!id || this.guardando() || this.guardandoAvance() || this.anulandoSesion()) return;
+    this.relevoApi.sesionActual().subscribe({
+      next: sesionActual => {
+        if (this.destruido || this.sesion()?.id !== id) return;
+        if (sesionActual?.id === id) return;
+        this.sesion.set(null);
+        this.confirmarFinalizacion.set(false);
+        this.confirmarAnulacion.set(false);
+        this.limpiarFormulario();
+        this.mensaje.set('');
+        this.error.set('El relevo se anuló automáticamente al cumplirse las 8 horas del turno. Puedes iniciar uno nuevo.');
+      },
+      error: () => {
+        // Ante problemas de red no se descarta el avance local.
+      }
+    });
+  }
+
   ngOnDestroy(): void {
+    this.destruido = true;
+    if (this.intervaloTurno) clearInterval(this.intervaloTurno);
 
     this.archivosChecklist
       .forEach(

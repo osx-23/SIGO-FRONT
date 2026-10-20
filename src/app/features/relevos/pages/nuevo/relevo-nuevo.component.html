@@ -101,7 +101,7 @@
           <p class="mt-2 text-sm font-semibold text-slate-800">
             Inicio: {{ formatearMomento(sesionActiva.iniciadoEn) }}
           </p>
-          <p class="mt-1 text-xs text-slate-500">Finalización: pendiente. El servidor conserva la hora real de inicio.</p>
+          <p class="mt-1 text-xs text-slate-500">Finalización: pendiente. El servidor conserva la hora real de inicio y anula la sesión si pasan 8 horas sin finalizar.</p>
         </div>
         <div class="text-sm font-semibold text-blue-700">
           Sesión #{{ sesionActiva.id }}
@@ -152,7 +152,7 @@
           <p class="text-xs font-bold uppercase tracking-wider text-blue-700">Paso 1 · Inicio</p>
           <h2 class="mt-2 text-xl font-bold text-slate-900">Iniciar relevo de turno</h2>
           <p class="mt-2 text-sm leading-6 text-slate-500">
-            Selecciona tu plaza y turno. Al iniciar se guardarán la fecha y hora en el servidor.
+            Selecciona tu plaza y turno. Al iniciar se guardarán la fecha y hora en el servidor. Si no finalizas en 8 horas, se anulará automáticamente.
           </p>
         </div>
         <div class="grid gap-4 sm:grid-cols-2">

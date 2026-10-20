@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 
+import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CatalogoItem, InventarioDetalle, InventarioResumen } from '../../models/inventario.models';
 import { InventarioApiService } from '../../services/inventario-api.service';
@@ -12,7 +13,7 @@ type EstadoFiltro = '' | 'EN_PROCESO' | 'FINALIZADO' | 'ANULADO';
 @Component({
   selector: 'app-historial',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, InventarioSectionTabsComponent],
   templateUrl: './historial.component.html',
   styleUrl: './historial.component.css'
 })

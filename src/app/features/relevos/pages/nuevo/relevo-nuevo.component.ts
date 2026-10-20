@@ -684,9 +684,11 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
   private asignarSesion(sesion: RelevoSesion): void {
     this.sesion.set(sesion);
     const momento = new Date(sesion.iniciadoEn);
-    const fecha = new Intl.DateTimeFormat('en-CA', {
+    const partes = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit'
-    }).format(momento);
+    }).formatToParts(momento);
+    const campo = (nombre: string) => partes.find(parte => parte.type === nombre)?.value ?? '';
+    const fecha = `${campo('year')}-${campo('month')}-${campo('day')}`;
     const hora = new Intl.DateTimeFormat('es-PE', {
       timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false
     }).format(momento);
@@ -1256,6 +1258,7 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
       .subscribe({
 
         next: vias => {
+          if (Number(this.form.controls.plazaId.value) !== plazaId) return;
 
           this.viasDisponibles =
             [...(vias ?? [])]

@@ -91,6 +91,33 @@
   }
 
 
+  @if (sesion(); as sesionActiva) {
+    <section class="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm sm:p-5" aria-label="Estado del relevo">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <span class="inline-flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white">
+            <span class="h-2 w-2 rounded-full bg-white"></span> En proceso
+          </span>
+          <p class="mt-2 text-sm font-semibold text-slate-800">
+            Inicio: {{ formatearMomento(sesionActiva.iniciadoEn) }}
+          </p>
+          <p class="mt-1 text-xs text-slate-500">Finalización: pendiente. El servidor conserva la hora real de inicio.</p>
+        </div>
+        <div class="text-sm font-semibold text-blue-700">
+          Sesión #{{ sesionActiva.id }}
+        </div>
+      </div>
+    </section>
+  } @else if (ultimoFinalizado(); as finalizado) {
+    <section class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm" aria-label="Último relevo finalizado">
+      <p class="text-sm font-bold text-emerald-800">Relevo finalizado · #{{ finalizado.relevoId }}</p>
+      <p class="mt-1 text-xs text-emerald-900">
+        Inicio: {{ formatearMomento(finalizado.iniciadoEn) }}
+        · Fin: {{ formatearMomento(finalizado.finalizadoEn) }}
+      </p>
+    </section>
+  }
+
   <!-- =========================================================
        LOADING
        ========================================================= -->
@@ -113,12 +140,63 @@
 
   } @else {
 
+    @if (recuperandoSesion()) {
+      <div class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
+        <span class="h-5 w-5 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600"></span>
+        Comprobando si tienes un relevo en proceso...
+      </div>
+    } @else if (!sesion()) {
+      <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"
+               [formGroup]="form" aria-label="Iniciar relevo de turno">
+        <div class="mb-5">
+          <p class="text-xs font-bold uppercase tracking-wider text-blue-700">Paso 1 · Inicio</p>
+          <h2 class="mt-2 text-xl font-bold text-slate-900">Iniciar relevo de turno</h2>
+          <p class="mt-2 text-sm leading-6 text-slate-500">
+            Selecciona tu plaza y turno. Al iniciar se guardarán la fecha y hora en el servidor.
+          </p>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          @if (puedeSeleccionarPlaza()) {
+            <label class="space-y-2 text-sm font-semibold text-slate-700">
+              <span class="block">Plaza</span>
+              <select formControlName="plazaId"
+                      class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500">
+                <option [ngValue]="null">Selecciona una plaza</option>
+                @for (plaza of plazas; track plaza.id) {
+                  <option [ngValue]="plaza.id">{{ plaza.codigo }} · {{ plaza.descripcion }}</option>
+                }
+              </select>
+            </label>
+          } @else {
+            <div>
+              <span class="block text-sm font-semibold text-slate-700">Plaza asignada</span>
+              <p class="mt-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-800">{{ plazaSeleccionadaTexto() }}</p>
+            </div>
+          }
+          <label class="space-y-2 text-sm font-semibold text-slate-700">
+            <span class="block">Turno</span>
+            <select formControlName="turnoId"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500">
+              <option [ngValue]="null">Selecciona un turno</option>
+              @for (turno of turnos; track turno.id) {
+                <option [ngValue]="turno.id">Turno {{ turno.codigo }} · {{ turno.nombre }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        <div class="mt-6 flex justify-end">
+          <button type="button" (click)="iniciarRelevo()"
+                  [disabled]="iniciandoSesion() || cargandoVias() || !form.controls.plazaId.value || !form.controls.turnoId.value"
+                  class="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+            {{ iniciandoSesion() ? 'Iniciando...' : 'Iniciar relevo' }}
+          </button>
+        </div>
+      </section>
+    }
 
-    <!-- =======================================================
-         FORMULARIO
-         ======================================================= -->
-
-    <form
+    @if (sesion()) {
+      <!-- Paso 2: completar el checklist y finalizar la sesión -->
+      <form
       class="space-y-6"
       [formGroup]="form"
       (ngSubmit)="registrar()"
@@ -1130,36 +1208,77 @@
         </div>
 
 
-        <div
-          class="mt-5 flex justify-end"
-        >
-
-          <button
-            type="submit"
-            [disabled]="
-              guardando() ||
-              cargandoVias() ||
-              !form.controls.plazaId.value
-            "
-            class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-
-            {{
-              guardando()
-                ? 'Guardando relevo...'
-                : 'Registrar relevo'
-            }}
-
+        <p class="mt-4 text-xs text-slate-500">
+          Puedes guardar el checklist y las observaciones para continuar después.
+          Las fotografías seleccionadas se subirán únicamente al finalizar; no permanecen guardadas si sales.
+        </p>
+        <div class="mt-5 flex flex-wrap justify-end gap-3">
+          <button type="button" (click)="solicitarAnulacion()"
+                  [disabled]="guardando() || guardandoAvance() || anulandoSesion()"
+                  class="rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
+            Anular sesión
           </button>
-
+          <button type="button" (click)="guardarAvanceRelevo()"
+                  [disabled]="guardando() || guardandoAvance() || cargandoVias()"
+                  class="rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-800 hover:bg-blue-100 disabled:opacity-50">
+            {{ guardandoAvance() ? 'Guardando...' : 'Guardar avance' }}
+          </button>
+          <button type="button" (click)="solicitarFinalizacion()"
+                  [disabled]="guardando() || guardandoAvance() || cargandoVias()"
+                  class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+            {{ guardando() ? 'Finalizando...' : 'Finalizar relevo' }}
+          </button>
         </div>
 
       </section>
 
-    </form>
+      </form>
+    }
 
   }
 
+
+  @if (confirmarFinalizacion()) {
+    <div class="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-4"
+         role="presentation">
+      <section class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+               role="dialog" aria-modal="true" aria-label="Confirmar finalización">
+        <h3 class="text-lg font-bold text-slate-900">¿Finalizar el relevo?</h3>
+        <p class="mt-2 text-sm text-slate-600">
+          Se registrará la hora real de finalización y el relevo pasará al historial.
+        </p>
+        <div class="mt-6 flex justify-end gap-3">
+          <button type="button" (click)="confirmarFinalizacion.set(false)" [disabled]="guardando()"
+                  class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600">Volver</button>
+          <button type="button" (click)="registrar()" [disabled]="guardando()"
+                  class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">
+            {{ guardando() ? 'Finalizando...' : 'Confirmar finalización' }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (confirmarAnulacion()) {
+    <div class="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-4"
+         role="presentation">
+      <section class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+               role="dialog" aria-modal="true" aria-label="Anular sesión">
+        <h3 class="text-lg font-bold text-slate-900">¿Anular esta sesión?</h3>
+        <p class="mt-2 text-sm text-slate-600">
+          El avance de este relevo se descartará y podrás iniciar uno nuevo.
+        </p>
+        <div class="mt-6 flex justify-end gap-3">
+          <button type="button" (click)="confirmarAnulacion.set(false)" [disabled]="anulandoSesion()"
+                  class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600">Volver</button>
+          <button type="button" (click)="anularRelevo()" [disabled]="anulandoSesion()"
+                  class="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white">
+            {{ anulandoSesion() ? 'Anulando...' : 'Anular sesión' }}
+          </button>
+        </div>
+      </section>
+    </div>
+  }
 
   <!-- =========================================================
        CROPPER

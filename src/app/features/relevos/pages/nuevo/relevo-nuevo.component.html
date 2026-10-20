@@ -250,6 +250,7 @@
               <select
                 class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 formControlName="plazaId"
+                [attr.disabled]="sesion() ? '' : null"
               >
 
                 <option
@@ -321,6 +322,7 @@
             <select
               class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               formControlName="turnoId"
+              [attr.disabled]="sesion() ? '' : null"
             >
 
               <option
@@ -362,6 +364,7 @@
               type="date"
               class="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               formControlName="fecha"
+              [attr.readonly]="sesion() ? '' : null"
             />
 
           </label>
@@ -381,6 +384,7 @@
               type="time"
               class="w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               formControlName="hora"
+              [attr.readonly]="sesion() ? '' : null"
             />
 
           </label>

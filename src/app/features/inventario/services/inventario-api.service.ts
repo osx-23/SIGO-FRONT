@@ -34,6 +34,7 @@ export class InventarioApiService {
   }
 
   detalle(id: number) { return this.http.get<InventarioDetalle>(`${this.api}/inventarios/${id}`); }
+  exportarExcel(id: number) { return this.http.get(`${this.api}/inventarios/${id}/excel`, { responseType: 'blob' }); }
 
   stock(filtros?: { plazaId?: number | null; buscar?: string | null }) {
     let params = new HttpParams();

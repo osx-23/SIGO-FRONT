@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import jsPDF from 'jspdf';
 
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CatalogoItem, InventarioDetalle, InventarioResumen } from '../../models/inventario.models';
@@ -28,6 +27,7 @@ export class HistorialComponent implements OnInit {
 
   cargando = true;
   cargandoDetalle = false;
+  exportandoExcelId: number | null = null;
   error = '';
   pagina = 0;
   totalPaginas = 0;
@@ -132,99 +132,30 @@ export class HistorialComponent implements OnInit {
     if (!this.cargandoDetalle) this.detalle = null;
   }
 
-  async exportarPdf(item?: InventarioResumen): Promise<void> {
+  async exportarExcel(item?: InventarioResumen): Promise<void> {
+    const id = item?.id ?? this.detalle?.id;
+    if (!id || this.exportandoExcelId !== null) return;
+
+    this.exportandoExcelId = id;
+    this.error = '';
+    this.cdr.detectChanges();
     try {
-      const data = item
-        ? await firstValueFrom(this.api.detalle(item.id))
-        : this.detalle;
-      if (!data) return;
-
-      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-      const ancho = doc.internal.pageSize.getWidth();
-      const alto = doc.internal.pageSize.getHeight();
-      const margen = 16;
-      let y = 18;
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.text('LIMA EXPRESA', margen, y);
-      doc.setFontSize(13);
-      doc.text('Reporte de inventario', margen, y + 8);
-      doc.setDrawColor(30, 64, 175);
-      doc.setLineWidth(0.8);
-      doc.line(margen, y + 12, ancho - margen, y + 12);
-      y += 22;
-
-      const dato = (etiqueta: string, valor: string, x: number, yy: number) => {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.text(etiqueta.toUpperCase(), x, yy);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text(valor || '-', x, yy + 5);
-      };
-
-      dato('Inventario', `#${data.id}`, margen, y);
-      dato('Plaza', data.plaza, 55, y);
-      dato('Estado', this.estadoTexto(data.estado), 105, y);
-      dato('Rol', data.rol, 155, y);
-      y += 15;
-      dato('Responsable', data.responsable, margen, y);
-      dato('Fecha inicio', this.formatearFecha(data.fechaInicio), 105, y);
-      y += 15;
-      dato('Fecha finalización', data.fechaFinalizacion ? this.formatearFecha(data.fechaFinalizacion) : '-', margen, y);
-      dato('Productos registrados', String(data.productos?.length ?? 0), 105, y);
-      y += 16;
-
-      doc.setFillColor(245, 247, 250);
-      doc.rect(margen, y, ancho - margen * 2, 9, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.text('PRODUCTO', margen + 2, y + 6);
-      doc.text('CATEGORÍA', 105, y + 6);
-      doc.text('CANTIDAD', ancho - margen - 2, y + 6, { align: 'right' });
-      y += 12;
-
-      for (const p of data.productos ?? []) {
-        const nombre = doc.splitTextToSize(p.nombre, 80);
-        const categoria = doc.splitTextToSize(p.categoria || '-', 42);
-        const altoFila = Math.max(nombre.length, categoria.length) * 4.5 + 4;
-
-        if (y + altoFila > alto - 18) {
-          this.piePdf(doc);
-          doc.addPage();
-          y = 18;
-        }
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.text(nombre, margen + 2, y);
-        doc.text(categoria, 105, y);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${this.formatearCantidad(p.cantidad)} ${p.unidad}`, ancho - margen - 2, y, { align: 'right' });
-        y += altoFila;
-        doc.setDrawColor(230, 233, 238);
-        doc.line(margen, y - 2, ancho - margen, y - 2);
+      const archivo = await firstValueFrom(this.api.exportarExcel(id));
+      const url = URL.createObjectURL(archivo);
+      const enlace = document.createElement('a');
+      try {
+        enlace.href = url;
+        enlace.download = `inventario-${id}.xlsx`;
+        document.body.appendChild(enlace);
+        enlace.click();
+      } finally {
+        enlace.remove();
+        URL.revokeObjectURL(url);
       }
-
-      if (data.observacion) {
-        y += 5;
-        if (y > alto - 35) {
-          this.piePdf(doc);
-          doc.addPage();
-          y = 18;
-        }
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.text('Observación', margen, y);
-        doc.setFont('helvetica', 'normal');
-        doc.text(doc.splitTextToSize(data.observacion, ancho - margen * 2), margen, y + 5);
-      }
-
-      this.piePdf(doc);
-      doc.save(`inventario-${data.id}-${data.plaza}.pdf`);
     } catch (e: any) {
       this.error = this.extraerError(e);
+    } finally {
+      this.exportandoExcelId = null;
       this.cdr.detectChanges();
     }
   }
@@ -258,17 +189,6 @@ export class HistorialComponent implements OnInit {
 
   formatearCantidad(valor: number): string {
     return new Intl.NumberFormat('es-PE', { maximumFractionDigits: 2 }).format(Number(valor ?? 0));
-  }
-
-  private piePdf(doc: jsPDF): void {
-    const ancho = doc.internal.pageSize.getWidth();
-    const alto = doc.internal.pageSize.getHeight();
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(100);
-    doc.text('SIGO · Lima Expresa · Inventario', 16, alto - 8);
-    doc.text(`Página ${doc.getNumberOfPages()}`, ancho - 16, alto - 8, { align: 'right' });
-    doc.setTextColor(0);
   }
 
   private extraerError(e: any): string {

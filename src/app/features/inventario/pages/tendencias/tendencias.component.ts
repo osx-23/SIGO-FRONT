@@ -43,7 +43,7 @@ interface PuntoConteo {
           <label for="producto" class="mb-2 block text-xs font-bold uppercase text-slate-500">Material</label>
           <select id="producto" [(ngModel)]="productoId" (ngModelChange)="cargarPuntos()" class="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
             @for (p of productos(); track p.productoId) {
-              <option [ngValue]="p.productoId">{{ p.producto }}</option>
+              <option [ngValue]="p.productoId">{{ p.codigo }} · {{ p.producto }}</option>
             }
           </select>
         </div>

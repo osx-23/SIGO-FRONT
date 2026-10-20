@@ -375,7 +375,7 @@
                   </thead>
                   <tbody class="divide-y divide-slate-100">
                     @for (i of seleccionado.items; track i.productoId) {
-                      <tr><td class="p-3"><strong>{{ i.producto }}</strong><span class="block text-xs text-slate-400">{{ i.unidad }}</span></td>
+                      <tr><td class="p-3"><strong>{{ i.producto }}</strong><span class="block text-xs font-bold text-blue-700">Código: {{ i.codigo }}</span><span class="block text-xs text-slate-400">{{ i.unidad }}</span></td>
                         <td class="p-3">{{ i.cantidad | number:'1.0-2' }}</td>
                         <td class="p-3 text-emerald-700">{{ i.recibida | number:'1.0-2' }}</td>
                         <td class="p-3 font-bold">{{ i.pendiente | number:'1.0-2' }}</td>
@@ -421,6 +421,7 @@
                   @for (r of seleccionado.recepciones; track r.id + '-' + r.productoId) {
                     <div class="flex justify-between gap-4 rounded-lg bg-slate-50 p-3 text-sm">
                       <div><strong>{{ r.producto }}</strong>
+                         <span class="block text-xs font-bold text-blue-700">Código: {{ r.codigo }}</span>
                         <p class="text-xs text-slate-500">{{ r.fecha | date:'dd/MM/yyyy HH:mm' }} · Registrado por #{{ r.recibidoPor }}</p>
                         @if (r.observacion) { <p class="text-xs text-slate-500">{{ r.observacion }}</p> }
                       </div>
@@ -456,7 +457,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
               @for (item of consolidado; track item.productoId) {
-                <tr><td class="p-4 font-semibold">{{ item.producto }}</td><td class="p-4">{{ item.unidad }}</td>
+                <tr><td class="p-4 font-semibold">{{ item.producto }}<span class="block text-xs font-bold text-blue-700">Código: {{ item.codigo }}</span></td><td class="p-4">{{ item.unidad }}</td>
                   <td class="p-4">{{ item.plazas }}</td><td class="p-4 font-extrabold">{{ item.cantidadTotal | number:'1.0-2' }}</td></tr>
               } @empty {
                 <tr><td colspan="4" class="p-6 text-center text-slate-500">No hay pedidos aprobados para este mes.</td></tr>
@@ -480,7 +481,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
               @for (x of consumo; track x.periodo + '-' + x.productoId) {
-                <tr><td class="p-4">{{ x.periodo }}</td><td class="p-4 font-semibold">{{ x.producto }}</td>
+                <tr><td class="p-4">{{ x.periodo }}</td><td class="p-4 font-semibold">{{ x.producto }}<span class="block text-xs font-bold text-blue-700">Código: {{ x.codigo }}</span></td>
                   <td class="p-4">{{ x.consumo | number:'1.0-2' }}</td></tr>
               } @empty {
                 <tr><td colspan="3" class="p-6 text-center text-slate-500">

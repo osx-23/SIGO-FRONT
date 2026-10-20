@@ -57,7 +57,7 @@ export class PedidosComponent implements OnInit {
   }
 
   codigoDe(item: SugerenciaPedido): string {
-    return this.metadata.get(item.productoId)?.codigo ?? ('#' + item.productoId);
+    return item.codigo || this.metadata.get(item.productoId)?.codigo || ('#' + item.productoId);
   }
 
   categoriaDe(item: SugerenciaPedido): string {
@@ -358,7 +358,7 @@ export class PedidosComponent implements OnInit {
     for (const i of pedido.items) {
       if (!this.sugerencias.some(s => s.productoId === i.productoId)) {
         this.sugerencias.push({
-          productoId: i.productoId, producto: i.producto, unidadMedida: i.unidad,
+          productoId: i.productoId, codigo: i.codigo, producto: i.producto, unidadMedida: i.unidad,
           stockActual: i.stock ?? 0, stockVerificado: i.stock !== null,
           stockOrigen: i.stock !== null ? 'CONTEO' : 'SIN_REGISTRO',
           stockMinimo: 0, promedioMensual: i.promedio, sugerido: i.sugerida,

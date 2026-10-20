@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
+import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { InventarioApiService } from '../../services/inventario-api.service';
 import { CatalogoItem, StockActual } from '../../models/inventario.models';
@@ -17,7 +18,7 @@ interface PuntoConteo {
 @Component({
   selector: 'app-tendencias-inventario',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, InventarioSectionTabsComponent],
   template: `
   <main class="min-h-full bg-slate-50 px-4 py-6 sm:px-6">
     <div class="mx-auto max-w-7xl space-y-6">
@@ -26,6 +27,8 @@ interface PuntoConteo {
         <h1 class="mt-2 text-2xl font-extrabold text-slate-900 sm:text-3xl">Tendencia de existencias</h1>
         <p class="mt-2 text-sm text-slate-500">Cada barra representa un inventario finalizado. Consulta la evolución del saldo de cada producto, sin confundir entregas y traslados con consumo.</p>
       </header>
+
+      <app-inventario-section-tabs seccion="stock"></app-inventario-section-tabs>
 
       <section class="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-3">
         <div>

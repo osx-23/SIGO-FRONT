@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CatalogoItem, ProductoAdmin } from '../../models/inventario.models';
 import { InventarioApiService } from '../../services/inventario-api.service';
@@ -9,7 +10,7 @@ import { InventarioApiService } from '../../services/inventario-api.service';
 @Component({
   selector: 'app-productos',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, InventarioSectionTabsComponent],
   templateUrl: './productos.component.html',
   styleUrl: './productos.component.css'
 })

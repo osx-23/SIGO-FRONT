@@ -143,6 +143,13 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   }
 
 
+  inventarioSeccionActiva(seccion: 'stock' | 'movimientos'): boolean {
+    const ruta = this.router.url.split(/[?#]/, 1)[0];
+    return seccion === 'stock'
+      ? ['/inventario/stock', '/inventario/tendencias', '/inventario/productos'].includes(ruta)
+      : ['/inventario/historial', '/inventario/traslados'].includes(ruta);
+  }
+
   puedeUsarChat(): boolean {
 
     return (

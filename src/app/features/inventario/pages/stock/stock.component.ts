@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CatalogoItem, StockActual } from '../../models/inventario.models';
 import { InventarioApiService } from '../../services/inventario-api.service';
@@ -10,7 +11,7 @@ import { InventarioApiService } from '../../services/inventario-api.service';
 @Component({
   selector: 'app-stock',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, InventarioSectionTabsComponent],
   templateUrl: './stock.component.html',
   styleUrl: './stock.component.css'
 })

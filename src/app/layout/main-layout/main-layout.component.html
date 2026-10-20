@@ -513,18 +513,8 @@
 
 
           @if (grupoAbierto('INVENTARIO')) {
-
             <div class="nav-section-content">
-
-              @if (
-                has('INVENTARIO') &&
-                auth.tieneRol(
-                  'SUPERVISOR',
-                  'CONTROLADOR',
-                  'OPERADOR'
-                )
-              ) {
-
+              @if (has('INVENTARIO') && auth.tieneRol('SUPERVISOR', 'CONTROLADOR', 'OPERADOR')) {
                 <a
                   routerLink="/inventario/nuevo"
                   routerLinkActive="active"
@@ -547,45 +537,11 @@
                   </span>
 
                 </a>
-
               }
-
-
-              @if (
-                has('INVENTARIO') &&
-                auth.tieneRol(
-                  'SUPERVISOR',
-                  'CONTROLADOR'
-                )
-              ) {
-
+              @if ((has('INVENTARIO') || has('ADMIN_PRODUCTOS')) && auth.tieneRol('SUPERVISOR', 'CONTROLADOR')) {
                 <a
-                  routerLink="/inventario/historial"
-                  routerLinkActive="active"
-                  (click)="close()"
-                  data-tooltip="Historial"
-                >
-
-                  <span class="nav-icon">
-
-                    <svg viewBox="0 0 24 24">
-                      <path
-                        d="M4 3h16v4H4V3Zm1 6h14v12H5V9Zm3 3v2h8v-2H8Zm0 4v2h5v-2H8Z"
-                      />
-                    </svg>
-
-                  </span>
-
-                  <span class="nav-label">
-                    Historial
-                  </span>
-
-                </a>
-
-
-                <a
-                  routerLink="/inventario/stock"
-                  routerLinkActive="active"
+                  [routerLink]="has('INVENTARIO') ? '/inventario/stock' : '/inventario/productos'"
+                  [class.active]="inventarioSeccionActiva('stock')"
                   (click)="close()"
                   data-tooltip="Stock"
                 >
@@ -605,16 +561,30 @@
                   </span>
 
                 </a>
+              }
+              @if (has('INVENTARIO') && auth.tieneRol('SUPERVISOR', 'CONTROLADOR')) {
+                <a
+                  routerLink="/inventario/historial"
+                  [class.active]="inventarioSeccionActiva('movimientos')"
+                  (click)="close()"
+                  data-tooltip="Movimientos"
+                >
 
-                <a routerLink="/inventario/tendencias" routerLinkActive="active" (click)="close()" data-tooltip="Tendencias de stock">
-                  <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 19h18v2H3v-2ZM5 16l5-5 4 3 5-8 2 1-7 10-4-3-4 4-1-2Z"/></svg></span>
-                  <span class="nav-label">Tendencias de stock</span>
-                </a>
-                <a routerLink="/inventario/traslados" routerLinkActive="active" (click)="close()" data-tooltip="Mover a otra plaza">
-                  <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 7h15l-3-3 1.4-1.4L22 8l-5.6 5.4L15 12l3-3H3V7Zm18 10H6l3 3-1.4 1.4L2 16l5.6-5.4L9 12l-3 3h15v2Z"/></svg></span>
-                  <span class="nav-label">Traslados entre plazas</span>
-                </a>
+                  <span class="nav-icon">
 
+                    <svg viewBox="0 0 24 24">
+                      <path
+                        d="M4 3h16v4H4V3Zm1 6h14v12H5V9Zm3 3v2h8v-2H8Zm0 4v2h5v-2H8Z"
+                      />
+                    </svg>
+
+                  </span>
+
+                  <span class="nav-label">
+                    Movimientos
+                  </span>
+
+                </a>
                 <a
                   routerLink="/inventario/pedidos"
                   routerLinkActive="active"
@@ -630,40 +600,8 @@
                     Pedidos de materiales
                   </span>
                 </a>
-
-
               }
-
-
-              @if (has('ADMIN_PRODUCTOS')) {
-
-                <a
-                  routerLink="/inventario/productos"
-                  routerLinkActive="active"
-                  (click)="close()"
-                  data-tooltip="Administrar productos"
-                >
-
-                  <span class="nav-icon">
-
-                    <svg viewBox="0 0 24 24">
-                      <path
-                        d="M4 4h16v5H4V4Zm0 7h10v9H4v-9Zm12 0h4v4h-4v-4Zm0 6h4v3h-4v-3Z"
-                      />
-                    </svg>
-
-                  </span>
-
-                  <span class="nav-label">
-                    Administrar productos
-                  </span>
-
-                </a>
-
-              }
-
             </div>
-
           }
 
         </section>

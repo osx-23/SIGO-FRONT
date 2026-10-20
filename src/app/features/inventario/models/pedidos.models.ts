@@ -3,6 +3,7 @@ export type EstadoPedido = 'BORRADOR' | 'PENDIENTE' | 'APROBADO' | 'ENVIADO' |
 
 export interface SugerenciaPedido {
   productoId: number;
+  codigo: string;
   producto: string;
   unidadMedida: string;
   stockActual: number;
@@ -44,6 +45,7 @@ export interface PedidoLista {
 }
 export interface ItemPedidoDetalle {
   productoId: number;
+  codigo: string;
   producto: string;
   unidad: string;
   cantidad: number;
@@ -58,6 +60,7 @@ export interface RecepcionPedido {
   fecha: string;
   observacion: string | null;
   recibidoPor: number;
+  codigo: string;
   producto: string;
   productoId: number;
   cantidad: number;
@@ -79,6 +82,7 @@ export interface PedidoDetalle {
 }
 export interface MaterialConsolidado {
   productoId: number;
+  codigo: string;
   producto: string;
   unidad: string;
   cantidadTotal: number;
@@ -87,6 +91,7 @@ export interface MaterialConsolidado {
 export interface ConsumoHistorico {
   plazaId: number;
   productoId: number;
+  codigo: string;
   producto: string;
   periodo: string;
   consumo: number;

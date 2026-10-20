@@ -42,6 +42,7 @@ export interface InventarioDetalle {
 
 export interface InventarioDetalleItem {
   productoId: number;
+  codigo: string;
   nombre: string;
   unidad: string;
   categoria: string | null;
@@ -53,6 +54,7 @@ export interface StockActual {
   plazaId: number;
   plaza: string;
   productoId: number;
+  codigo: string;
   producto: string;
   unidadMedida: string;
   cantidadActual: number;

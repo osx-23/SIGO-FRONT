@@ -208,6 +208,9 @@
                         <span class="font-bold text-blue-600">+ {{ t.items.length - 1 }} más</span>
                       }
                     </strong>
+                    <span class="mt-0.5 block text-[11px] font-bold text-blue-700">
+                      Código: {{ t.items[0]?.codigo }}
+                    </span>
                     <button type="button" (click)="alternarDetalle(t.grupoId)"
                       [attr.aria-expanded]="expandido(t.grupoId)" class="mt-1 text-[11px] font-bold text-blue-700 hover:underline">
                       {{ expandido(t.grupoId) ? 'Ocultar materiales' : 'Ver materiales y cantidades' }}
@@ -263,6 +266,7 @@
                           @for (item of t.items; track item.id) {
                             <div class="rounded-lg bg-slate-50 px-3 py-2">
                               <p class="text-xs font-bold text-slate-800">{{ item.producto }}</p>
+                              <p class="mt-0.5 text-[11px] font-bold text-blue-700">Código: {{ item.codigo }}</p>
                               <p class="mt-1 text-xs text-blue-700">
                                 {{ item.cantidad | number:'1.0-2' }} {{ item.unidad }}
                               </p>
@@ -365,7 +369,7 @@
                   [disabled]="enviando" class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-blue-500">
                   <option [ngValue]="null">Selecciona un material</option>
                   @for (item of opcionesMateriales; track item.productoId) {
-                    <option [ngValue]="item.productoId">{{ item.producto }}</option>
+                    <option [ngValue]="item.productoId">{{ item.codigo }} · {{ item.producto }}</option>
                   }
                 </select>
               </label>
@@ -407,6 +411,7 @@
                   <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                     <div class="min-w-0 flex-1">
                       <p class="text-xs font-bold text-slate-800">{{ detalleMaterial(linea.productoId)?.producto }}</p>
+                      <span class="text-[11px] font-bold text-blue-700">Código: {{ detalleMaterial(linea.productoId)?.codigo }}</span>
                       <p class="mt-1 text-[11px] text-slate-500">
                         Disponible: {{ detalleMaterial(linea.productoId)?.cantidadActual | number:'1.0-2' }}
                         {{ detalleMaterial(linea.productoId)?.unidadMedida }}

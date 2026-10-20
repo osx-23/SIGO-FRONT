@@ -21,6 +21,7 @@ interface Traslado {
   destino: string;
   productoId: number;
   producto: string;
+  codigo: string;
   unidad: string;
   cantidad: number;
   estado: EstadoTraslado;

@@ -1069,3 +1069,76 @@
   }
 
 }
+/* Bloqueo temporal por intentos: aviso y contador adaptables al móvil. */
+.lockout-message {
+  display: grid;
+  gap: 12px;
+  margin-top: -8px;
+  padding: 16px;
+  border: 1px solid #f5c4c4;
+  border-radius: var(--radius-lg);
+  background: #fff5f5;
+  color: #962e34;
+  line-height: 1.5;
+}
+
+.lockout-message__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.lockout-message__icon {
+  flex: 0 0 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #b4232c;
+  background: #fee2e2;
+}
+
+.lockout-message__icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lockout-message p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.lockout-message__timer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #fbd7d7;
+  border-radius: 12px;
+  background: #fff;
+  color: #7b2a31;
+}
+
+.lockout-message__timer span {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.lockout-message__timer strong {
+  font-size: 29px;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+.lockout-message small {
+  font-size: 11px;
+  color: #a34b53;
+}

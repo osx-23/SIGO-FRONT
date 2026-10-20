@@ -110,6 +110,7 @@
               type="text"
               name="codigo"
               [(ngModel)]="codigo"
+              (ngModelChange)="alCambiarCodigo()"
 
               autocomplete="username"
               inputmode="numeric"
@@ -121,7 +122,7 @@
               autofocus
 
               [disabled]="loading()"
-              [attr.aria-invalid]="error() ? true : null"
+              [attr.aria-invalid]="error() || bloqueado() ? true : null"
             />
 
           </div>
@@ -187,12 +188,12 @@
 
               required
 
-              [disabled]="loading()"
+              [disabled]="loading() || bloqueado()"
 
-              [attr.aria-invalid]="error() ? true : null"
+              [attr.aria-invalid]="error() || bloqueado() ? true : null"
 
               [attr.aria-describedby]="
-                error() ? 'login-error' : null
+                error() || bloqueado() ? 'login-error' : null
               "
             />
 
@@ -212,7 +213,7 @@
 
               [attr.aria-pressed]="mostrarPassword()"
 
-              [disabled]="loading()"
+              [disabled]="loading() || bloqueado()"
             >
 
               @if (mostrarPassword()) {
@@ -312,18 +313,32 @@
       <!-- =====================================================
            ERROR
            ===================================================== -->
-      @if (error()) {
-
-        <div
-          class="error-message"
-          id="login-error"
-          role="alert"
-        >
-
-          {{ error() }}
-
+      @if (bloqueado()) {
+        <div class="lockout-message" id="login-error" role="alert">
+          <div class="lockout-message__header">
+            <span class="lockout-message__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <rect x="5" y="10" width="14" height="11" rx="2"/>
+                <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+              </svg>
+            </span>
+            <strong>Tu cuenta ha sido bloqueada temporalmente</strong>
+          </div>
+          <p>
+            Superaste los 10 intentos fallidos. Debes esperar
+            <strong>{{ minutosRestantes() }} {{ minutosRestantes() === 1 ? 'minuto' : 'minutos' }}</strong>
+            antes de volver a iniciar sesión.
+          </p>
+          <div class="lockout-message__timer" aria-label="Tiempo restante">
+            <span>Tiempo restante</span>
+            <strong aria-live="off">{{ tiempoRestante() }}</strong>
+          </div>
+          <small>El acceso se habilitará automáticamente al terminar el contador.</small>
         </div>
-
+      } @else if (error()) {
+        <div class="error-message" id="login-error" role="alert">
+          {{ error() }}
+        </div>
       }
 
 
@@ -334,10 +349,12 @@
       <button
         class="submit-button"
         type="submit"
-        [disabled]="loading()"
+        [disabled]="loading() || bloqueado()"
       >
 
-        @if (loading()) {
+        @if (bloqueado()) {
+          <span>Espera {{ tiempoRestante() }}</span>
+        } @else if (loading()) {
 
           <span
             class="spinner"

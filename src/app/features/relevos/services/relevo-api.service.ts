@@ -29,6 +29,12 @@ export class RelevoApiService {
     return this.http.get<RelevoSesion | null>(`${this.api}/relevos/sesiones/actual`);
   }
 
+  historialSesiones(inicio: string, fin: string): Observable<RelevoSesion[]> {
+    return this.http.get<RelevoSesion[]>(`${this.api}/relevos/sesiones/historial`, {
+      params: { inicio, fin }
+    });
+  }
+
   iniciarSesion(plazaId: number, turnoId: number): Observable<RelevoSesion> {
     return this.http.post<RelevoSesion>(`${this.api}/relevos/sesiones`, { plazaId, turnoId });
   }

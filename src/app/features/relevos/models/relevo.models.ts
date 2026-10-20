@@ -94,3 +94,15 @@ export interface RelevoResponse {
   checklist: RelevoChecklistResponse[];
   vias: RelevoViaResponse[];
 }
+
+export interface RelevoSesion {
+  id: number;
+  operadorId: number;
+  plazaId: number;
+  turnoId: number;
+  estado: 'EN_PROCESO' | 'FINALIZADO' | 'ANULADO';
+  iniciadoEn: string;
+  finalizadoEn: string | null;
+  relevoId: number | null;
+  borrador: string | null;
+}

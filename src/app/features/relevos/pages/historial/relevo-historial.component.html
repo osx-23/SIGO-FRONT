@@ -75,7 +75,7 @@
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
           <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <tr><th class="px-5 py-3">Fecha</th><th class="px-5 py-3">Plaza</th><th class="px-5 py-3">Turno</th><th class="px-5 py-3">Registrado por</th><th class="px-5 py-3">Estado operativo</th><th class="px-5 py-3 text-right">Acciones</th></tr>
+            <tr><th class="px-5 py-3">Fecha</th><th class="px-5 py-3">Plaza</th><th class="px-5 py-3">Turno</th><th class="px-5 py-3">Registrado por</th><th class="px-5 py-3">Inicio</th><th class="px-5 py-3">Finalización</th><th class="px-5 py-3">Estado operativo</th><th class="px-5 py-3 text-right">Acciones</th></tr>
           </thead>
           <tbody class="divide-y divide-slate-100 bg-white">
             @for (relevo of relevos; track relevo.id) {
@@ -84,6 +84,8 @@
                 <td class="px-5 py-4"><span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{{ relevo.plazaCodigo }}</span></td>
                 <td class="px-5 py-4 font-semibold text-slate-800">{{ relevo.turnoCodigo }}</td>
                 <td class="min-w-[180px] px-5 py-4 text-slate-600">{{ relevo.operadorNombre }}</td>
+                <td class="whitespace-nowrap px-5 py-4 text-xs font-medium text-slate-700">{{ horaInicioRelevo(relevo.id) }}</td>
+                <td class="whitespace-nowrap px-5 py-4 text-xs font-medium text-slate-700">{{ horaFinRelevo(relevo.id) }}</td>
                 <td class="px-5 py-4"><span class="rounded-full px-3 py-1 text-xs font-semibold" [class.bg-emerald-50]="viasConObservacion(relevo) + checklistConObservacion(relevo) === 0" [class.text-emerald-700]="viasConObservacion(relevo) + checklistConObservacion(relevo) === 0" [class.bg-amber-50]="viasConObservacion(relevo) + checklistConObservacion(relevo) > 0" [class.text-amber-700]="viasConObservacion(relevo) + checklistConObservacion(relevo) > 0">{{ viasConObservacion(relevo) + checklistConObservacion(relevo) === 0 ? 'Sin observaciones' : (viasConObservacion(relevo) + checklistConObservacion(relevo)) + ' observado(s)' }}</span></td>
                 <td class="px-5 py-4">
                   <div class="flex flex-wrap justify-end gap-2">
@@ -104,7 +106,9 @@
     <div class="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" (click)="cerrarDetalle()">
       <section class="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
         <header class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6">
-          <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Detalle del relevo</p><h2 class="mt-1 text-xl font-semibold text-slate-950">{{ detalleSeleccionado()!.plazaCodigo }} · Turno {{ detalleSeleccionado()!.turnoCodigo }}</h2><p class="mt-1 text-sm text-slate-500">{{ detalleSeleccionado()!.fecha }} · {{ horaCorta(detalleSeleccionado()!.hora) }} · {{ detalleSeleccionado()!.operadorNombre }}</p></div>
+          <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Detalle del relevo</p><h2 class="mt-1 text-xl font-semibold text-slate-950">{{ detalleSeleccionado()!.plazaCodigo }} · Turno {{ detalleSeleccionado()!.turnoCodigo }}</h2><p class="mt-1 text-sm text-slate-500">{{ detalleSeleccionado()!.fecha }} · {{ horaCorta(detalleSeleccionado()!.hora) }} · {{ detalleSeleccionado()!.operadorNombre }}</p><p class="mt-2 text-xs text-blue-700">
+            Inicio: {{ horaInicioRelevo(detalleSeleccionado()!.id) }} · Finalización: {{ horaFinRelevo(detalleSeleccionado()!.id) }}
+          </p></div>
           <button type="button" class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-2xl text-slate-500" (click)="cerrarDetalle()">×</button>
         </header>
 

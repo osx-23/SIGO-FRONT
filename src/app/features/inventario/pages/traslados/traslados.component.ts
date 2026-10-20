@@ -1,11 +1,11 @@
-import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
+import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { InventarioApiService } from '../../services/inventario-api.service';
 import { CatalogoItem, StockActual } from '../../models/inventario.models';
@@ -51,7 +51,7 @@ interface GrupoTraslado {
 @Component({
   selector: 'app-traslados',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, InventarioSectionTabsComponent],
+  imports: [CommonModule, FormsModule, InventarioSectionTabsComponent],
   templateUrl: './traslados.component.html'
 })
 export class TrasladosComponent implements OnInit {

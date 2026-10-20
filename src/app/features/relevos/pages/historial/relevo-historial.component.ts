@@ -16,7 +16,7 @@ import { Plaza } from '../../../asistencia/models/asistencia.models';
 
 import { AsistenciaApiService } from '../../../asistencia/services/asistencia-api.service';
 
-import { RelevoChecklistResponse, RelevoResponse, RelevoViaResponse } from '../../models/relevo.models';
+import { RelevoChecklistResponse, RelevoResponse, RelevoSesion, RelevoViaResponse } from '../../models/relevo.models';
 
 import { RelevoApiService } from '../../services/relevo-api.service';
 
@@ -34,6 +34,7 @@ export class RelevoHistorialComponent implements OnInit {
 
   readonly cargando = signal(false); readonly error = signal(''); readonly detalleSeleccionado = signal<RelevoResponse | null>(null); readonly generandoPdfId = signal<number | null>(null);
 
+  sesionesPorRelevo: Record<number, RelevoSesion> = {};
   relevos: RelevoResponse[] = []; plazas: Plaza[] = []; inicio = ''; fin = ''; plazaId: number | null = null;
 
   get esOperador(): boolean { return this.auth.usuario()?.rol === 'OPERADOR'; }
@@ -85,8 +86,19 @@ export class RelevoHistorialComponent implements OnInit {
         }
 
         this.relevos=items.sort((a,b)=>this.fechaHoraNumero(b)-this.fechaHoraNumero(a));
-
-        this.cargando.set(false);
+        this.sesionesPorRelevo = {};
+        this.api.historialSesiones(this.inicio, this.fin).subscribe({
+          next: sesiones => {
+            for (const sesion of sesiones ?? []) {
+              if (sesion.relevoId) this.sesionesPorRelevo[sesion.relevoId] = sesion;
+            }
+            this.cargando.set(false);
+          },
+          error: () => {
+            // El historial anterior continúa visible aun sin metadatos de sesión.
+            this.cargando.set(false);
+          }
+        });
 
       },
 
@@ -103,6 +115,25 @@ export class RelevoHistorialComponent implements OnInit {
   baseOperativa(r:RelevoResponse){return r.checklist.filter(i=>i.categoria==='BASE_OPERATIVA');} plazaPeaje(r:RelevoResponse){return r.checklist.filter(i=>i.categoria==='PLAZA_PEAJE');}
 
   totalVias(r:RelevoResponse){return r.vias?.length??0;} viasConObservacion(r:RelevoResponse){return r.vias?.filter(v=>v.estado==='OBSERVADO'||v.estado==='NO_OPERATIVO').length??0;} checklistConObservacion(r:RelevoResponse){return r.checklist?.filter(i=>i.estado==='OBSERVADO'||i.estado==='NO_OPERATIVO').length??0;}
+
+  horaInicioRelevo(id: number): string {
+    return this.sesionesPorRelevo[id]?.iniciadoEn
+      ? this.horaSesion(this.sesionesPorRelevo[id].iniciadoEn)
+      : 'Registro anterior';
+  }
+
+  horaFinRelevo(id: number): string {
+    return this.sesionesPorRelevo[id]?.finalizadoEn
+      ? this.horaSesion(this.sesionesPorRelevo[id].finalizadoEn!)
+      : '—';
+  }
+
+  private horaSesion(valor: string): string {
+    return new Intl.DateTimeFormat('es-PE', {
+      timeZone: 'America/Lima', day: '2-digit', month: '2-digit',
+      year: 'numeric', hour: '2-digit', minute: '2-digit'
+    }).format(new Date(valor));
+  }
 
   horaCorta(h:string){return h?.slice(0,5)||'--:--';} estadoLabel(e:string){if(e==='NO_OPERATIVO')return 'No operativo';if(e==='OBSERVADO')return 'Observado';return 'Operativo';}
 

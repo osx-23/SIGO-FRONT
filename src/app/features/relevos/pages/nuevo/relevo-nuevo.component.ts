@@ -44,6 +44,7 @@ import {
   EstadoOperativo,
   RelevoRequest,
   RelevoResponse,
+  RelevoSesion,
   Via
 } from '../../models/relevo.models';
 
@@ -115,6 +116,19 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
 
   readonly guardando =
     signal(false);
+
+  private intervaloTurno: ReturnType<typeof setInterval> | null = null;
+  private destruido = false;
+
+  readonly sesion = signal<RelevoSesion | null>(null);
+  readonly ultimoFinalizado = signal<RelevoSesion | null>(null);
+  readonly recuperandoSesion = signal(true);
+  readonly iniciandoSesion = signal(false);
+  readonly guardandoAvance = signal(false);
+  readonly anulandoSesion = signal(false);
+  readonly confirmarFinalizacion = signal(false);
+  readonly confirmarAnulacion = signal(false);
+
 
   readonly mensaje =
     signal('');
@@ -253,6 +267,7 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
 
     this.cargarDatos();
+    this.intervaloTurno = setInterval(() => this.verificarEstadoTurno(), 60_000);
 
 
     /*
@@ -291,7 +306,29 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
   }
 
 
+  private verificarEstadoTurno(): void {
+    const id = this.sesion()?.id;
+    if (!id || this.guardando() || this.guardandoAvance() || this.anulandoSesion()) return;
+    this.relevoApi.sesionActual().subscribe({
+      next: sesionActual => {
+        if (this.destruido || this.sesion()?.id !== id) return;
+        if (sesionActual?.id === id) return;
+        this.sesion.set(null);
+        this.confirmarFinalizacion.set(false);
+        this.confirmarAnulacion.set(false);
+        this.limpiarFormulario();
+        this.mensaje.set('');
+        this.error.set('El relevo se anuló automáticamente al cumplirse las 8 horas del turno. Puedes iniciar uno nuevo.');
+      },
+      error: () => {
+        // Ante problemas de red no se descarta el avance local.
+      }
+    });
+  }
+
   ngOnDestroy(): void {
+    this.destruido = true;
+    if (this.intervaloTurno) clearInterval(this.intervaloTurno);
 
     this.archivosChecklist
       .forEach(
@@ -583,7 +620,165 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
      REGISTRAR
      ========================================================== */
 
+
+  iniciarRelevo(): void {
+    if (this.iniciandoSesion() || this.sesion()) return;
+    const plazaId = Number(this.form.controls.plazaId.value);
+    const turnoId = Number(this.form.controls.turnoId.value);
+    if (!plazaId || !turnoId) {
+      this.error.set('Selecciona una plaza y un turno para iniciar el relevo.');
+      return;
+    }
+    this.iniciandoSesion.set(true);
+    this.error.set('');
+    this.relevoApi.iniciarSesion(plazaId, turnoId).subscribe({
+      next: sesion => {
+        this.asignarSesion(sesion);
+        this.iniciandoSesion.set(false);
+        this.mensaje.set('Relevo iniciado. La hora de inicio quedó registrada.');
+      },
+      error: err => {
+        this.iniciandoSesion.set(false);
+        this.error.set(err?.error?.message ?? 'No fue posible iniciar el relevo.');
+      }
+    });
+  }
+
+  guardarAvanceRelevo(): void {
+    const sesion = this.sesion();
+    if (!sesion || this.guardandoAvance()) return;
+    this.guardandoAvance.set(true);
+    this.error.set('');
+    this.relevoApi.guardarAvanceSesion(sesion.id, JSON.stringify(this.form.getRawValue())).subscribe({
+      next: guardada => {
+        this.sesion.set(guardada);
+        this.guardandoAvance.set(false);
+        this.mensaje.set('Avance guardado. Las fotografías se enviarán al finalizar el relevo.');
+      },
+      error: err => {
+        this.guardandoAvance.set(false);
+        this.error.set(err?.error?.message ?? 'No se pudo guardar el avance.');
+      }
+    });
+  }
+
+  solicitarFinalizacion(): void {
+    if (!this.sesion() || this.guardando()) return;
+    this.error.set('');
+    this.form.markAllAsTouched();
+    if (this.form.invalid || this.cargandoVias()) {
+      this.error.set('Completa los campos del relevo antes de finalizar.');
+      return;
+    }
+    this.confirmarFinalizacion.set(true);
+  }
+
+  solicitarAnulacion(): void {
+    if (this.sesion() && !this.anulandoSesion()) {
+      this.confirmarAnulacion.set(true);
+    }
+  }
+
+  anularRelevo(): void {
+    const actual = this.sesion();
+    if (!actual || this.anulandoSesion()) return;
+    this.anulandoSesion.set(true);
+    this.relevoApi.anularSesion(actual.id).subscribe({
+      next: () => {
+        this.anulandoSesion.set(false);
+        this.confirmarAnulacion.set(false);
+        this.sesion.set(null);
+        this.limpiarFormulario();
+        this.mensaje.set('La sesión fue anulada; puedes iniciar un relevo nuevo.');
+      },
+      error: err => {
+        this.anulandoSesion.set(false);
+        this.error.set(err?.error?.message ?? 'No se pudo anular la sesión.');
+      }
+    });
+  }
+
+  formatearMomento(valor: string | null): string {
+    if (!valor) return 'Pendiente';
+    return new Intl.DateTimeFormat('es-PE', {
+      timeZone: 'America/Lima',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    }).format(new Date(valor));
+  }
+
+  private asignarSesion(sesion: RelevoSesion): void {
+    this.sesion.set(sesion);
+    const momento = new Date(sesion.iniciadoEn);
+    const partes = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(momento);
+    const campo = (nombre: string) => partes.find(parte => parte.type === nombre)?.value ?? '';
+    const fecha = `${campo('year')}-${campo('month')}-${campo('day')}`;
+    const hora = new Intl.DateTimeFormat('es-PE', {
+      timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false
+    }).format(momento);
+    this.form.patchValue({
+      plazaId: sesion.plazaId,
+      turnoId: sesion.turnoId,
+      fecha,
+      hora
+    }, { emitEvent: false });
+    if (Number(this.viasDisponibles[0]?.plazaId ?? sesion.plazaId) !== sesion.plazaId
+      || !this.vias.length) {
+      this.cargarVias(sesion.plazaId, true);
+    }
+    this.restaurarBorrador();
+  }
+
+  private recuperarSesion(): void {
+    this.recuperandoSesion.set(true);
+    this.relevoApi.sesionActual().subscribe({
+      next: sesion => {
+        this.recuperandoSesion.set(false);
+        if (sesion) {
+          this.asignarSesion(sesion);
+          this.mensaje.set('Se recuperó el relevo en proceso. Puedes continuar donde lo dejaste.');
+        }
+      },
+      error: err => {
+        this.recuperandoSesion.set(false);
+        this.error.set(err?.error?.message ?? 'No se pudo recuperar el relevo en proceso.');
+      }
+    });
+  }
+
+  private restaurarBorrador(): void {
+    const guardado = this.sesion()?.borrador;
+    if (!guardado || !this.checklist.length) return;
+    try {
+      const data = JSON.parse(guardado) as {
+        observaciones?: string; resumen?: string;
+        checklist?: Array<{ elementoId: number; estado: EstadoOperativo; detalle: string; cantidad: number | null }>;
+        vias?: Array<{ viaId: number; estado: EstadoOperativo; detalle: string }>;
+      };
+      this.form.patchValue({
+        observaciones: data.observaciones ?? '',
+        resumen: data.resumen ?? ''
+      }, { emitEvent: false });
+      const items = new Map((data.checklist ?? []).map(item => [Number(item.elementoId), item]));
+      for (const control of this.checklist.controls) {
+        const item = items.get(Number(control.get('elementoId')?.value));
+        if (item) control.patchValue(item);
+      }
+      const vias = new Map((data.vias ?? []).map(item => [Number(item.viaId), item]));
+      for (const control of this.vias.controls) {
+        const item = vias.get(Number(control.get('viaId')?.value));
+        if (item) control.patchValue(item);
+      }
+    } catch {
+      this.error.set('Se recuperó el relevo, pero el avance guardado no se pudo interpretar.');
+    }
+  }
+
   registrar(): void {
+    if (!this.sesion() || !this.confirmarFinalizacion()) return;
+    this.confirmarFinalizacion.set(false);
 
     this.mensaje.set('');
     this.error.set('');
@@ -760,19 +955,18 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
     this.guardando.set(true);
 
 
+    const sesionActual = this.sesion()!;
+
     this.relevoApi
-
-      .registrar(request)
-
+      .finalizarSesion(sesionActual.id, request)
       .pipe(
-
-        switchMap(
-          relevo =>
-            this.subirEvidencias(
-              relevo
-            )
-        )
-
+        switchMap(finalizada => {
+          this.ultimoFinalizado.set(finalizada);
+          this.sesion.set(null);
+          return this.relevoApi.obtener(finalizada.relevoId!).pipe(
+            switchMap(relevo => this.subirEvidencias(relevo))
+          );
+        })
       )
 
       .subscribe({
@@ -783,7 +977,7 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
 
 
           this.mensaje.set(
-            `Relevo #${relevo.id} registrado correctamente.`
+            `Relevo #${relevo.id} finalizado correctamente.`
           );
 
 
@@ -798,8 +992,9 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
 
 
           this.error.set(
-            err?.error?.message ??
-            'No se pudo completar el registro del relevo.'
+            this.ultimoFinalizado()
+              ? 'El relevo se finalizó, pero hubo un problema al cargar alguna fotografía. Revisa el historial para verificar las evidencias.'
+              : (err?.error?.message ?? 'No se pudo finalizar el relevo.')
           );
 
         }
@@ -1027,11 +1222,14 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
 
         }
 
+        this.recuperarSesion();
+
       },
 
 
       error: () => {
 
+        this.recuperandoSesion.set(false);
         this.cargando.set(false);
 
 
@@ -1086,6 +1284,7 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
       .subscribe({
 
         next: vias => {
+          if (Number(this.form.controls.plazaId.value) !== plazaId) return;
 
           this.viasDisponibles =
             [...(vias ?? [])]
@@ -1112,7 +1311,7 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
 
 
           this.construirVias();
-
+          if (this.sesion()?.borrador) this.restaurarBorrador();
 
           this.cargandoVias.set(false);
 
@@ -1580,6 +1779,8 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
      ========================================================== */
 
   private limpiarFormulario(): void {
+    this.confirmarAnulacion.set(false);
+    this.confirmarFinalizacion.set(false);
 
     this.archivosChecklist
       .forEach(

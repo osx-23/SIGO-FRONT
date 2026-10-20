@@ -1,7 +1,6 @@
 <div class="min-h-full bg-slate-50 px-4 py-5 sm:px-6 lg:px-8">
 
   <div class="mx-auto max-w-7xl space-y-6">
-    <app-inventario-section-tabs seccion="movimientos"></app-inventario-section-tabs>
 
     <!-- ===================================================== -->
     <!-- HEADER -->
@@ -36,7 +35,7 @@
             class="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base"
           >
             Consulta los inventarios registrados, revisa el detalle de productos
-            y genera el reporte en PDF.
+            y descarga los reportes en Excel.
           </p>
 
         </div>
@@ -81,6 +80,7 @@
       </div>
     </section>
 
+    <app-inventario-section-tabs seccion="movimientos"></app-inventario-section-tabs>
 
     <!-- ===================================================== -->
     <!-- ERROR -->
@@ -765,7 +765,7 @@
 
                 <button
                   type="button"
-                  (click)="exportarPdf(i)"
+                  (click)="exportarExcel(i)"
                   class="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
                 >
 
@@ -777,9 +777,7 @@
                       d="M6 2h9l5 5v15H6V2Zm8 2v5h4.2L14 4ZM9 13v2h8v-2H9Zm0 4v2h8v-2H9Z"
                     />
                   </svg>
-
-                  PDF
-
+                  Excel
                 </button>
 
               </div>
@@ -1151,7 +1149,7 @@
 
                     <button
                       type="button"
-                      (click)="exportarPdf()"
+                      (click)="exportarExcel()"
                       class="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700"
                     >
 
@@ -1164,7 +1162,7 @@
                         />
                       </svg>
 
-                      Exportar PDF
+                      Exportar Excel
 
                     </button>
 

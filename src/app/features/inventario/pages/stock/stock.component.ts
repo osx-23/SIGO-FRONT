@@ -1,9 +1,9 @@
-import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CatalogoItem, StockActual } from '../../models/inventario.models';
 import { InventarioApiService } from '../../services/inventario-api.service';

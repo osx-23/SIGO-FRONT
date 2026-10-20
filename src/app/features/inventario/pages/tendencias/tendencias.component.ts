@@ -1,10 +1,10 @@
-import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
+import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { InventarioApiService } from '../../services/inventario-api.service';
 import { CatalogoItem, StockActual } from '../../models/inventario.models';
@@ -22,12 +22,13 @@ interface PuntoConteo {
   template: `
   <main class="min-h-full bg-slate-50 px-4 py-6 sm:px-6">
     <div class="mx-auto max-w-7xl space-y-6">
-      <app-inventario-section-tabs seccion="stock"></app-inventario-section-tabs>
       <header class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <span class="text-xs font-extrabold uppercase tracking-widest text-blue-700">SIGO · Inventario</span>
         <h1 class="mt-2 text-2xl font-extrabold text-slate-900 sm:text-3xl">Tendencia de existencias</h1>
         <p class="mt-2 text-sm text-slate-500">Cada barra representa un inventario finalizado. Consulta la evolución del saldo de cada producto, sin confundir entregas y traslados con consumo.</p>
       </header>
+
+      <app-inventario-section-tabs seccion="stock"></app-inventario-section-tabs>
 
       <section class="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-3">
         <div>

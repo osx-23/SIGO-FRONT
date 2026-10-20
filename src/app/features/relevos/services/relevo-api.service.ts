@@ -7,6 +7,7 @@ import {
   EvidenciaRelevoResponse,
   RelevoRequest,
   RelevoResponse,
+  RelevoSesion,
   Via
 } from '../models/relevo.models';
 
@@ -22,6 +23,32 @@ export class RelevoApiService {
 
   getElementos(): Observable<ElementoRelevo[]> {
     return this.http.get<ElementoRelevo[]>(`${this.api}/relevos/elementos`);
+  }
+
+  sesionActual(): Observable<RelevoSesion | null> {
+    return this.http.get<RelevoSesion | null>(`${this.api}/relevos/sesiones/actual`);
+  }
+
+  historialSesiones(inicio: string, fin: string): Observable<RelevoSesion[]> {
+    return this.http.get<RelevoSesion[]>(`${this.api}/relevos/sesiones/historial`, {
+      params: { inicio, fin }
+    });
+  }
+
+  iniciarSesion(plazaId: number, turnoId: number): Observable<RelevoSesion> {
+    return this.http.post<RelevoSesion>(`${this.api}/relevos/sesiones`, { plazaId, turnoId });
+  }
+
+  guardarAvanceSesion(id: number, borrador: string): Observable<RelevoSesion> {
+    return this.http.put<RelevoSesion>(`${this.api}/relevos/sesiones/${id}/borrador`, { borrador });
+  }
+
+  finalizarSesion(id: number, request: RelevoRequest): Observable<RelevoSesion> {
+    return this.http.post<RelevoSesion>(`${this.api}/relevos/sesiones/${id}/finalizar`, request);
+  }
+
+  anularSesion(id: number): Observable<RelevoSesion> {
+    return this.http.post<RelevoSesion>(`${this.api}/relevos/sesiones/${id}/anular`, {});
   }
 
   registrar(request: RelevoRequest): Observable<RelevoResponse> {

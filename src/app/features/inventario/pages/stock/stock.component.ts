@@ -18,6 +18,8 @@ import { InventarioApiService } from '../../services/inventario-api.service';
 export class StockComponent implements OnInit {
   items: StockActual[] = [];
   plazas: CatalogoItem[] = [];
+  private codigosPorProducto = new Map<number, string>();
+  private catalogoCodigosCargado = false;
 
   cargando = true;
   error = '';
@@ -56,9 +58,29 @@ export class StockComponent implements OnInit {
   }
 
   async cargarStock(): Promise<void> {
-    this.items = await firstValueFrom(this.api.stock({
+    const stock = await firstValueFrom(this.api.stock({
       plazaId: this.esSupervisor() ? this.plazaId : this.auth.usuario()?.plazaId ?? null,
       buscar: this.busqueda
+    }));
+
+    // Compatibilidad con APIs antiguas que todavía no incluyen "codigo" en Stock.
+    if (stock.some(item => !item.codigo?.trim()) && !this.catalogoCodigosCargado) {
+      try {
+        const productos = await firstValueFrom(this.api.productosAdmin());
+        this.codigosPorProducto = new Map(
+          productos
+            .filter(producto => !!producto.codigo?.trim())
+            .map(producto => [producto.id, producto.codigo.trim()])
+        );
+        this.catalogoCodigosCargado = true;
+      } catch {
+        // Los usuarios sin acceso al catálogo pueden consultar Stock igualmente.
+      }
+    }
+
+    this.items = stock.map(item => ({
+      ...item,
+      codigo: item.codigo?.trim() || this.codigosPorProducto.get(item.productoId) || ''
     }));
   }
 

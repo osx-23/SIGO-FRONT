@@ -157,6 +157,9 @@ export class ProgramacionSupervisorComponent
   readonly generador =
     inject(ProgramacionGeneradorState);
 
+  /** Registra el modo de la propuesta aplicada, aunque el usuario cambie el selector. */
+  private propuestaPendientesActiva = false;
+
   readonly excepciones =
     inject(ProgramacionExcepcionState);
 
@@ -950,6 +953,7 @@ export class ProgramacionSupervisorComponent
       '';
 
     this.generador.limpiarResultado();
+    this.propuestaPendientesActiva = false;
 
 
     this.diaSeleccionado = null;
@@ -1784,6 +1788,8 @@ export class ProgramacionSupervisorComponent
       )
       .subscribe({
         next: propuesta => {
+          this.propuestaPendientesActiva =
+            this.generador.modoGeneracion === 'COMPLETAR_PENDIENTES';
           this.aplicarPropuesta(
             propuesta
           );
@@ -1797,7 +1803,7 @@ export class ProgramacionSupervisorComponent
           const pendientesGenerados = propuesta.agentes.reduce(
             (total, agente) => total + agente.dias.length, 0
           );
-          this.mensaje = this.generador.modoGeneracion === 'COMPLETAR_PENDIENTES'
+          this.mensaje = this.propuestaPendientesActiva
             ? pendientesGenerados
               ? `Se completaron ${pendientesGenerados} días sin turno en el borrador. La programación anterior permanece sin cambios.`
               : 'No hay turnos pendientes que completar. La programación existente se conserva.'
@@ -1868,7 +1874,7 @@ export class ProgramacionSupervisorComponent
         );
 
       // En completar pendientes, jamás sustituir una celda ya cargada.
-      if (this.generador.modoGeneracion === 'COMPLETAR_PENDIENTES'
+      if (this.propuestaPendientesActiva
           && nuevaMatrix.get(key) != null) {
         continue;
       }
@@ -2307,7 +2313,7 @@ export class ProgramacionSupervisorComponent
 
     // Detecta guardados concurrentes antes de escribir una propuesta
     // parcial y exige actualizar si alguno de sus huecos fue ocupado.
-    const operacion = this.generador.modoGeneracion === 'COMPLETAR_PENDIENTES'
+    const operacion = this.propuestaPendientesActiva
         && this.generador.ultimaPropuesta
       ? this.apiExcelTurnos.getTurnos(plazaId, this.anio, this.mes).pipe(
           switchMap(turnosActuales => {
@@ -2358,6 +2364,8 @@ export class ProgramacionSupervisorComponent
             );
 
           this.cambios.clear();
+          this.propuestaPendientesActiva = false;
+          this.generador.limpiarResultado();
 
 
           this.mensaje =

@@ -18,6 +18,8 @@ import { InventarioApiService } from '../../services/inventario-api.service';
 export class StockComponent implements OnInit {
   items: StockActual[] = [];
   plazas: CatalogoItem[] = [];
+  categorias: CatalogoItem[] = [];
+  private nombresCategoriaPorId = new Map<number, string>();
   private codigosPorProducto = new Map<number, string>();
   private catalogoCodigosCargado = false;
 
@@ -25,6 +27,7 @@ export class StockComponent implements OnInit {
   error = '';
   busqueda = '';
   plazaId: number | null = null;
+  categoriaId: number | null = null;
   estado: 'TODOS' | 'BAJO' | 'OK' = 'TODOS';
 
   constructor(
@@ -46,7 +49,7 @@ export class StockComponent implements OnInit {
     this.cargando = true;
     this.error = '';
     try {
-      const tareas: Promise<unknown>[] = [this.cargarStock()];
+      const tareas: Promise<unknown>[] = [this.cargarStock(), this.cargarCategorias()];
       if (this.esSupervisor()) tareas.push(this.cargarPlazas());
       await Promise.all(tareas);
     } catch (e: any) {
@@ -88,6 +91,13 @@ export class StockComponent implements OnInit {
     this.plazas = await firstValueFrom(this.api.catalogo('plazas'));
   }
 
+  async cargarCategorias(): Promise<void> {
+    this.categorias = await firstValueFrom(this.api.catalogo('categorias'));
+    this.nombresCategoriaPorId = new Map(
+      this.categorias.map(categoria => [categoria.id, categoria.nombre])
+    );
+  }
+
   async aplicarFiltros(): Promise<void> {
     this.cargando = true;
     this.error = '';
@@ -104,12 +114,21 @@ export class StockComponent implements OnInit {
   async limpiarFiltros(): Promise<void> {
     this.busqueda = '';
     this.estado = 'TODOS';
+    this.categoriaId = null;
     this.plazaId = this.esSupervisor() ? null : this.auth.usuario()?.plazaId ?? null;
     await this.aplicarFiltros();
   }
 
+  nombreCategoria(categoriaId: number | null): string {
+    if (categoriaId == null) return 'Sin categoría';
+    return this.nombresCategoriaPorId.get(categoriaId) ?? 'Categoría no disponible';
+  }
+
   itemsVisibles(): StockActual[] {
     const filtrados = this.items.filter(item => {
+      // -1 representa los productos que todavía no tienen categoría asignada.
+      if (this.categoriaId === -1 && item.categoriaId != null) return false;
+      if (this.categoriaId !== null && this.categoriaId !== -1 && item.categoriaId !== this.categoriaId) return false;
       if (this.estado === 'BAJO') return item.bajoMinimo;
       if (this.estado === 'OK') return !item.bajoMinimo;
       return true;

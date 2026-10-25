@@ -39,12 +39,47 @@ import {
 } from '../../models/programacion.models';
 
 import {
-  ProgramacionApiService
+  ProgramacionApiService,
+  VistaPreviaDistribucionExcel,
+  ExtraccionCasetasExcelJson,
+  VistaPreviaTurnosCasetasExcel
 } from '../../data-access/programacion-api.service';
 
 import {
   Router
 } from '@angular/router';
+
+/** Revisión explícita del Excel; nada de esto escribe en PostgreSQL. */
+interface FilaRevisionCasetaExcel {
+  programacionId: number;
+  codigoTrabajador: number;
+  trabajador: string;
+  fecha: string;
+  turno: EstadoProgramacion;
+  casetaActual: string;
+  casetaExcel: string;
+  ubicacionActualId: number | null;
+  ubicacionExcelId: number | null;
+  puedeUsarExcel: boolean;
+  opcion: 'PENDIENTE' | 'CONSERVAR' | 'EXCEL' | 'MANUAL';
+  ubicacionManualId: number | null;
+  motivo: string;
+  origen: 'EXCEL' | 'OCUPANTE';
+}
+interface ConflictoCasetaExcel {
+  fecha: string;
+  turno: string;
+  caseta: string;
+  programacionId: number;
+  codigo: number;
+  trabajador: string;
+}
+interface GrupoConflictoCasetaExcel {
+  fecha: string;
+  turno: string;
+  caseta: string;
+  ocupantes: ConflictoCasetaExcel[];
+}
 
 @Component({
   selector: 'app-distribucion-controlador',
@@ -153,6 +188,54 @@ export class DistribucionControladorComponent
   generandoReportePdf = false;
 
   generandoReporteMatrizPdf = false;
+
+  generandoReporteExcel = false;
+
+  filasRevisionCasetasExcel: FilaRevisionCasetaExcel[] = [];
+  observacionesRevisionCasetasExcel: string[] = [];
+  conflictosRevisionCasetasExcel: GrupoConflictoCasetaExcel[] = [];
+  coincidenciasCasetasExcel = 0;
+  celdasCasetasExcel = 0;
+
+  importandoExcel = false;
+  vistaPreviaImportacion: VistaPreviaDistribucionExcel | null = null;
+  vistaPreviaTurnosCasetas: VistaPreviaTurnosCasetasExcel | null = null;
+  leyendoTurnosCasetas = false;
+  archivoExcelEnRevision: File | null = null;
+  plazaExcelEnRevision: number | null = null;
+  anioExcelEnRevision = 0;
+  mesExcelEnRevision = 0;
+  guardandoTurnosExcel = false;
+  guardandoCasetasExcel = false;
+  filtroEstadoRevisionExcel = 'REVISAR';
+  filtroTrabajadorRevisionExcel = '';
+  semanaRevisionExcel = 0;
+
+  get turnosPendientesExcel(): number {
+    const vista = this.vistaPreviaTurnosCasetas;
+    if (!vista) return 0;
+    // El archivo confirmado manda también sobre descansos D/DM/V/COM/LIC.
+    // ACTUALIZAR incluye limpiar una caseta heredada en estado no operativo.
+    return vista.propuestas.filter(p =>
+      p.accion === 'CREAR' || p.accion === 'ACTUALIZAR'
+    ).length;
+  }
+
+  get filasRevisionExcel() {
+    const vista = this.vistaPreviaTurnosCasetas;
+    if (!vista) return [];
+    const nombre = this.filtroTrabajadorRevisionExcel.trim().toLowerCase();
+    return vista.propuestas.filter(p => {
+      if (this.filtroEstadoRevisionExcel !== 'TODOS' && p.accion !== this.filtroEstadoRevisionExcel) return false;
+      if (nombre && !`${p.codigoTrabajador} ${p.trabajador}`.toLowerCase().includes(nombre)) return false;
+      if (this.semanaRevisionExcel) {
+        const semana = Math.ceil(Number(p.fecha.slice(8, 10)) / 7);
+        if (semana !== this.semanaRevisionExcel) return false;
+      }
+      return true;
+    }).slice(0, 100);
+  }
+
 
   errorReportePdf = '';
 
@@ -1380,6 +1463,700 @@ export class DistribucionControladorComponent
       });
   }
 
+  /** Single Excel entry point: both formats, first shifts then casetas. */
+  previsualizarTurnosCasetasExcel(evento: Event): void {
+    const entrada = evento.target as HTMLInputElement;
+    const archivo = entrada.files?.[0];
+    entrada.value = '';
+    this.descartarImportacionExcel();
+    if (!archivo || !this.plazaId || this.cargando || this.guardando) return;
+    if (this.cambios.size > 0) {
+      this.error = 'Guarda o descarta los cambios pendientes antes de importar otro Excel.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (!archivo.name.toLowerCase().endsWith('.xlsx') || archivo.size > 2 * 1024 * 1024) {
+      this.error = 'Selecciona un Excel .xlsx de máximo 2 MB.';
+      this.cdr.detectChanges();
+      return;
+    }
+    this.archivoExcelEnRevision = archivo;
+    this.plazaExcelEnRevision = this.plazaId;
+    this.anioExcelEnRevision = this.anio;
+    this.mesExcelEnRevision = this.mes;
+    this.filtroEstadoRevisionExcel = 'REVISAR';
+    this.filtroTrabajadorRevisionExcel = '';
+    this.semanaRevisionExcel = 0;
+    this.leyendoTurnosCasetas = true;
+    this.api.previsualizarExcelTurnosCasetas(this.plazaId, archivo, this.anio, this.mes)
+      .pipe(finalize(() => {
+        this.leyendoTurnosCasetas = false;
+        this.cdr.detectChanges();
+      }))
+      .subscribe({
+        next: previa => {
+          this.vistaPreviaTurnosCasetas = previa;
+          this.mensaje = 'Excel leído. Revisa primero los turnos; no se ha guardado nada.';
+          this.cdr.detectChanges();
+        },
+        error: e => {
+          this.error = this.mensajeError(e, 'No se pudo leer el Excel mensual o semanal.');
+          this.archivoExcelEnRevision = null;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  private validarContextoExcel(): boolean {
+    if (!this.archivoExcelEnRevision || !this.plazaId ||
+        this.plazaId !== this.plazaExcelEnRevision ||
+        this.anio !== this.anioExcelEnRevision || this.mes !== this.mesExcelEnRevision ||
+        this.cambios.size > 0) {
+      this.error = 'Cambió la plaza, el periodo o hay cambios pendientes. Vuelve a importar el archivo.';
+      this.cdr.detectChanges();
+      return false;
+    }
+    return true;
+  }
+
+  confirmarTurnosImportacionExcel(): void {
+    if (!this.vistaPreviaTurnosCasetas || !this.validarContextoExcel() ||
+        !this.esSupervisor || this.guardandoTurnosExcel) return;
+    if (this.turnosPendientesExcel === 0) {
+      this.continuarACasetasExcel();
+      return;
+    }
+    if (!window.confirm(`El Excel reemplazará ${this.turnosPendientesExcel} programaciones anteriores de SIGO (A/B/C/D/DM/V/COM/LIC). Los cambios manuales hechos antes en esas celdas se sobrescribirán. ¿Confirmas?`)) {
+      return;
+    }
+    this.guardandoTurnosExcel = true;
+    this.error = '';
+    this.api.confirmarTurnosExcel(this.plazaId!, this.archivoExcelEnRevision!, this.anio, this.mes)
+      .pipe(finalize(() => {
+        this.guardandoTurnosExcel = false;
+        this.cdr.detectChanges();
+      }))
+      .subscribe({
+        next: resultado => {
+          this.mensaje = `Turnos guardados: ${resultado.guardados}. Ahora revisa las casetas.`;
+          this.continuarACasetasExcel();
+        },
+        error: e => {
+          this.error = this.mensajeError(e, 'No se pudieron guardar los turnos. No se importaron casetas.');
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  continuarACasetasExcel(): void {
+    if (!this.validarContextoExcel() || this.importandoExcel) return;
+    this.importandoExcel = true;
+    this.error = '';
+    this.api.previsualizarExcelDistribucion(this.plazaId!, this.archivoExcelEnRevision!, this.anio, this.mes)
+      .pipe(finalize(() => {
+        this.importandoExcel = false;
+        this.cdr.detectChanges();
+      }))
+      .subscribe({
+        next: previa => {
+          this.vistaPreviaTurnosCasetas = null;
+          this.vistaPreviaImportacion = previa;
+          if (!previa.valido) {
+            this.error = `Hay ${previa.errores.length} conflictos que deben corregirse antes de guardar casetas.`;
+          } else {
+            this.mensaje = `${previa.cambios.length} casetas pendientes y ${previa.omitidos.length} omitidas. Revisa antes de confirmar.`;
+          }
+          this.cdr.detectChanges();
+        },
+        error: e => {
+          this.error = this.mensajeError(e, 'No se pudo analizar las casetas del Excel.');
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  confirmarCasetasImportacionExcel(): void {
+    if (!this.vistaPreviaImportacion?.valido || !this.validarContextoExcel() ||
+        !this.esSupervisor || this.guardandoCasetasExcel) return;
+    if (!window.confirm(`El Excel reemplazará ${this.vistaPreviaImportacion.cambios.length} asignaciones de casetas (incluidas liberaciones anteriores). Las casetas sin turno se omiten. Puedes editar manualmente después. ¿Confirmas?`)) {
+      return;
+    }
+    this.guardandoCasetasExcel = true;
+    this.error = '';
+    this.api.confirmarCasetasExcel(this.plazaId!, this.archivoExcelEnRevision!, this.anio, this.mes)
+      .pipe(finalize(() => {
+        this.guardandoCasetasExcel = false;
+        this.cdr.detectChanges();
+      }))
+      .subscribe({
+        next: resultado => {
+          this.descartarImportacionExcel();
+          this.cargar();
+          // cargar() resets status; show durable result after data refresh in future.
+          this.mensaje = `${resultado.guardados} casetas guardadas. ${resultado.omitidos} omitidas. Puedes editarlas desde SIGO.`;
+          this.cdr.detectChanges();
+        },
+        error: e => {
+          this.error = this.mensajeError(e, 'No se pudieron guardar las casetas.');
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /** Los cambios del Excel se deciden en la pantalla, no durante la lectura. */
+  previsualizarCasetasJsonDesdeExcel(evento: Event): void {
+    const entrada = evento.target as HTMLInputElement;
+    const archivo = entrada.files?.[0];
+    entrada.value = '';
+    this.descartarImportacionExcel();
+    if (!archivo || !this.plazaId || this.cargando || this.guardando) return;
+    if (this.cambios.size) {
+      this.error = 'Guarda o descarta los cambios pendientes antes de importar Excel.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (!archivo.name.toLowerCase().endsWith('.xlsx') || archivo.size > 2 * 1024 * 1024) {
+      this.error = 'Selecciona un Excel .xlsx de máximo 2 MB.';
+      this.cdr.detectChanges();
+      return;
+    }
+    this.resumenImportacionParcialCasetas = null;
+    this.archivoExcelEnRevision = archivo;
+    this.plazaExcelEnRevision = this.plazaId;
+    this.anioExcelEnRevision = this.anio;
+    this.mesExcelEnRevision = this.mes;
+    this.importandoExcel = true;
+    this.error = '';
+    this.mensaje = '';
+    this.api.extraerCasetasExcelJson(this.plazaId, archivo, this.anio, this.mes)
+      .subscribe({
+        next: datos => {
+          this.api.previsualizarCasetasJson(datos)
+            .pipe(finalize(() => {
+              this.importandoExcel = false;
+              this.cdr.detectChanges();
+            }))
+            .subscribe({
+              next: previa => {
+                // El backend verifica la plaza y los registros. Su lista de conflictos
+                // no se aplica a ciegas: el supervisor los resuelve en la matriz.
+                this.vistaPreviaImportacion = previa;
+                this.vistaPreviaTurnosCasetas = null;
+                this.prepararRevisionCasetasExcel(datos);
+                this.error = '';
+                this.mensaje = 'Excel extraído por Apache POI y validado como JSON. Revisa las diferencias; no se ha guardado nada.';
+                this.cdr.detectChanges();
+              },
+              error: e => {
+                this.error = this.mensajeError(e, 'No se pudo validar el JSON de casetas.');
+                this.cdr.detectChanges();
+              }
+            });
+        },
+        error: e => {
+          this.importandoExcel = false;
+          this.error = this.mensajeError(e, 'No se pudo extraer el Excel con Apache POI.');
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  private codigoCasetaExcel(valor: string | null): string {
+    if (valor === null) return '';
+    const limpio = valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    const auxiliar = /^AUX(?:ILIAR)?\s*-?\s*(\d+)$/.exec(limpio);
+    return auxiliar ? `AUX ${auxiliar[1]}` : limpio;
+  }
+
+  private prepararRevisionCasetasExcel(datos: ExtraccionCasetasExcelJson): void {
+    this.filasRevisionCasetasExcel = [];
+    this.observacionesRevisionCasetasExcel = [];
+    this.coincidenciasCasetasExcel = 0;
+    this.celdasCasetasExcel = datos.registros.length;
+
+    const turnos = new Map<string, ProgramacionDia>();
+    for (const p of this.programaciones) {
+      turnos.set(`${p.codigoTrabajador}|${p.fecha}`, p);
+    }
+    const activos = new Set(this.agentes.filter(a => a.activo !== false).map(a => a.codigo));
+    const ubicacionesPorCodigo = new Map(this.ubicaciones.filter(u => u.activo)
+      .map(u => [this.codigoCasetaExcel(u.codigo), u] as const));
+    const agrupados = new Map<string, typeof datos.registros>();
+    for (const registro of datos.registros) {
+      const llave = `${registro.codigoTrabajador}|${registro.fecha}`;
+      const grupo = agrupados.get(llave) ?? [];
+      grupo.push(registro);
+      agrupados.set(llave, grupo);
+    }
+
+    for (const [llave, grupo] of agrupados) {
+      const registro = grupo[0];
+      const p = turnos.get(llave);
+      const referencia = `Código ${registro.codigoTrabajador} · ${registro.fecha}`;
+      if (!activos.has(registro.codigoTrabajador)) {
+        this.observacionesRevisionCasetasExcel.push(`${referencia}: trabajador no activo en la plaza; omitido.`);
+        continue;
+      }
+      if (!p) {
+        this.observacionesRevisionCasetasExcel.push(`${referencia}: sin programación registrada en SIGO; omitido.`);
+        continue;
+      }
+      const turnoOperativo = ['A', 'B', 'C'].includes(p.estado);
+      if (!turnoOperativo && registro.caseta !== null) {
+        this.observacionesRevisionCasetasExcel.push(`${referencia}: SIGO tiene turno ${p.estado}. No se cambia el turno ni se asigna caseta.`);
+        continue;
+      }
+
+      const actualId = this.asignacionesGuardadas.get(p.programacionId) ?? null;
+      const actual = this.ubicaciones.find(u => u.id === actualId);
+      const codigo = this.codigoCasetaExcel(registro.caseta);
+      const ubicacion = registro.caseta === null ? null : (ubicacionesPorCodigo.get(codigo) ?? null);
+      const casetaExiste = registro.caseta === null || !!ubicacion;
+      const permitida = registro.caseta === null || (!!ubicacion && this.ubicacionHabilitadaParaTurno(ubicacion, p.estado));
+      const turnoDistinto = !!registro.turnoExcel && registro.turnoExcel !== p.estado;
+      const repetido = grupo.length > 1;
+      const misma = casetaExiste && permitida && !turnoDistinto && !repetido && actualId === (ubicacion?.id ?? null);
+      if (misma) {
+        this.coincidenciasCasetasExcel++;
+        continue;
+      }
+
+      const motivos: string[] = [];
+      if (repetido) motivos.push(`El trabajador aparece ${grupo.length} veces en la misma fecha (${grupo.map(r => r.caseta ?? 'Sin asignar').join(', ')}); escoge explícitamente la ubicación correcta.`);
+      if (!casetaExiste) motivos.push('La caseta indicada en Excel no existe o no está activa; selecciona otra ubicación.');
+      if (!permitida && casetaExiste) motivos.push(`La caseta del Excel no está habilitada para el turno ${p.estado}.`);
+      if (turnoDistinto) motivos.push(`El color del Excel indica turno ${registro.turnoExcel}, pero SIGO registra ${p.estado}; no se cambiará el turno.`);
+      if (actualId !== null && actualId !== (ubicacion?.id ?? null)) motivos.push('La caseta existente es distinta. Es necesario decidir qué asignación conservar.');
+      const propuestaSegura = casetaExiste && permitida;
+      this.filasRevisionCasetasExcel.push({
+        programacionId: p.programacionId,
+        codigoTrabajador: p.codigoTrabajador,
+        trabajador: p.nombreTrabajador,
+        fecha: p.fecha,
+        turno: p.estado,
+        casetaActual: actual?.codigo ?? 'Sin asignar',
+        casetaExcel: registro.caseta === null ? 'Sin asignar' : registro.caseta,
+        ubicacionActualId: actualId,
+        ubicacionExcelId: ubicacion?.id ?? null,
+        puedeUsarExcel: propuestaSegura,
+        opcion: (actualId === null && propuestaSegura && !repetido && !turnoDistinto) ? 'EXCEL' : 'PENDIENTE',
+        ubicacionManualId: actualId,
+        motivo: motivos.join(' '),
+        origen: 'EXCEL'
+      });
+    }
+
+    // Dos solicitudes de la misma fecha/turno/ubicación nunca se aceptan sin decisión.
+    const pedidos = new Map<string, FilaRevisionCasetaExcel[]>();
+    for (const fila of this.filasRevisionCasetasExcel) {
+      if (!fila.puedeUsarExcel || fila.ubicacionExcelId === null) continue;
+      const llave = `${fila.fecha}|${fila.turno}|${fila.ubicacionExcelId}`;
+      const grupo = pedidos.get(llave) ?? [];
+      grupo.push(fila);
+      pedidos.set(llave, grupo);
+    }
+    for (const grupo of pedidos.values()) {
+      if (grupo.length < 2) continue;
+      for (const fila of grupo) {
+        fila.opcion = 'PENDIENTE';
+        fila.motivo += ' La misma caseta fue solicitada por varios trabajadores en el Excel.';
+      }
+    }
+    this.actualizarConflictosCasetasExcel();
+  }
+
+  get pendientesRevisionCasetasExcel(): number {
+    return this.filasRevisionCasetasExcel.filter(f => f.opcion === 'PENDIENTE').length;
+  }
+
+  get cambiosRevisionCasetasExcel(): number {
+    return this.filasRevisionCasetasExcel.filter(f =>
+      this.ubicacionResueltaExcel(f) !== f.ubicacionActualId && f.opcion !== 'PENDIENTE'
+    ).length;
+  }
+
+  private ubicacionResueltaExcel(fila: FilaRevisionCasetaExcel): number | null {
+    if (fila.opcion === 'EXCEL') return fila.ubicacionExcelId;
+    if (fila.opcion === 'MANUAL') return fila.ubicacionManualId;
+    return fila.ubicacionActualId;
+  }
+
+  resolverFilaCasetaExcel(fila: FilaRevisionCasetaExcel, opcion: string): void {
+    if (!['PENDIENTE', 'CONSERVAR', 'EXCEL', 'MANUAL'].includes(opcion)) return;
+    if (opcion === 'EXCEL' && !fila.puedeUsarExcel) return;
+    fila.opcion = opcion as FilaRevisionCasetaExcel['opcion'];
+    this.actualizarConflictosCasetasExcel();
+    this.error = '';
+    this.cdr.detectChanges();
+  }
+
+  /** Acciones masivas explícitas; nunca sobreescriben ni guardan silenciosamente. */
+  resolverPendientesCasetasExcel(opcion: 'CONSERVAR' | 'EXCEL'): void {
+    for (const fila of this.filasRevisionCasetasExcel) {
+      if (fila.opcion !== 'PENDIENTE') continue;
+      if (opcion === 'EXCEL' && !fila.puedeUsarExcel) continue;
+      fila.opcion = opcion;
+    }
+    this.actualizarConflictosCasetasExcel();
+    this.error = '';
+    this.cdr.detectChanges();
+  }
+
+  seleccionarCasetaManualExcel(fila: FilaRevisionCasetaExcel, valor: string): void {
+    fila.ubicacionManualId = valor === 'NINGUNA' ? null : Number(valor);
+    fila.opcion = 'MANUAL';
+    this.actualizarConflictosCasetasExcel();
+    this.error = '';
+    this.cdr.detectChanges();
+  }
+
+  /** Incluir a un ocupante no mencionado en el Excel, solo si el controlador lo elige. */
+  revisarOcupanteCasetaExcel(programacionId: number): void {
+    if (this.filasRevisionCasetasExcel.some(f => f.programacionId === programacionId)) return;
+    const p = this.programaciones.find(x => x.programacionId === programacionId);
+    if (!p) return;
+    const actualId = this.asignacionesGuardadas.get(programacionId) ?? null;
+    const actual = this.ubicaciones.find(u => u.id === actualId);
+    this.filasRevisionCasetasExcel.push({
+      programacionId,
+      codigoTrabajador: p.codigoTrabajador,
+      trabajador: p.nombreTrabajador,
+      fecha: p.fecha,
+      turno: p.estado,
+      casetaActual: actual?.codigo ?? 'Sin asignar',
+      casetaExcel: 'No incluido en Excel',
+      ubicacionActualId: actualId,
+      ubicacionExcelId: null,
+      puedeUsarExcel: false,
+      opcion: 'PENDIENTE',
+      ubicacionManualId: actualId,
+      motivo: 'Esta caseta ya está ocupada. Decide si conservarla, liberarla o asignar otra ubicación; no se quitará automáticamente.',
+      origen: 'OCUPANTE'
+    });
+    this.actualizarConflictosCasetasExcel();
+    this.cdr.detectChanges();
+  }
+
+  tieneFilaRevisionCasetaExcel(programacionId: number): boolean {
+    return this.filasRevisionCasetasExcel.some(f => f.programacionId === programacionId);
+  }
+
+  private actualizarConflictosCasetasExcel(): void {
+    const plan = new Map<number, number>(this.asignacionesGuardadas);
+    const afectados = new Set<number>();
+    for (const fila of this.filasRevisionCasetasExcel) {
+      if (fila.opcion !== 'EXCEL' && fila.opcion !== 'MANUAL') continue;
+      const destino = this.ubicacionResueltaExcel(fila);
+      if (destino !== fila.ubicacionActualId) afectados.add(fila.programacionId);
+      if (destino === null) plan.delete(fila.programacionId);
+      else plan.set(fila.programacionId, destino);
+    }
+    const grupos = new Map<string, ConflictoCasetaExcel[]>();
+    const ubicaciones = new Map(this.ubicaciones.map(u => [u.id, u] as const));
+    for (const p of this.programaciones) {
+      if (!['A', 'B', 'C'].includes(p.estado)) continue;
+      const ubicacionId = plan.get(p.programacionId);
+      if (ubicacionId === undefined) continue;
+      const lugar = ubicaciones.get(ubicacionId);
+      if (!lugar) continue;
+      const llave = `${p.fecha}|${p.estado}|${ubicacionId}`;
+      const lista = grupos.get(llave) ?? [];
+      lista.push({ fecha: p.fecha, turno: p.estado, caseta: lugar.codigo,
+        programacionId: p.programacionId, codigo: p.codigoTrabajador, trabajador: p.nombreTrabajador });
+      grupos.set(llave, lista);
+    }
+    this.conflictosRevisionCasetasExcel = [];
+    for (const lista of grupos.values()) {
+      if (lista.length < 2 || !lista.some(a => afectados.has(a.programacionId))) continue;
+      this.conflictosRevisionCasetasExcel.push({
+        fecha: lista[0].fecha,
+        turno: lista[0].turno,
+        caseta: lista[0].caseta,
+        ocupantes: lista
+      });
+    }
+    this.loteSeguroCasetasExcel = this.construirLoteSeguroCasetasExcel();
+  }
+
+
+  previsualizarImportacionExcel(evento: Event): void {
+    const entrada = evento.target as HTMLInputElement;
+    const archivo = entrada.files?.[0];
+    entrada.value = '';
+    this.vistaPreviaImportacion = null;
+    this.vistaPreviaTurnosCasetas = null;
+    if (!archivo) return;
+    if (!this.plazaId || this.cargando || this.guardando) return;
+    if (this.cambios.size > 0) {
+      this.error = 'Guarda o descarta primero los cambios pendientes antes de importar Excel.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (!archivo.name.toLowerCase().endsWith('.xlsx') || archivo.size > 2 * 1024 * 1024) {
+      this.error = 'Selecciona un archivo .xlsx de máximo 2 MB.';
+      this.cdr.detectChanges();
+      return;
+    }
+    this.importandoExcel = true;
+    this.error = '';
+    this.mensaje = '';
+    this.api.previsualizarExcelDistribucion(this.plazaId, archivo, this.anio, this.mes)
+      .pipe(finalize(() => {
+        this.importandoExcel = false;
+        this.cdr.detectChanges();
+      }))
+      .subscribe({
+        next: previa => {
+          this.vistaPreviaImportacion = previa;
+          if (!previa.valido) {
+            this.error = `El Excel contiene ${previa.errores.length} error(es). Corrígelos antes de aplicar.`;
+          } else {
+            this.mensaje = `Excel leído: ${previa.cambios.length} cambios propuestos. No se guardó nada.`;
+          }
+          this.cdr.detectChanges();
+        },
+        error: e => {
+          this.error = this.mensajeError(e,
+            'No se pudo importar el Excel. Revisa el formato y el mes seleccionado.');
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /** Aplica únicamente las decisiones validadas: nunca guarda en la base de datos. */
+  /**
+   * Calcula un subconjunto seguro, SIN alterar la matriz ni la base de datos.
+   * Se validan todas las propuestas elegidas juntas (incluidos intercambios),
+   * y se excluyen iterativamente las que producen ocupaciones duplicadas.
+   */
+  private construirLoteSeguroCasetasExcel(): {
+    propuestas: Array<{ id: number; ubicacionId: number | null }>;
+    pendientes: string[];
+    excluidas: string[];
+  } {
+    const candidatas = new Map<number, { id: number; ubicacionId: number | null }>();
+    const pendientes: string[] = [];
+    const excluidas: string[] = [];
+    const programacionesPorId = new Map(this.programaciones.map(p => [p.programacionId, p] as const));
+    const ubicacionesPorId = new Map(this.ubicaciones.map(u => [u.id, u] as const));
+    const referencias = new Map<number, string>();
+
+    for (const fila of this.filasRevisionCasetasExcel) {
+      const referencia = `${fila.fecha} · ${fila.turno} · Código ${fila.codigoTrabajador}`;
+      referencias.set(fila.programacionId, referencia);
+      if (fila.opcion === 'PENDIENTE') {
+        pendientes.push(`${referencia}: SIGO ${fila.casetaActual}, Excel ${fila.casetaExcel}; falta una decisión del controlador.`);
+        continue;
+      }
+      if (fila.opcion === 'CONSERVAR') continue;
+      if (fila.opcion === 'EXCEL' && !fila.puedeUsarExcel) {
+        excluidas.push(`${referencia}: el valor del Excel no es una caseta válida para este turno.`);
+        continue;
+      }
+      const destino = this.ubicacionResueltaExcel(fila);
+      if (destino === fila.ubicacionActualId) continue;
+      const p = programacionesPorId.get(fila.programacionId);
+      if (!p || p.codigoTrabajador !== fila.codigoTrabajador || p.fecha !== fila.fecha || p.estado !== fila.turno) {
+        excluidas.push(`${referencia}: la programación cambió respecto de la vista previa.`);
+        continue;
+      }
+      if (destino !== null) {
+        const ubicacion = ubicacionesPorId.get(destino);
+        if (!ubicacion || !ubicacion.activo || !['A', 'B', 'C'].includes(p.estado) ||
+            !this.ubicacionHabilitadaParaTurno(ubicacion, p.estado)) {
+          excluidas.push(`${referencia}: la caseta seleccionada no existe, no está activa o no admite el turno.`);
+          continue;
+        }
+      }
+      candidatas.set(fila.programacionId, { id: fila.programacionId, ubicacionId: destino });
+    }
+
+    // Es importante calcular el resultado CONJUNTO. Por ejemplo, un intercambio
+    // 101 ↔ 102 es válido si ambos movimientos fueron elegidos explícitamente.
+    // Si una propuesta falla, volvemos a calcular con su ocupación original,
+    // porque eso podría bloquear una segunda propuesta que dependía de ella.
+    let cambio: boolean;
+    do {
+      cambio = false;
+      const plan = new Map<number, number>(this.asignacionesGuardadas);
+      for (const propuesta of candidatas.values()) {
+        if (propuesta.ubicacionId === null) plan.delete(propuesta.id);
+        else plan.set(propuesta.id, propuesta.ubicacionId);
+      }
+      const ocupantes = new Map<string, number[]>();
+      for (const p of this.programaciones) {
+        if (!['A', 'B', 'C'].includes(p.estado)) continue;
+        const ubicacionId = plan.get(p.programacionId);
+        if (ubicacionId === undefined) continue;
+        const clave = `${p.fecha}|${p.estado}|${ubicacionId}`;
+        const lista = ocupantes.get(clave) ?? [];
+        lista.push(p.programacionId);
+        ocupantes.set(clave, lista);
+      }
+      const descartar = new Set<number>();
+      for (const [clave, ids] of ocupantes) {
+        if (ids.length < 2) continue;
+        for (const id of ids) {
+          if (!candidatas.has(id)) continue;
+          descartar.add(id);
+        }
+        // Las colisiones preexistentes que no implican ningún cambio del lote
+        // no se resuelven ni se alteran silenciosamente en esta importación.
+        if (ids.some(id => candidatas.has(id))) {
+          const involucrados = ids.map(id => programacionesPorId.get(id)?.codigoTrabajador ?? id);
+          for (const id of ids) {
+            if (!candidatas.has(id)) continue;
+            excluidas.push(`${referencias.get(id) ?? 'Programación ' + id}: caseta duplicada ` +
+              `(${clave.replace(/\|/g, ' · ')}), códigos ${involucrados.join(' y ')}; no se aplicó esta propuesta.`);
+          }
+        }
+      }
+      for (const id of descartar) {
+        if (candidatas.delete(id)) cambio = true;
+      }
+    } while (cambio);
+
+    return { propuestas: [...candidatas.values()], pendientes, excluidas };
+  }
+
+  loteSeguroCasetasExcel: {
+    propuestas: Array<{ id: number; ubicacionId: number | null }>;
+    pendientes: string[];
+    excluidas: string[];
+  } = { propuestas: [], pendientes: [], excluidas: [] };
+
+  /** Información persistente en la interfaz hasta confirmar el guardado. */
+  resumenImportacionParcialCasetas: {
+    aplicadas: number;
+    pendientes: number;
+    excluidas: number;
+    detalle: string[];
+  } | null = null;
+
+  /** Aplica SOLO las casetas seguras al borrador, previo aviso si queda algo fuera. */
+  aplicarImportacionExcel(): void {
+    if (!this.vistaPreviaImportacion || !this.plazaId || this.cargando || this.guardando ||
+        this.cambios.size > 0) return;
+    if (this.plazaExcelEnRevision !== this.plazaId ||
+        this.anioExcelEnRevision !== this.anio || this.mesExcelEnRevision !== this.mes) {
+      this.error = 'Cambiaste de plaza o mes. Importa el Excel nuevamente.';
+      this.cdr.detectChanges();
+      return;
+    }
+    const lote = this.construirLoteSeguroCasetasExcel();
+    if (!lote.propuestas.length) {
+      this.error = 'No hay asignaciones seguras por aplicar. Revisa las decisiones o las casetas duplicadas.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (lote.pendientes.length || lote.excluidas.length) {
+      const aceptar = window.confirm(
+        `IMPORTACIÓN PARCIAL DE CASETAS\n\n` +
+        `Cambios válidos que pasarán a la tabla: ${lote.propuestas.length}\n` +
+        `Decisiones pendientes (NO se aplican): ${lote.pendientes.length}\n` +
+        `Asignaciones excluidas por validación (NO se aplican): ${lote.excluidas.length}\n\n` +
+        `Ningún cambio se guardará aún en PostgreSQL.\n` +
+        `Las casetas no aplicadas conservarán su valor actual en SIGO.\n\n` +
+        `¿Deseas aplicar solo los cambios válidos al borrador mensual?`
+      );
+      if (!aceptar) return;
+    }
+    const originales = new Map(this.asignaciones);
+    const pendientesOriginales = new Map(this.cambios);
+    for (const propuesta of lote.propuestas) {
+      this.cambiar(propuesta.id, propuesta.ubicacionId);
+      if ((this.asignaciones.get(propuesta.id) ?? null) !== propuesta.ubicacionId) {
+        this.asignaciones.clear();
+        for (const [id, valor] of originales) this.asignaciones.set(id, valor);
+        this.cambios.clear();
+        for (const [id, valor] of pendientesOriginales) this.cambios.set(id, valor);
+        this.error = 'No se aplicó ningún cambio: una asignación no pudo incorporarse al borrador.';
+        this.cdr.detectChanges();
+        return;
+      }
+    }
+    const pendientes = lote.pendientes.length;
+    const excluidas = lote.excluidas.length;
+    const detalle = [...lote.pendientes, ...lote.excluidas];
+    const aplicadas = lote.propuestas.length;
+    this.descartarImportacionExcel();
+    this.resumenImportacionParcialCasetas = { aplicadas, pendientes, excluidas, detalle };
+    this.mensaje = `Se aplicaron ${aplicadas} asignaciones al borrador. ` +
+      `${pendientes} decisiones pendientes y ${excluidas} propuestas excluidas conservaron sus casetas anteriores. ` +
+      'Revisa la matriz antes de Guardar cambios.';
+    this.error = '';
+    this.cdr.detectChanges();
+  }
+
+  descartarImportacionExcel(): void {
+    this.filasRevisionCasetasExcel = [];
+    this.observacionesRevisionCasetasExcel = [];
+    this.conflictosRevisionCasetasExcel = [];
+    this.coincidenciasCasetasExcel = 0;
+    this.celdasCasetasExcel = 0;
+    this.vistaPreviaImportacion = null;
+    this.vistaPreviaTurnosCasetas = null;
+    this.archivoExcelEnRevision = null;
+    this.plazaExcelEnRevision = null;
+    this.error = '';
+    this.mensaje = '';
+    this.cdr.detectChanges();
+  }
+
+
+  exportarReporteExcel(): void {
+    if (!this.plazaId || !this.diasVisibles.length) {
+      this.error = 'Selecciona una plaza y un periodo válido para exportar Excel.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (this.cambios.size > 0) {
+      this.error = 'Guarda primero las asignaciones pendientes antes de exportar Excel.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (this.generandoReporteExcel) return;
+
+    // El mismo rango exacto que utiliza el botón "Exportar PDF".
+    const desde = this.fecha(this.diasVisibles[0]);
+    const hasta = this.fecha(this.diasVisibles[this.diasVisibles.length - 1]);
+    const plazaId = this.plazaId;
+    const plazaCodigo = this.plazas.find(p => p.id === plazaId)?.codigo
+      ?? this.auth.usuario()?.plaza ?? 'plaza';
+
+    this.generandoReporteExcel = true;
+    this.error = '';
+    this.mensaje = '';
+    this.cdr.detectChanges();
+
+    this.api.getReporteDistribucionPlazaExcel(plazaId, desde, hasta)
+      .pipe(finalize(() => {
+        this.generandoReporteExcel = false;
+        this.cdr.detectChanges();
+      }))
+      .subscribe({
+        next: blob => {
+          const url = URL.createObjectURL(blob);
+          const enlace = document.createElement('a');
+          enlace.href = url;
+          enlace.download = `distribucion-${plazaCodigo}-${desde}-${hasta}.xlsx`;
+          document.body.appendChild(enlace);
+          enlace.click();
+          enlace.remove();
+          URL.revokeObjectURL(url);
+          this.mensaje = this.filtroSemana === 0
+            ? 'Excel mensual de distribución generado correctamente.'
+            : 'Excel de la semana visible generado correctamente.';
+          this.cdr.detectChanges();
+        },
+        error: e => {
+          this.error = this.mensajeError(e,
+            'No se pudo generar el Excel de distribución.');
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
   exportarReporteMatrizPdf(): void {
 
     if (
@@ -2254,6 +3031,21 @@ export class DistribucionControladorComponent
       return;
     }
 
+    if (this.resumenImportacionParcialCasetas &&
+        (this.resumenImportacionParcialCasetas.pendientes > 0 ||
+         this.resumenImportacionParcialCasetas.excluidas > 0)) {
+      const resumen = this.resumenImportacionParcialCasetas;
+      const aceptar = window.confirm(
+        `ATENCIÓN: GUARDADO DE UN LOTE INCOMPLETO\n\n` +
+        `Cambios actualmente pendientes en la matriz: ${this.cambios.size}\n` +
+        `Decisiones que no ingresaron en el lote importado: ${resumen.pendientes}\n` +
+        `Asignaciones excluidas de la importación: ${resumen.excluidas}\n\n` +
+        `Los casos no importados conservaron su valor en SIGO (salvo si tú los editaste después).\n` +
+        `Se guardarán solamente los cambios presentes en la matriz.\n` +
+        `¿Confirmas expresamente guardar este borrador parcial?`
+      );
+      if (!aceptar) return;
+    }
     this.guardadoForzadoDisponible =
       false;
 
@@ -2335,6 +3127,7 @@ export class DistribucionControladorComponent
         next: (
           guardadas
         ) => {
+          this.resumenImportacionParcialCasetas = null;
 
           /*
            * Aplicamos también las desasignaciones, que no aparecen en la

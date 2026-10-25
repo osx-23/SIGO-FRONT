@@ -131,6 +131,85 @@ export interface ProgramacionContextoResponse {
   excepciones: AgenteProgramacionExcepcion[];
 }
 
+export interface ImportacionCasetaCambio {
+  programacionTurnoId: number;
+  ubicacionId: number | null;
+  codigoTrabajador: number;
+  trabajador: string;
+  fecha: string;
+  caseta: string;
+}
+
+
+/** Datos extraídos por Apache POI: se envían mediante POST JSON para validar. */
+export interface RegistroCasetaExcelJson {
+  codigoTrabajador: number;
+  fecha: string;
+  caseta: string | null;
+  turnoExcel: 'A' | 'B' | 'C' | null;
+}
+export interface ExtraccionCasetasExcelJson {
+  plazaId: number;
+  plazaCodigo: string;
+  desde: string;
+  hasta: string;
+  registros: RegistroCasetaExcelJson[];
+}
+
+export interface VistaPreviaDistribucionExcel {
+  valido: boolean;
+  plazaId: number;
+  desde: string;
+  hasta: string;
+  celdasLeidas: number;
+  yaAsignadas: number;
+  cambios: ImportacionCasetaCambio[];
+  errores: string[];
+  omitidos: string[];
+}
+
+/** Vista previa segura de turnos + casetas. NO existe endpoint de guardado en esta modalidad. */
+export interface PropuestaTurnoCasetaExcel {
+  codigoTrabajador: number;
+  trabajador: string;
+  fecha: string;
+  valorExcel: string;
+  turnoExcel: string | null;
+  turnoSigo: string | null;
+  casetaSigo: string | null;
+  accion: 'CREAR' | 'ACTUALIZAR' | 'COINCIDE' | 'REVISAR';
+  detalle: string;
+}
+
+export interface VistaPreviaTurnosCasetasExcel {
+  desde: string;
+  hasta: string;
+  leidas: number;
+  crear: number;
+  actualizar: number;
+  coinciden: number;
+  revisar: number;
+  propuestas: PropuestaTurnoCasetaExcel[];
+  advertencias: string[];
+}
+
+/** SIGO_IMPORTAR_TURNOS_TEXTO_V1 - lectura literal de los textos de turnos. */
+export interface CambioTextoTurnoExcel {
+  trabajadorId: number;
+  codigoTrabajador: number;
+  nombre: string;
+  fecha: string;
+  anterior: EstadoProgramacion | null;
+  nuevo: EstadoProgramacion | null;
+}
+export interface VistaPreviaTurnosTextoExcel {
+  leidos: number;
+  coinciden: number;
+  cambios: CambioTextoTurnoExcel[];
+  errores: string[];
+  omitidos: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProgramacionApiService {
   private readonly http = inject(HttpClient);
@@ -175,6 +254,19 @@ export class ProgramacionApiService {
       .set('mes', mes);
 
     return this.http.get<ProgramacionDia[]>(`${this.api}/programacion/turnos`, { params });
+  }
+
+  /** SIGO_IMPORTAR_TURNOS_TEXTO_V1. Apache POI lee, pero no guarda. */
+  previsualizarTextoTurnos(plazaId: number, anio: number, mes: number, archivo: File): Observable<VistaPreviaTurnosTextoExcel> {
+    const data = new FormData();
+    data.append('archivo', archivo);
+    data.append('plazaId', String(plazaId));
+    data.append('anio', String(anio));
+    data.append('mes', String(mes));
+    return this.http.post<VistaPreviaTurnosTextoExcel>(
+      `${this.api}/programacion/turnos/importar-excel/vista-previa`,
+      data
+    );
   }
 
   guardarTurnos(request: GuardarProgramacionRequest): Observable<ProgramacionDia[]> {
@@ -265,6 +357,76 @@ export class ProgramacionApiService {
         params,
         responseType: 'blob'
       }
+    );
+  }
+
+  previsualizarExcelTurnosCasetas(plazaId: number, archivo: File, anio: number, mes: number): Observable<VistaPreviaTurnosCasetasExcel> {
+    const formulario = new FormData();
+    formulario.append('archivo', archivo, archivo.name);
+    return this.http.post<VistaPreviaTurnosCasetasExcel>(
+      `${this.api}/distribucion/importar-excel/turnos/vista-previa`, formulario,
+      { params: new HttpParams().set('plazaId', plazaId).set('anio', anio).set('mes', mes) }
+    );
+  }
+
+  confirmarTurnosExcel(plazaId: number, archivo: File, anio: number, mes: number): Observable<{guardados: number; omitidos: number; mensaje: string}> {
+    const formulario = new FormData();
+    formulario.append('archivo', archivo, archivo.name);
+    return this.http.post<{guardados: number; omitidos: number; mensaje: string}>(
+      `${this.api}/distribucion/importar-excel/turnos/confirmar`, formulario,
+      { params: new HttpParams().set('plazaId', plazaId).set('anio', anio).set('mes', mes) }
+    );
+  }
+
+  confirmarCasetasExcel(plazaId: number, archivo: File, anio: number, mes: number): Observable<{guardados: number; omitidos: number; yaAsignadas: number; mensaje: string}> {
+    const formulario = new FormData();
+    formulario.append('archivo', archivo, archivo.name);
+    return this.http.post<{guardados: number; omitidos: number; yaAsignadas: number; mensaje: string}>(
+      `${this.api}/distribucion/importar-excel/casetas/confirmar`, formulario,
+      { params: new HttpParams().set('plazaId', plazaId).set('anio', anio).set('mes', mes) }
+    );
+  }
+
+  /** Multipart solo para subir XLSX. Apache POI responde con JSON de las casetas. */
+  extraerCasetasExcelJson(plazaId: number, archivo: File, anio: number, mes: number): Observable<ExtraccionCasetasExcelJson> {
+    const formulario = new FormData();
+    formulario.append('archivo', archivo, archivo.name);
+    return this.http.post<ExtraccionCasetasExcelJson>(
+      `${this.api}/distribucion/importar-excel/casetas/extraer`, formulario,
+      { params: new HttpParams().set('plazaId', plazaId).set('anio', anio).set('mes', mes) }
+    );
+  }
+
+  /** Segundo POST JSON: valida sin escribir en PostgreSQL. */
+  previsualizarCasetasJson(datos: ExtraccionCasetasExcelJson): Observable<VistaPreviaDistribucionExcel> {
+    return this.http.post<VistaPreviaDistribucionExcel>(
+      `${this.api}/distribucion/importar-excel/casetas/vista-previa-json`, datos
+    );
+  }
+
+  previsualizarExcelDistribucion(plazaId: number, archivo: File, anio: number, mes: number): Observable<VistaPreviaDistribucionExcel> {
+    const formulario = new FormData();
+    formulario.append('archivo', archivo, archivo.name);
+    return this.http.post<VistaPreviaDistribucionExcel>(
+      `${this.api}/distribucion/importar-excel/vista-previa`,
+      formulario,
+      { params: new HttpParams().set('plazaId', plazaId).set('anio', anio).set('mes', mes) }
+    );
+  }
+
+  getReporteDistribucionPlazaExcel(
+    plazaId: number,
+    desde: string,
+    hasta: string
+  ): Observable<Blob> {
+    const params = new HttpParams()
+      .set('plazaId', plazaId)
+      .set('desde', desde)
+      .set('hasta', hasta);
+
+    return this.http.get(
+      `${this.api}/distribucion/reporte-plaza/excel`,
+      { params, responseType: 'blob' }
     );
   }
 

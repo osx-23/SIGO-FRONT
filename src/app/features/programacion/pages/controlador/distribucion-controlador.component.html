@@ -61,6 +61,38 @@
         </button>
       }
 
+      <input
+        #archivoExcel
+        type="file"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        class="hidden"
+        aria-label="Seleccionar Excel de distribución"
+        (change)="previsualizarCasetasJsonDesdeExcel($event)"
+      />
+      <button
+        class="secondary"
+        type="button"
+        (click)="archivoExcel.click()"
+        [disabled]="cargando || guardando || importandoExcel || leyendoTurnosCasetas || !plazaId || cambios.size > 0"
+        title="Leer Excel semanal o mensual; revisar primero turnos y luego casetas"
+      >
+        {{ importandoExcel || leyendoTurnosCasetas ? 'Analizando Excel...' : 'Importar Excel' }}
+      </button>
+
+      <button
+        class="secondary"
+        type="button"
+        (click)="exportarReporteExcel()"
+        [disabled]="cargando || guardando || generandoReporteExcel ||
+          !plazaId || programaciones.length === 0 || cambios.size > 0"
+        [title]="cambios.size > 0 ? 'Guarda primero los cambios pendientes' :
+          filtroSemana === 0
+            ? 'Exportar la distribución mensual igual al PDF'
+            : 'Exportar la semana visible igual al PDF'"
+      >
+        {{ generandoReporteExcel ? 'Exportando Excel...' : 'Exportar Excel' }}
+      </button>
+
       <button
         class="secondary"
         type="button"
@@ -121,6 +153,225 @@
     </div>
     </div>
   </header>
+
+  @if (vistaPreviaTurnosCasetas; as completa) {
+    <section class="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm" aria-label="Primera etapa: programar turnos desde Excel">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">Importar Excel · Paso 1 de 2: turnos</h2>
+          <p class="mt-1 text-sm text-slate-700">{{ completa.desde }} al {{ completa.hasta }} · {{ completa.leidas }} celdas analizadas</p>
+          <p class="mt-1 text-xs text-slate-600">El Excel mensual y el semanal utilizan la misma revisión. Nada se guarda hasta confirmar.</p>
+        </div>
+        <button type="button" class="secondary" (click)="descartarImportacionExcel()">Cerrar</button>
+      </div>
+      <div class="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+        <div class="rounded-lg bg-white p-3"><b class="block text-lg">{{ completa.crear }}</b>Por crear</div>
+        <div class="rounded-lg bg-white p-3"><b class="block text-lg">{{ completa.actualizar }}</b>Por actualizar</div>
+        <div class="rounded-lg bg-white p-3"><b class="block text-lg">{{ completa.coinciden }}</b>Coinciden</div>
+        <div class="rounded-lg bg-amber-100 p-3"><b class="block text-lg">{{ completa.revisar }}</b>Revisar</div>
+      </div>
+      <p class="mt-2 text-xs font-semibold text-slate-700">
+        {{ turnosPendientesExcel }} programaciones pendientes: A/B/C y estados D, DM, V, COM o LIC.
+        El Excel confirmado reemplaza los datos anteriores; el personal inactivo o desconocido requiere revisión.
+      </p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <label class="text-xs font-semibold">Estado
+          <select class="ml-1 rounded border border-slate-300 bg-white p-2" [(ngModel)]="filtroEstadoRevisionExcel">
+            <option value="REVISAR">Requieren revisión</option>
+            <option value="CREAR">Por crear</option>
+            <option value="ACTUALIZAR">Por actualizar</option>
+            <option value="COINCIDE">Coinciden</option>
+            <option value="TODOS">Todos</option>
+          </select>
+        </label>
+        <label class="text-xs font-semibold">Semana
+          <select class="ml-1 rounded border border-slate-300 bg-white p-2" [(ngModel)]="semanaRevisionExcel">
+            <option [ngValue]="0">Todas</option>
+            <option [ngValue]="1">Días 1–7</option>
+            <option [ngValue]="2">Días 8–14</option>
+            <option [ngValue]="3">Días 15–21</option>
+            <option [ngValue]="4">Días 22–28</option>
+            <option [ngValue]="5">Días 29–31</option>
+          </select>
+        </label>
+        <label class="text-xs font-semibold">Trabajador
+          <input class="ml-1 rounded border border-slate-300 bg-white p-2" type="search"
+                 placeholder="Código o nombre" [(ngModel)]="filtroTrabajadorRevisionExcel" />
+        </label>
+      </div>
+      <div class="mt-3 max-h-80 overflow-auto rounded-lg border border-blue-100 bg-white">
+        <table class="w-full text-left text-xs text-slate-700">
+          <thead class="sticky top-0 bg-slate-100"><tr>
+            <th class="p-2">Código</th><th class="p-2">Trabajador</th><th class="p-2">Fecha</th>
+            <th class="p-2">Excel</th><th class="p-2">Turno Excel</th><th class="p-2">Turno SIGO</th>
+            <th class="p-2">Resultado</th><th class="p-2">Motivo</th>
+          </tr></thead>
+          <tbody>
+            @for (item of filasRevisionExcel; track $index) {
+              <tr class="border-b"><td class="p-2">{{ item.codigoTrabajador }}</td>
+                <td class="p-2">{{ item.trabajador }}</td><td class="p-2">{{ item.fecha }}</td>
+                <td class="p-2">{{ item.valorExcel }}</td><td class="p-2 font-semibold">{{ item.turnoExcel || '?' }}</td>
+                <td class="p-2">{{ item.turnoSigo || 'Sin turno' }}</td>
+                <td class="p-2 font-semibold">{{ item.accion }}</td><td class="p-2">{{ item.detalle }}</td></tr>
+            } @empty {
+              <tr><td colspan="8" class="p-3 text-slate-500">No hay registros con estos filtros.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-1 text-xs text-slate-500">Se muestran hasta 100 filas por filtro. Cambia la semana o busca un trabajador.</p>
+      @if (esSupervisor) {
+        <div class="mt-3 flex justify-end gap-2">
+          <button type="button" class="primary" (click)="confirmarTurnosImportacionExcel()"
+                  [disabled]="guardandoTurnosExcel || leyendoTurnosCasetas || importandoExcel">
+            {{ guardandoTurnosExcel ? 'Guardando turnos...' :
+               turnosPendientesExcel === 0 ? 'Continuar a casetas' : 'Confirmar y guardar turnos' }}
+          </button>
+        </div>
+      } @else {
+        <p class="mt-2 text-xs text-amber-800">Solo un supervisor puede confirmar la importación.</p>
+      }
+    </section>
+  }
+
+  @if (resumenImportacionParcialCasetas; as resumenExcel) {
+    <section class="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4" aria-label="Resultado de aplicación parcial de Excel">
+      <h3 class="font-semibold text-amber-950">Importación Excel aplicada solo al borrador</h3>
+      <p class="mt-1 text-sm text-amber-900">
+        {{ resumenExcel.aplicadas }} asignaciones cargadas ·
+        {{ resumenExcel.pendientes }} decisiones pendientes ·
+        {{ resumenExcel.excluidas }} asignaciones excluidas.
+        Las pendientes y excluidas conservan su asignación anterior.
+      </p>
+      <p class="mt-1 text-xs text-amber-900">
+        Aún no se guardó nada en PostgreSQL. Puedes corregir las casetas manualmente en la matriz.
+        Si guardas sin resolver todos los casos, SIGO te pedirá confirmación expresa.
+      </p>
+      @if (resumenExcel.detalle.length > 0) {
+        <details class="mt-2">
+          <summary class="cursor-pointer text-sm font-semibold text-amber-950">
+            Ver las {{ resumenExcel.detalle.length }} decisiones no aplicadas
+          </summary>
+          <ol class="mt-2 max-h-60 overflow-auto list-decimal pl-6 text-xs text-amber-950 space-y-1">
+            @for (texto of resumenExcel.detalle; track $index) { <li>{{ texto }}</li> }
+          </ol>
+        </details>
+      }
+    </section>
+  }
+
+  @if (vistaPreviaImportacion; as previa) {
+    <section class="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm" aria-label="Revisión de importación Excel">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-slate-900">Importar Excel · Revisar casetas antes de aplicar</h2>
+          <p class="text-sm text-slate-700 mt-1">{{ previa.desde }} al {{ previa.hasta }} · Plaza seleccionada</p>
+          <p class="mt-2 text-sm text-slate-800">
+            {{ celdasCasetasExcel }} registros leídos · {{ coincidenciasCasetasExcel }} coinciden ·
+            {{ filasRevisionCasetasExcel.length }} para revisar · {{ cambiosRevisionCasetasExcel }} cambios elegidos
+          </p>
+          <p class="mt-1 text-xs text-slate-600">Las celdas vacías no borran nada. D, DM, V, COM y LIC dejan la caseta sin asignación.
+            Los turnos A/B/C guardados en SIGO nunca se modifican desde aquí.</p>
+        </div>
+        <button type="button" class="secondary" (click)="descartarImportacionExcel()">Cancelar importación</button>
+      </div>
+
+      @if (observacionesRevisionCasetasExcel.length > 0) {
+        <details class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <summary class="cursor-pointer font-semibold text-amber-900">Observaciones y omitidas ({{ observacionesRevisionCasetasExcel.length }})</summary>
+          <ul class="mt-2 max-h-48 overflow-auto list-disc space-y-1 pl-6 text-xs text-amber-900">
+            @for (motivo of observacionesRevisionCasetasExcel; track $index) { <li>{{ motivo }}</li> }
+          </ul>
+        </details>
+      }
+      @if (conflictosRevisionCasetasExcel.length > 0) {
+        <div class="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+          <h3 class="font-semibold text-red-900">Casetas con ocupación duplicada ({{ conflictosRevisionCasetasExcel.length }})</h3>
+          <p class="mt-1 text-xs text-red-800">Debes decidir quién conserva la caseta y, si corresponde, liberar o reubicar al ocupante. Ninguno se desplazará automáticamente.</p>
+          <ul class="mt-2 space-y-3 text-xs text-red-900 max-h-64 overflow-auto">
+            @for (conflicto of conflictosRevisionCasetasExcel; track $index) {
+              <li class="rounded-lg border border-red-200 bg-white p-2">
+                <strong>{{ conflicto.fecha }} · Turno {{ conflicto.turno }} · Caseta {{ conflicto.caseta }}</strong>
+                @for (ocupante of conflicto.ocupantes; track ocupante.programacionId) {
+                  <div class="mt-1 flex flex-wrap items-center justify-between gap-2">
+                    <span>{{ ocupante.codigo }} · {{ ocupante.trabajador }}</span>
+                    @if (!tieneFilaRevisionCasetaExcel(ocupante.programacionId)) {
+                      <button type="button" class="secondary" (click)="revisarOcupanteCasetaExcel(ocupante.programacionId)">
+                        Revisar este ocupante
+                      </button>
+                    }
+                  </div>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+      }
+      @if (pendientesRevisionCasetasExcel > 0) {
+        <p class="mt-3 text-sm font-semibold text-amber-900">{{ pendientesRevisionCasetasExcel }} decisiones pendientes. Resuélvelas en la tabla o decide explícitamente para el grupo.</p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button type="button" class="secondary" (click)="resolverPendientesCasetasExcel('CONSERVAR')">Conservar SIGO en todas las pendientes</button>
+          <button type="button" class="secondary" (click)="resolverPendientesCasetasExcel('EXCEL')">Proponer Excel en todas las pendientes válidas</button>
+        </div>
+        <p class="mt-1 text-xs text-amber-900">Las propuestas masivas no se aplican ni guardan sin pasar la revisión de casetas duplicadas.</p>
+      }
+      <div class="mt-3 max-h-[32rem] overflow-auto rounded-lg border border-blue-100 bg-white">
+        <table class="w-full min-w-[900px] text-left text-xs text-slate-800">
+          <thead class="sticky top-0 z-10 bg-slate-100">
+            <tr>
+              <th class="p-2">Fecha / turno</th><th class="p-2">Trabajador</th>
+              <th class="p-2">En SIGO</th><th class="p-2">En Excel</th>
+              <th class="p-2">Decisión del controlador</th><th class="p-2">Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (fila of filasRevisionCasetasExcel; track fila.programacionId) {
+              <tr class="border-t align-top" [class.bg-amber-50]="fila.opcion === 'PENDIENTE'">
+                <td class="p-2 whitespace-nowrap">{{ fila.fecha }}<div class="font-semibold">{{ fila.turno }}</div></td>
+                <td class="p-2"><strong>{{ fila.codigoTrabajador }}</strong><div>{{ fila.trabajador }}</div></td>
+                <td class="p-2">{{ fila.casetaActual }}</td>
+                <td class="p-2">{{ fila.casetaExcel }}</td>
+                <td class="p-2">
+                  <label class="sr-only" [attr.for]="'decision-excel-' + fila.programacionId">Decisión</label>
+                  <select class="w-full rounded border border-slate-300 p-2" [id]="'decision-excel-' + fila.programacionId"
+                          [ngModel]="fila.opcion" (ngModelChange)="resolverFilaCasetaExcel(fila, $event)">
+                    <option value="PENDIENTE">Pendiente de revisión</option>
+                    <option value="CONSERVAR">Conservar SIGO</option>
+                    <option value="EXCEL" [disabled]="!fila.puedeUsarExcel">Usar asignación del Excel</option>
+                    <option value="MANUAL">Elegir otra caseta / liberar</option>
+                  </select>
+                  @if (fila.opcion === 'MANUAL') {
+                    <label class="mt-2 block text-xs" [attr.for]="'manual-excel-' + fila.programacionId">Ubicación elegida</label>
+                    <select class="mt-1 w-full rounded border border-slate-300 p-2" [id]="'manual-excel-' + fila.programacionId"
+                            [ngModel]="fila.ubicacionManualId === null ? 'NINGUNA' : '' + fila.ubicacionManualId"
+                            (ngModelChange)="seleccionarCasetaManualExcel(fila, $event)">
+                      <option value="NINGUNA">Sin asignar</option>
+                      @for (ubicacion of ubicaciones; track ubicacion.id) {
+                        @if (ubicacion.activo) {
+                          <option [value]="'' + ubicacion.id"
+                                  [disabled]="!ubicacionHabilitadaParaTurno(ubicacion, fila.turno)">{{ ubicacion.codigo }} · {{ ubicacion.nombre }}</option>
+                        }
+                      }
+                    </select>
+                  }
+                </td>
+                <td class="p-2 text-slate-600">{{ fila.motivo || (fila.opcion === 'EXCEL' ? 'Nueva caseta propuesta.' : 'Revisa la decisión.') }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <p class="max-w-lg text-xs text-slate-700">Solo se cargan a la matriz las decisiones válidas. Las casetas que decidas conservar no se modifican.
+          Después podrás editar el borrador y finalmente pulsar «Guardar cambios». Las decisiones pendientes y propuestas que causen duplicados se excluirán del lote y se mostrarán antes de guardar.</p>
+        <button class="primary" type="button" (click)="aplicarImportacionExcel()"
+                [disabled]="cargando || guardando || importandoExcel ||
+                            cambios.size > 0 || loteSeguroCasetasExcel.propuestas.length === 0">
+          Aplicar {{ loteSeguroCasetasExcel.propuestas.length }} asignaciones válidas a la tabla
+        </button>
+      </div>
+    </section>
+  }
 
 
   <!-- ===================================================== -->

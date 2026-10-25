@@ -145,11 +145,12 @@ export class StockComponent implements OnInit {
     });
 
     return [...filtrados].sort((a, b) => {
-      // Primero stock adecuado, después stock bajo; el stock agotado queda al final.
-      if (a.bajoMinimo !== b.bajoMinimo) return a.bajoMinimo ? 1 : -1;
-      const aTieneStock = Number(a.cantidadActual) > 0;
-      const bTieneStock = Number(b.cantidadActual) > 0;
-      if (aTieneStock !== bTieneStock) return aTieneStock ? -1 : 1;
+      // Stock adecuado disponible, luego bajo mínimo y finalmente agotado.
+      // "Agotado" se prioriza incluso si el mínimo configurado es cero.
+      const prioridad = (item: StockActual): number =>
+        Number(item.cantidadActual) <= 0 ? 2 : item.bajoMinimo ? 1 : 0;
+      const diferencia = prioridad(a) - prioridad(b);
+      if (diferencia !== 0) return diferencia;
       const porPlaza = a.plaza.localeCompare(b.plaza, 'es', { numeric: true });
       return porPlaza !== 0 ? porPlaza : a.producto.localeCompare(b.producto);
     });

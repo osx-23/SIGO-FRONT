@@ -1530,13 +1530,11 @@ export class DistribucionControladorComponent
       this.continuarACasetasExcel();
       return;
     }
-    if (this.vistaPreviaTurnosCasetas.revisar > 0) {
-      this.error = 'El Excel tiene turnos por revisar. Resuelve primero las observaciones antes de guardar.';
-      this.cdr.detectChanges();
-      return;
-    }
+    const omitidas = this.vistaPreviaTurnosCasetas.revisar;
     if (!window.confirm(
-      `El Excel reemplazará ${pendientes.length} programaciones anteriores de SIGO (A/B/C/D/DM/V/COM/LIC). Los cambios manuales hechos antes en esas celdas se sobrescribirán. ¿Confirmas?`
+      `El Excel reemplazará ${pendientes.length} programaciones anteriores de SIGO (A/B/C/D/DM/V/COM/LIC). Los cambios manuales hechos antes en esas celdas se sobrescribirán.` +
+      (omitidas ? ` Hay ${omitidas} registros por revisar que no se guardarán.` : '') +
+      ' ¿Confirmas?'
     )) return;
 
     const plazaId = this.plazaId!;

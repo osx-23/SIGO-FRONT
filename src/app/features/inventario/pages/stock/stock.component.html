@@ -380,7 +380,7 @@
           <p
             class="mt-1 text-sm text-slate-500"
           >
-            Filtra productos por nombre, plaza o nivel de stock.
+            Filtra productos por nombre, categoría, plaza o nivel de stock.
           </p>
 
         </div>
@@ -389,6 +389,7 @@
         @if (
           busqueda ||
           estado !== 'TODOS' ||
+          categoriaId !== null ||
           (esSupervisor() && plazaId)
         ) {
 
@@ -407,7 +408,7 @@
 
 
       <div
-        class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4"
+        class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5"
       >
 
         <!-- PRODUCTO -->
@@ -512,6 +513,32 @@
           </div>
 
         }
+
+
+        <!-- CATEGORÍA -->
+
+        <div>
+
+          <label
+            for="stock-categoria"
+            class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+          >
+            Categoría
+          </label>
+
+          <select
+            id="stock-categoria"
+            [(ngModel)]="categoriaId"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+          >
+            <option [ngValue]="null">Todas las categorías</option>
+            @for (categoria of categorias; track categoria.id) {
+              <option [ngValue]="categoria.id">{{ categoria.nombre }}</option>
+            }
+            <option [ngValue]="-1">Sin categoría</option>
+          </select>
+
+        </div>
 
 
         <!-- ESTADO -->
@@ -841,6 +868,12 @@
                         class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-extrabold text-slate-600"
                       >
                         {{ s.plaza }}
+                      </span>
+
+                      <span
+                        class="inline-flex max-w-full items-center rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-extrabold text-indigo-700"
+                      >
+                        Categoría: {{ nombreCategoria(s.categoriaId) }}
                       </span>
 
                       <span

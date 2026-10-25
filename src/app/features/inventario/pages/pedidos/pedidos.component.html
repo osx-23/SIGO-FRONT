@@ -29,21 +29,81 @@
       }
     </header>
 
-    <nav class="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3" aria-label="Secciones de pedidos">
-      <button type="button" (click)="vista='nuevo'" [class.bg-blue-50]="vista==='nuevo'"
-        [class.border-blue-200]="vista==='nuevo'" [class.text-blue-700]="vista==='nuevo'"
-        class="rounded-lg border border-transparent px-4 py-2 text-xs font-bold text-slate-500 transition hover:bg-white">Planificar pedido</button>
-      <button type="button" (click)="vista='seguimiento'" [class.bg-blue-50]="vista==='seguimiento'"
-        [class.border-blue-200]="vista==='seguimiento'" [class.text-blue-700]="vista==='seguimiento'"
-        class="rounded-lg border border-transparent px-4 py-2 text-xs font-bold text-slate-500 transition hover:bg-white">Seguimiento y recepción</button>
-      <button type="button" (click)="vista='historico'" [class.bg-blue-50]="vista==='historico'"
-        [class.border-blue-200]="vista==='historico'" [class.text-blue-700]="vista==='historico'"
-        class="rounded-lg border border-transparent px-4 py-2 text-xs font-bold text-slate-500 transition hover:bg-white">Consumo histórico</button>
-      @if (esSupervisor()) {
-        <button type="button" (click)="vista='consolidado'" [class.bg-blue-50]="vista==='consolidado'"
-          [class.border-blue-200]="vista==='consolidado'" [class.text-blue-700]="vista==='consolidado'"
-          class="rounded-lg border border-transparent px-4 py-2 text-xs font-bold text-slate-500 transition hover:bg-white">Consolidado general</button>
-      }
+    <!-- Accesos a las cuatro vistas del planificador (acciones y permisos originales). -->
+    <nav class="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-3" aria-label="Secciones de pedidos">
+      <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <button type="button" (click)="vista='nuevo'" [attr.aria-pressed]="vista==='nuevo'"
+          [ngClass]="vista==='nuevo' ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-100' : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50'"
+          class="group flex min-h-[94px] w-full items-center gap-3 rounded-xl border p-3.5 text-left transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 sm:p-4">
+          <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+            [ngClass]="vista==='nuevo' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'"
+            aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current stroke-[1.8]" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="4" width="14" height="17" rx="2"/>
+              <path d="M9 4.5V3h6v1.5M9 10h6M9 14h3M16 14v5m-2.5-2.5h5"/>
+            </svg>
+          </span>
+          <span class="min-w-0">
+            <span class="block text-sm font-extrabold leading-5">Planificar pedido</span>
+            <span class="mt-1 block text-[11px] leading-4 opacity-80">Calcula y prepara requerimientos</span>
+          </span>
+        </button>
+
+        <button type="button" (click)="vista='seguimiento'" [attr.aria-pressed]="vista==='seguimiento'"
+          [ngClass]="vista==='seguimiento' ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-100' : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50'"
+          class="group flex min-h-[94px] w-full items-center gap-3 rounded-xl border p-3.5 text-left transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 sm:p-4">
+          <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+            [ngClass]="vista==='seguimiento' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'"
+            aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current stroke-[1.8]" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m3 7 9-4 9 4v10l-9 4-9-4V7Z"/>
+              <path d="m3 7 9 4 9-4M12 11v10M16 15l2 2 3-3"/>
+            </svg>
+          </span>
+          <span class="min-w-0">
+            <span class="block text-sm font-extrabold leading-5">Seguimiento y recepción</span>
+            <span class="mt-1 block text-[11px] leading-4 opacity-80">Revisa pedidos y confirma entregas</span>
+          </span>
+        </button>
+
+        <button type="button" (click)="vista='historico'" [attr.aria-pressed]="vista==='historico'"
+          [ngClass]="vista==='historico' ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-100' : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50'"
+          class="group flex min-h-[94px] w-full items-center gap-3 rounded-xl border p-3.5 text-left transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 sm:p-4">
+          <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+            [ngClass]="vista==='historico' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'"
+            aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current stroke-[1.8]" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v18h18M7 17v-5M12 17V8M17 17V5"/>
+              <path d="m7 7 5-3 5 1 4-3"/>
+            </svg>
+          </span>
+          <span class="min-w-0">
+            <span class="block text-sm font-extrabold leading-5">Consumo histórico</span>
+            <span class="mt-1 block text-[11px] leading-4 opacity-80">Consulta el consumo por material</span>
+          </span>
+        </button>
+
+        @if (esSupervisor()) {
+          <button type="button" (click)="vista='consolidado'" [attr.aria-pressed]="vista==='consolidado'"
+            [ngClass]="vista==='consolidado' ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-100' : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50'"
+            class="group flex min-h-[94px] w-full items-center gap-3 rounded-xl border p-3.5 text-left transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 sm:p-4">
+            <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+              [ngClass]="vista==='consolidado' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'"
+              aria-hidden="true">
+              <svg viewBox="0 0 24 24" class="h-6 w-6 fill-none stroke-current stroke-[1.8]" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="8" height="7" rx="1"/>
+                <rect x="13" y="4" width="8" height="7" rx="1"/>
+                <rect x="3" y="13" width="8" height="7" rx="1"/>
+                <rect x="13" y="13" width="8" height="7" rx="1"/>
+              </svg>
+            </span>
+            <span class="min-w-0">
+              <span class="block text-sm font-extrabold leading-5">Consolidado general</span>
+              <span class="mt-1 block text-[11px] leading-4 opacity-80">Reúne pedidos de todas las plazas</span>
+            </span>
+          </button>
+        }
+      </div>
     </nav>
 
     @if (error) {

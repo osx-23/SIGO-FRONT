@@ -65,6 +65,7 @@ export interface GenerarProgramacionRequest {
   coberturaDomingo: CoberturaTurnosRequest;
   diasEspeciales: DiaEspecialProgramacionRequest[];
   novedades: NovedadProgramacionRequest[];
+  completarPendientes?: boolean;
 }
 
 export interface ProgramacionDiaPropuesta {

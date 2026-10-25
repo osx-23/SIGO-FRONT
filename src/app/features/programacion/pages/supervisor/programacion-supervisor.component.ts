@@ -12,7 +12,9 @@ import { FormsModule } from '@angular/forms';
 
 import {
   finalize,
-  Subscription
+  Subscription,
+  switchMap,
+  throwError
 } from 'rxjs';
 
 import {
@@ -1731,6 +1733,13 @@ export class ProgramacionSupervisorComponent
       return;
     }
 
+    if (this.generador.modoGeneracion === 'COMPLETAR_PENDIENTES'
+        && this.cambios.size > 0) {
+      this.error = 'Guarda o descarta los cambios pendientes de la matriz antes de completar turnos. Así protegemos la programación existente.';
+      this.mostrarConfirmacionAccion(this.error, 'Cambios sin guardar', 'error');
+      return;
+    }
+
     const errorValidacion =
       this.generador.validar(
         this.anio,
@@ -1785,8 +1794,14 @@ export class ProgramacionSupervisorComponent
           const deficits =
             this.diasPropuestaConDeficit();
 
-          this.mensaje =
-            'Propuesta generada. Revísala y edítala antes de guardar.';
+          const pendientesGenerados = propuesta.agentes.reduce(
+            (total, agente) => total + agente.dias.length, 0
+          );
+          this.mensaje = this.generador.modoGeneracion === 'COMPLETAR_PENDIENTES'
+            ? pendientesGenerados
+              ? `Se completaron ${pendientesGenerados} días sin turno en el borrador. La programación anterior permanece sin cambios.`
+              : 'No hay turnos pendientes que completar. La programación existente se conserva.'
+            : 'Propuesta generada. Revísala y edítala antes de guardar.';
 
           this.mostrarConfirmacionAccion(
             alertas > 0 || deficits > 0
@@ -1851,6 +1866,12 @@ export class ProgramacionSupervisorComponent
           celda.trabajadorId,
           dia
         );
+
+      // En completar pendientes, jamás sustituir una celda ya cargada.
+      if (this.generador.modoGeneracion === 'COMPLETAR_PENDIENTES'
+          && nuevaMatrix.get(key) != null) {
+        continue;
+      }
 
       nuevaMatrix.set(
         key,
@@ -2279,13 +2300,30 @@ export class ProgramacionSupervisorComponent
       '';
 
 
-    this.guardadoFacade
-      .guardar(
-        this.plazaId,
-        this.cambios,
-        this.anio,
-        this.mes
-      )
+    const plazaId = this.plazaId;
+    const cambios = new Map(this.cambios);
+    const solicitud = this.guardadoFacade.guardar(
+      plazaId, cambios, this.anio, this.mes);
+
+    // Detecta guardados concurrentes antes de escribir una propuesta
+    // parcial y exige actualizar si alguno de sus huecos fue ocupado.
+    const operacion = this.generador.modoGeneracion === 'COMPLETAR_PENDIENTES'
+        && this.generador.ultimaPropuesta
+      ? this.apiExcelTurnos.getTurnos(plazaId, this.anio, this.mes).pipe(
+          switchMap(turnosActuales => {
+            const ocupados = new Set(turnosActuales.map(turno =>
+              this.key(turno.trabajadorId, this.diaDeFecha(turno.fecha))));
+            if ([...cambios.keys()].some(key => ocupados.has(key))) {
+              return throwError(() => new Error(
+                'Se guardaron turnos mientras revisabas la propuesta. Actualiza la programación y genera nuevamente para no sobrescribirlos.'
+              ));
+            }
+            return solicitud;
+          })
+        )
+      : solicitud;
+
+    operacion
       .pipe(
 
         finalize(

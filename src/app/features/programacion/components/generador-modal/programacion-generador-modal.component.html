@@ -22,6 +22,27 @@
         <section class="generator-section">
           <div class="generator-section-head">
             <div>
+              <h3>Modo de generación</h3>
+              <p>Elige si deseas recalcular todo el mes o completar únicamente los días sin turno.</p>
+            </div>
+          </div>
+          <label class="block mb-3">
+            <input type="radio" name="modoGeneracionTurnos" value="MES_COMPLETO"
+                   [(ngModel)]="generador.modoGeneracion" [disabled]="generador.procesando">
+            <strong> Mes completo</strong>
+            <span class="block text-sm text-slate-600">Recalcula el mes. Podrás revisar y reemplazar turnos existentes antes de guardar.</span>
+          </label>
+          <label class="block">
+            <input type="radio" name="modoGeneracionTurnos" value="COMPLETAR_PENDIENTES"
+                   [(ngModel)]="generador.modoGeneracion" [disabled]="generador.procesando">
+            <strong> Completar pendientes</strong>
+            <span class="block text-sm text-slate-600">Respeta los turnos guardados y propone solo los días sin programación.</span>
+          </label>
+        </section>
+
+        <section class="generator-section">
+          <div class="generator-section-head">
+            <div>
               <h3>Cobertura normal</h3>
               <p>Personal requerido de lunes a sábado, salvo fechas especiales.</p>
             </div>

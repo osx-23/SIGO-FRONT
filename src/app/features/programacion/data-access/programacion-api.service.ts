@@ -369,24 +369,6 @@ export class ProgramacionApiService {
     );
   }
 
-  confirmarTurnosExcel(plazaId: number, archivo: File, anio: number, mes: number): Observable<{guardados: number; omitidos: number; mensaje: string}> {
-    const formulario = new FormData();
-    formulario.append('archivo', archivo, archivo.name);
-    return this.http.post<{guardados: number; omitidos: number; mensaje: string}>(
-      `${this.api}/distribucion/importar-excel/turnos/confirmar`, formulario,
-      { params: new HttpParams().set('plazaId', plazaId).set('anio', anio).set('mes', mes) }
-    );
-  }
-
-  confirmarCasetasExcel(plazaId: number, archivo: File, anio: number, mes: number): Observable<{guardados: number; omitidos: number; yaAsignadas: number; mensaje: string}> {
-    const formulario = new FormData();
-    formulario.append('archivo', archivo, archivo.name);
-    return this.http.post<{guardados: number; omitidos: number; yaAsignadas: number; mensaje: string}>(
-      `${this.api}/distribucion/importar-excel/casetas/confirmar`, formulario,
-      { params: new HttpParams().set('plazaId', plazaId).set('anio', anio).set('mes', mes) }
-    );
-  }
-
   /** Multipart solo para subir XLSX. Apache POI responde con JSON de las casetas. */
   extraerCasetasExcelJson(plazaId: number, archivo: File, anio: number, mes: number): Observable<ExtraccionCasetasExcelJson> {
     const formulario = new FormData();

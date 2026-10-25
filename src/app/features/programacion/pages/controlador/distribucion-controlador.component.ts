@@ -11,7 +11,8 @@ import {
 import { FormsModule } from '@angular/forms';
 import {
   finalize,
-  forkJoin
+  forkJoin,
+  switchMap
 } from 'rxjs';
 
 import {
@@ -206,7 +207,6 @@ export class DistribucionControladorComponent
   anioExcelEnRevision = 0;
   mesExcelEnRevision = 0;
   guardandoTurnosExcel = false;
-  guardandoCasetasExcel = false;
   filtroEstadoRevisionExcel = 'REVISAR';
   filtroTrabajadorRevisionExcel = '';
   semanaRevisionExcel = 0;
@@ -1522,30 +1522,98 @@ export class DistribucionControladorComponent
   confirmarTurnosImportacionExcel(): void {
     if (!this.vistaPreviaTurnosCasetas || !this.validarContextoExcel() ||
         !this.esSupervisor || this.guardandoTurnosExcel) return;
-    if (this.turnosPendientesExcel === 0) {
+
+    const pendientes = this.vistaPreviaTurnosCasetas.propuestas.filter(p =>
+      p.accion === 'CREAR' || p.accion === 'ACTUALIZAR'
+    );
+    if (!pendientes.length) {
       this.continuarACasetasExcel();
       return;
     }
-    if (!window.confirm(`El Excel reemplazará ${this.turnosPendientesExcel} programaciones anteriores de SIGO (A/B/C/D/DM/V/COM/LIC). Los cambios manuales hechos antes en esas celdas se sobrescribirán. ¿Confirmas?`)) {
+    if (this.vistaPreviaTurnosCasetas.revisar > 0) {
+      this.error = 'El Excel tiene turnos por revisar. Resuelve primero las observaciones antes de guardar.';
+      this.cdr.detectChanges();
       return;
     }
+    if (!window.confirm(
+      `El Excel reemplazará ${pendientes.length} programaciones anteriores de SIGO (A/B/C/D/DM/V/COM/LIC). Los cambios manuales hechos antes en esas celdas se sobrescribirán. ¿Confirmas?`
+    )) return;
+
+    const plazaId = this.plazaId!;
+    const anio = this.anio;
+    const mes = this.mes;
+    let turnosGuardados = false;
     this.guardandoTurnosExcel = true;
     this.error = '';
-    this.api.confirmarTurnosExcel(this.plazaId!, this.archivoExcelEnRevision!, this.anio, this.mes)
-      .pipe(finalize(() => {
+
+    // La vista previa es de solo lectura. Guardamos únicamente los cambios
+    // revisados mediante el caso de uso normal, con permisos de supervisor.
+    forkJoin({
+      agentes: this.api.getAgentes(plazaId),
+      controladores: this.api.getControladores(plazaId)
+    }).pipe(
+      switchMap(({ agentes, controladores }) => {
+        const porCodigo = new Map<number, number>();
+        for (const trabajador of [...agentes, ...controladores]) {
+          if (trabajador.activo === false) continue;
+          const previo = porCodigo.get(trabajador.codigo);
+          if (previo !== undefined && previo !== trabajador.id) {
+            throw new Error(`Código duplicado en la plaza: ${trabajador.codigo}. Revisa los trabajadores.`);
+          }
+          porCodigo.set(trabajador.codigo, trabajador.id);
+        }
+
+        const estados = new Set<EstadoProgramacion>(['A', 'B', 'C', 'D', 'V', 'COM', 'DM', 'LIC']);
+        const revisados = new Set<string>();
+        const programaciones: { trabajadorId: number; fecha: string; estado: EstadoProgramacion }[] = [];
+
+        for (const propuesta of pendientes) {
+          const trabajadorId = porCodigo.get(propuesta.codigoTrabajador);
+          const estado = propuesta.turnoExcel as EstadoProgramacion | null;
+          if (!trabajadorId || !estado || !estados.has(estado)) {
+            throw new Error(`Revisa el turno de ${propuesta.codigoTrabajador} (${propuesta.fecha}): no hay trabajador activo o estado válido.`);
+          }
+          const clave = `${trabajadorId}|${propuesta.fecha}`;
+          if (revisados.has(clave)) {
+            throw new Error(`El Excel tiene registros repetidos para ${propuesta.codigoTrabajador} (${propuesta.fecha}).`);
+          }
+          revisados.add(clave);
+          programaciones.push({ trabajadorId, fecha: propuesta.fecha, estado });
+        }
+        return this.api.guardarTurnos({ plazaId, programaciones });
+      }),
+      switchMap(() => {
+        turnosGuardados = true;
+        // Evita mostrar turnos/casetas anteriores a la confirmación.
+        return forkJoin({
+          turnos: this.api.getTurnos(plazaId, anio, mes),
+          distribucion: this.api.getDistribucion(plazaId, anio, mes)
+        });
+      }),
+      finalize(() => {
         this.guardandoTurnosExcel = false;
         this.cdr.detectChanges();
-      }))
-      .subscribe({
-        next: resultado => {
-          this.mensaje = `Turnos guardados: ${resultado.guardados}. Ahora revisa las casetas.`;
-          this.continuarACasetasExcel();
-        },
-        error: e => {
-          this.error = this.mensajeError(e, 'No se pudieron guardar los turnos. No se importaron casetas.');
-          this.cdr.detectChanges();
+      })
+    ).subscribe({
+      next: ({ turnos, distribucion }) => {
+        this.programaciones = turnos;
+        this.asignaciones.clear();
+        this.asignacionesGuardadas.clear();
+        for (const item of distribucion) {
+          this.asignaciones.set(item.programacionTurnoId, item.ubicacionId);
+          this.asignacionesGuardadas.set(item.programacionTurnoId, item.ubicacionId);
         }
-      });
+        this.mensaje = `Turnos procesados: ${pendientes.length}. Ahora revisa las casetas.`;
+        this.continuarACasetasExcel();
+      },
+      error: e => {
+        this.error = turnosGuardados
+          ? 'Los turnos se guardaron, pero no se pudieron actualizar los datos de la pantalla. Recarga la plaza antes de continuar con las casetas.'
+          : e instanceof Error ? e.message
+          : this.mensajeError(e, 'No se pudieron guardar los turnos. No se importaron casetas.');
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   continuarACasetasExcel(): void {
@@ -1570,34 +1638,6 @@ export class DistribucionControladorComponent
         },
         error: e => {
           this.error = this.mensajeError(e, 'No se pudo analizar las casetas del Excel.');
-          this.cdr.detectChanges();
-        }
-      });
-  }
-
-  confirmarCasetasImportacionExcel(): void {
-    if (!this.vistaPreviaImportacion?.valido || !this.validarContextoExcel() ||
-        !this.esSupervisor || this.guardandoCasetasExcel) return;
-    if (!window.confirm(`El Excel reemplazará ${this.vistaPreviaImportacion.cambios.length} asignaciones de casetas (incluidas liberaciones anteriores). Las casetas sin turno se omiten. Puedes editar manualmente después. ¿Confirmas?`)) {
-      return;
-    }
-    this.guardandoCasetasExcel = true;
-    this.error = '';
-    this.api.confirmarCasetasExcel(this.plazaId!, this.archivoExcelEnRevision!, this.anio, this.mes)
-      .pipe(finalize(() => {
-        this.guardandoCasetasExcel = false;
-        this.cdr.detectChanges();
-      }))
-      .subscribe({
-        next: resultado => {
-          this.descartarImportacionExcel();
-          this.cargar();
-          // cargar() resets status; show durable result after data refresh in future.
-          this.mensaje = `${resultado.guardados} casetas guardadas. ${resultado.omitidos} omitidas. Puedes editarlas desde SIGO.`;
-          this.cdr.detectChanges();
-        },
-        error: e => {
-          this.error = this.mensajeError(e, 'No se pudieron guardar las casetas.');
           this.cdr.detectChanges();
         }
       });

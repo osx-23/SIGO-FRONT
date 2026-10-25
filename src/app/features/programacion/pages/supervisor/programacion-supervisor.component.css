@@ -571,9 +571,13 @@ tbody tr:hover .group-column{
   background:#fafcff;
 }
 
-/* Cuando se ocultan los detalles, Pos., Cód. y Nombre
-   siguen fijos y los días comienzan inmediatamente después. */
+/* Sin detalles también desaparece Pos. y sus flechas.
+   Ajustamos los offsets sticky de Código y Nombre para evitar huecos. */
+table.details-hidden .sticky-code{
+  left:0;
+}
 table.details-hidden .sticky-name{
+  left:78px;
   box-shadow:5px 0 8px -7px rgba(15,23,42,.35);
 }
 
@@ -1679,4 +1683,50 @@ table.details-hidden .sticky-name{
   .special-description,.novelty-agent,.novelty-observation{grid-column:auto}
   .generator-actions{display:grid;grid-template-columns:1fr 1fr}
   .proposal-status-metrics>div{flex:1}
+}
+
+/* Confirmación de importación Excel: resumen claro, avisos y acciones responsivas. */
+.excel-confirm-modal{
+  width:min(580px,100%);
+  max-height:min(88vh,760px);
+  overflow-y:auto;
+}
+.excel-confirm-metrics{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+  margin-top:15px;
+}
+.excel-confirm-metrics>div{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:12px;
+  border:1px solid #e2e8f0;
+  border-radius:11px;
+  background:#f8fafc;
+  text-align:center;
+}
+.excel-confirm-metrics strong{font-size:1.25rem;color:#0f172a}
+.excel-confirm-metrics span{font-size:.7rem;color:#64748b}
+.excel-confirm-notice{
+  margin-top:12px;
+  padding:11px 13px;
+  border-radius:10px;
+  border:1px solid #bfdbfe;
+  background:#eff6ff;
+  color:#1e40af;
+  font-size:.78rem;
+  line-height:1.5;
+}
+.excel-confirm-notice strong{display:block;font-weight:800}
+.excel-confirm-notice p{margin:3px 0 0}
+.excel-confirm-notice.warning{border-color:#fde68a;background:#fffbeb;color:#92400e}
+.excel-confirm-notice.danger{border-color:#fecaca;background:#fef2f2;color:#991b1b}
+.excel-confirm-notice.success{border-color:#a7f3d0;background:#ecfdf5;color:#065f46}
+@media(max-width:560px){
+  .excel-confirm-modal{max-height:92vh}
+  .excel-confirm-metrics>div{padding:9px 5px}
+  .excel-confirm-modal .shift-warning-actions{grid-template-columns:1fr}
+  .excel-confirm-modal .shift-warning-actions button{white-space:normal}
 }

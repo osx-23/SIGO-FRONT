@@ -249,6 +249,9 @@ export class ProgramacionSupervisorComponent
   vistaExcelTurnos: VistaPreviaTurnosTextoExcel | null = null;
   archivoExcelTurnos = '';
   omitidosExcelAgrupados: OmisionTurnoExcelAgrupada[] = [];
+  confirmacionExcelTurnosAbierta = false;
+  excelTurnosEliminaciones = 0;
+  excelTurnosNoRecomendados = 0;
 
   // Identifica a qué plaza y mes pertenece la lectura (evita aplicar vistas antiguas).
   private contextoExcelTurnos: { plazaId: number; anio: number; mes: number } | null = null;
@@ -516,6 +519,9 @@ export class ProgramacionSupervisorComponent
     this.vistaExcelTurnos = null;
     this.archivoExcelTurnos = '';
     this.omitidosExcelAgrupados = [];
+    this.confirmacionExcelTurnosAbierta = false;
+    this.excelTurnosEliminaciones = 0;
+    this.excelTurnosNoRecomendados = 0;
     this.contextoExcelTurnos = null;
     this.cdr.detectChanges();
   }
@@ -563,9 +569,10 @@ export class ProgramacionSupervisorComponent
     })).sort((a, b) => a.codigo.localeCompare(b.codigo, 'es', { numeric: true }));
   }
 
-  aplicarExcelTurnos(): void {
+  aplicarExcelTurnos(confirmado = false): void {
     const previa = this.vistaExcelTurnos;
-    if (!previa || !this.plazaId || this.cargando || this.guardando ||
+    if (!previa || !this.plazaId || this.cargando || this.guardando || this.guardandoOrden ||
+        this.generador.procesando || this.agentesProcesando.size > 0 ||
         this.importandoExcelTurnos || this.cambios.size > 0) return;
     if (previa.cambios.length === 0) return;
     if (!this.esContextoExcelActual()) {
@@ -594,19 +601,18 @@ export class ProgramacionSupervisorComponent
       claves.add(llave);
     }
 
-    if (previa.errores.length > 0 || previa.omitidos.length > 0) {
-      if (!window.confirm(`El Excel tiene ${previa.errores.length} error(es) y ${previa.omitidos.length} registro(s) omitidos. Solo se aplicarán ${previa.cambios.length} cambios válidos al borrador; los omitidos se mantendrán sin cambios. ¿Continuar?`)) return;
+    // Una única confirmación accesible reemplaza los diálogos nativos encadenados.
+    if (!confirmado) {
+      this.excelTurnosEliminaciones = previa.cambios.filter(c => c.nuevo === null).length;
+      this.excelTurnosNoRecomendados = previa.cambios.filter(c =>
+        (c.nuevo === 'A' || c.nuevo === 'B' || c.nuevo === 'C') &&
+        !this.turnoRecomendado(c.trabajadorId, c.nuevo)
+      ).length;
+      this.confirmacionExcelTurnosAbierta = true;
+      this.cdr.markForCheck();
+      return;
     }
-    if (previa.cambios.some(c => c.nuevo === null)) {
-      if (!window.confirm('El símbolo - eliminará la programación de los días indicados y sus casetas vinculadas al pulsar Guardar turnos. ¿Cargar estos cambios al borrador?')) return;
-    }
-    const turnosNoRecomendados = previa.cambios.filter(c =>
-      (c.nuevo === 'A' || c.nuevo === 'B' || c.nuevo === 'C') &&
-      !this.turnoRecomendado(c.trabajadorId, c.nuevo)
-    ).length;
-    if (turnosNoRecomendados > 0) {
-      if (!window.confirm(`${turnosNoRecomendados} turno(s) no coinciden con las recomendaciones registradas para sus agentes. Revisa esas excepciones antes de guardar. ¿Cargarlos igualmente al borrador?`)) return;
-    }
+    this.confirmacionExcelTurnosAbierta = false;
 
     const matrixNueva = new Map(this.matrix);
     let aplicados = 0;
@@ -624,6 +630,17 @@ export class ProgramacionSupervisorComponent
     this.error = '';
     this.mensaje = `${aplicados} turno(s) cargados al borrador. ${omitidos} registro(s) omitidos por validación, sin aplicar. Revisa la matriz y pulsa Guardar turnos para persistir.`;
     this.cdr.detectChanges();
+  }
+
+  confirmarAplicacionExcelTurnos(): void {
+    if (!this.confirmacionExcelTurnosAbierta) return;
+    // Se repiten las validaciones para evitar aplicar datos desactualizados.
+    this.aplicarExcelTurnos(true);
+  }
+
+  cancelarConfirmacionExcelTurnos(): void {
+    this.confirmacionExcelTurnosAbierta = false;
+    this.cdr.markForCheck();
   }
 
   ngOnInit(): void {

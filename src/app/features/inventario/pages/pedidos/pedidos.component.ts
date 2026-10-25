@@ -64,8 +64,37 @@ export class PedidosComponent implements OnInit {
     return this.metadata.get(item.productoId)?.categoria ?? 'Sin categoría';
   }
 
+  private categoriaDeProducto(productoId: number): string {
+    return this.metadata.get(productoId)?.categoria ?? 'Sin categoría';
+  }
+
   get categoriasDisponibles(): string[] {
-    return [...new Set(this.sugerencias.map(s => this.categoriaDe(s)))].sort((a, b) => a.localeCompare(b));
+    // Mantener opciones útiles al pasar entre Planificar, Histórico y Consolidado.
+    const categorias = [
+      ...this.sugerencias.map(s => this.categoriaDe(s)),
+      ...this.consumo.map(item => this.categoriaDeProducto(item.productoId)),
+      ...this.consolidado.map(item => this.categoriaDeProducto(item.productoId))
+    ];
+    return [...new Set(categorias)].sort((a, b) => a.localeCompare(b, 'es'));
+  }
+
+  get pedidosVisibles(): PedidoLista[] {
+    // El supervisor puede consultar todas las plazas; el selector muestra la elegida.
+    return this.plazaId === null
+      ? this.pedidos
+      : this.pedidos.filter(pedido => pedido.plazaId === this.plazaId);
+  }
+
+  get consolidadoVisible(): MaterialConsolidado[] {
+    return this.consolidado.filter(item =>
+      this.categoriaFiltro === 'TODAS' || this.categoriaDeProducto(item.productoId) === this.categoriaFiltro
+    );
+  }
+
+  get consumoVisible(): ConsumoHistorico[] {
+    return this.consumo.filter(item =>
+      this.categoriaFiltro === 'TODAS' || this.categoriaDeProducto(item.productoId) === this.categoriaFiltro
+    );
   }
 
   get productosBase(): SugerenciaPedido[] {
@@ -175,6 +204,8 @@ export class PedidosComponent implements OnInit {
   async cambiarContexto(): Promise<void> {
     this.editandoId = null;
     this.revisionAbierta = false;
+    // Evitar mostrar un pedido de otra plaza o periodo al cambiar filtros.
+    this.seleccionado = null;
     this.categoriaFiltro = 'TODAS';
     this.filtroStock = 'TODOS';
     this.busqueda = '';

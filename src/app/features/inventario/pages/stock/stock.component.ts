@@ -37,7 +37,8 @@ export class StockComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
-    if (!this.esSupervisor()) this.plazaId = this.auth.usuario()?.plazaId ?? null;
+    // Iniciar en la plaza de la sesión, también para supervisores.
+    this.plazaId = this.auth.usuario()?.plazaId ?? null;
     await this.inicializar();
   }
 
@@ -49,9 +50,8 @@ export class StockComponent implements OnInit {
     this.cargando = true;
     this.error = '';
     try {
-      const tareas: Promise<unknown>[] = [this.cargarStock(), this.cargarCategorias()];
-      if (this.esSupervisor()) tareas.push(this.cargarPlazas());
-      await Promise.all(tareas);
+      // El listado de plazas es de consulta para supervisores y controladores.
+      await Promise.all([this.cargarStock(), this.cargarCategorias(), this.cargarPlazas()]);
     } catch (e: any) {
       this.error = this.extraerError(e);
     } finally {
@@ -62,7 +62,8 @@ export class StockComponent implements OnInit {
 
   async cargarStock(): Promise<void> {
     const stock = await firstValueFrom(this.api.stock({
-      plazaId: this.esSupervisor() ? this.plazaId : this.auth.usuario()?.plazaId ?? null,
+      // Se respeta la plaza elegida; la API valida el alcance de lectura.
+      plazaId: this.plazaId,
       buscar: this.busqueda
     }));
 
@@ -115,8 +116,17 @@ export class StockComponent implements OnInit {
     this.busqueda = '';
     this.estado = 'TODOS';
     this.categoriaId = null;
-    this.plazaId = this.esSupervisor() ? null : this.auth.usuario()?.plazaId ?? null;
+    this.plazaId = this.auth.usuario()?.plazaId ?? null;
     await this.aplicarFiltros();
+  }
+
+  nombrePlazaSeleccionada(): string {
+    if (this.plazaId === null) return 'Todas las plazas';
+    const plaza = this.plazas.find(item => item.id === this.plazaId);
+    if (plaza) return plaza.codigo || plaza.nombre;
+    return this.plazaId === this.auth.usuario()?.plazaId
+      ? (this.auth.usuario()?.plaza || 'Tu plaza')
+      : 'Plaza seleccionada';
   }
 
   nombreCategoria(categoriaId: number | null): string {
@@ -135,8 +145,12 @@ export class StockComponent implements OnInit {
     });
 
     return [...filtrados].sort((a, b) => {
-      if (a.bajoMinimo !== b.bajoMinimo) return a.bajoMinimo ? -1 : 1;
-      const porPlaza = a.plaza.localeCompare(b.plaza, undefined, { numeric: true });
+      // Primero stock adecuado, después stock bajo; el stock agotado queda al final.
+      if (a.bajoMinimo !== b.bajoMinimo) return a.bajoMinimo ? 1 : -1;
+      const aTieneStock = Number(a.cantidadActual) > 0;
+      const bTieneStock = Number(b.cantidadActual) > 0;
+      if (aTieneStock !== bTieneStock) return aTieneStock ? -1 : 1;
+      const porPlaza = a.plaza.localeCompare(b.plaza, 'es', { numeric: true });
       return porPlaza !== 0 ? porPlaza : a.producto.localeCompare(b.producto);
     });
   }

@@ -58,11 +58,7 @@
             <strong
               class="mt-1 block text-sm font-extrabold text-slate-800"
             >
-              {{
-                esSupervisor()
-                  ? (plazaId ? 'Plaza seleccionada' : 'Todas las plazas')
-                  : (auth.usuario()?.plaza || 'Plaza asignada')
-              }}
+              {{ nombrePlazaSeleccionada() }}
             </strong>
 
           </div>
@@ -117,12 +113,6 @@
 
     <app-inventario-section-tabs seccion="stock"></app-inventario-section-tabs>
 
-
-    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-      <strong>Datos de referencia:</strong> se importaron existencias reportadas en septiembre de 2026.
-      Antes de utilizarlas como stock actual operativo, confirma si hubo consumos o movimientos posteriores.
-      Los materiales sin información en el Excel no deben interpretarse como stock cero confirmado.
-    </div>
 
     <!-- ===================================================== -->
     <!-- KPI -->
@@ -345,11 +335,7 @@
         <p
           class="mt-3 truncate text-xs font-medium text-slate-500"
         >
-          {{
-            esSupervisor()
-              ? 'Incluidas en la consulta'
-              : (auth.usuario()?.plaza || 'Plaza asignada')
-          }}
+          {{ nombrePlazaSeleccionada() }}
         </p>
 
       </article>
@@ -390,7 +376,7 @@
           busqueda ||
           estado !== 'TODOS' ||
           categoriaId !== null ||
-          (esSupervisor() && plazaId)
+          (plazaId !== (auth.usuario()?.plazaId ?? null))
         ) {
 
           <button
@@ -456,66 +442,36 @@
 
         <!-- PLAZA -->
 
-        @if (esSupervisor()) {
+        <div>
+          <label
+            for="stock-plaza"
+            class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
+          >
+            Plaza
+          </label>
 
-          <div>
-
-            <label
-              for="stock-plaza"
-              class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
-            >
-              Plaza
-            </label>
-
-            <select
-              id="stock-plaza"
-              [(ngModel)]="plazaId"
-              class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
-            >
-
-              <option [ngValue]="null">
-                Todas las plazas
+          <select
+            id="stock-plaza"
+            [(ngModel)]="plazaId"
+            (ngModelChange)="aplicarFiltros()"
+            [disabled]="cargando"
+            class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
+          >
+            <option [ngValue]="null">Todas las plazas</option>
+            @for (plaza of plazas; track plaza.id) {
+              <option [ngValue]="plaza.id">
+                {{ plaza.codigo || plaza.nombre }}{{ plaza.id === auth.usuario()?.plazaId ? ' (mi plaza)' : '' }}
               </option>
+            }
+          </select>
 
-              @for (
-                plaza of plazas;
-                track plaza.id
-              ) {
-
-                <option
-                  [ngValue]="plaza.id"
-                >
-                  {{ plaza.codigo || plaza.nombre }}
-                </option>
-
-              }
-
-            </select>
-
-          </div>
-
-        } @else {
-
-          <div>
-
-            <span
-              class="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-600"
-            >
-              Plaza
-            </span>
-
-            <div
-              class="flex h-11 items-center rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm font-bold text-slate-600"
-            >
-              {{ auth.usuario()?.plaza || 'Sin plaza asignada' }}
-            </div>
-
-          </div>
-
-        }
+          <p class="mt-1.5 text-xs text-slate-500">
+            Se selecciona tu plaza al ingresar. Puedes cambiarla para consultar otras existencias.
+          </p>
+        </div>
 
 
-        <!-- CATEGORÍA -->
+                <!-- CATEGORÍA -->
 
         <div>
 

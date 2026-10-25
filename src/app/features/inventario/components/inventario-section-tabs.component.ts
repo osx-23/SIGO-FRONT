@@ -10,22 +10,51 @@ import { AuthService } from '../../../core/auth/auth.service';
     <nav class="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-3"
          [attr.aria-label]="seccion === 'stock' ? 'Secciones de stock' : 'Secciones de movimientos'">
       @if (seccion === 'stock') {
-        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           @if (puedeConsultarInventario()) {
-            <a class="inventario-subtab simple" routerLink="/inventario/stock" routerLinkActive="is-active"
+            <a class="inventario-subtab" routerLink="/inventario/stock" routerLinkActive="is-active"
                [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
-              Stock actual
+              <span class="tab-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m12 3 9 5-9 5-9-5 9-5Z"/>
+                  <path d="M3 8v8l9 5 9-5V8M12 13v8"/>
+                </svg>
+              </span>
+              <span class="min-w-0">
+                <span class="tab-title">Stock actual</span>
+                <span class="tab-description">Revisa existencias por plaza</span>
+              </span>
             </a>
-            <a class="inventario-subtab simple" routerLink="/inventario/tendencias" routerLinkActive="is-active"
+            <a class="inventario-subtab" routerLink="/inventario/tendencias" routerLinkActive="is-active"
                [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
-              Tendencias
+              <span class="tab-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3v18h18M7 16l4-5 4 2 5-7"/>
+                  <path d="M17 6h3v3"/>
+                </svg>
+              </span>
+              <span class="min-w-0">
+                <span class="tab-title">Tendencias</span>
+                <span class="tab-description">Analiza la evolución del stock</span>
+              </span>
             </a>
           }
           @if (puedeAdministrarProductos()) {
-            <a class="inventario-subtab simple col-span-2 sm:col-span-1"
-               routerLink="/inventario/productos" routerLinkActive="is-active"
+            <a class="inventario-subtab" routerLink="/inventario/productos" routerLinkActive="is-active"
                [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
-              Administrar productos
+              <span class="tab-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="5" width="18" height="16" rx="2"/>
+                  <path d="M8 5V3h8v2M8 10h8M8 14h3M15 14v5M12.5 16.5h5"/>
+                </svg>
+              </span>
+              <span class="min-w-0">
+                <span class="tab-title">Administrar productos</span>
+                <span class="tab-description">Gestiona materiales y mínimos</span>
+              </span>
             </a>
           }
         </div>
@@ -113,9 +142,8 @@ import { AuthService } from '../../../core/auth/auth.service';
     .inventario-subtab.is-active .tab-icon { background: rgba(255,255,255,.17); color: white; }
     .tab-title { display: block; font-size: 12px; line-height: 1.35; font-weight: 800; }
     .tab-description { display: block; margin-top: 4px; font-size: 10px; font-weight: 500; line-height: 1.4; opacity: .85; }
-    .inventario-subtab.simple { min-height: 52px; font-weight: 750; font-size: 13px; }
     @media (min-width: 640px) {
-      .inventario-subtab:not(.simple) {
+      .inventario-subtab {
         min-height: 82px;
         flex-direction: row;
         justify-content: flex-start;

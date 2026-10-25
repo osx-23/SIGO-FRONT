@@ -193,6 +193,23 @@ export interface VistaPreviaTurnosCasetasExcel {
   advertencias: string[];
 }
 
+/** SIGO_IMPORTAR_TURNOS_TEXTO_V1 - lectura literal de los textos de turnos. */
+export interface CambioTextoTurnoExcel {
+  trabajadorId: number;
+  codigoTrabajador: number;
+  nombre: string;
+  fecha: string;
+  anterior: EstadoProgramacion | null;
+  nuevo: EstadoProgramacion | null;
+}
+export interface VistaPreviaTurnosTextoExcel {
+  leidos: number;
+  coinciden: number;
+  cambios: CambioTextoTurnoExcel[];
+  errores: string[];
+  omitidos: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProgramacionApiService {
   private readonly http = inject(HttpClient);
@@ -237,6 +254,19 @@ export class ProgramacionApiService {
       .set('mes', mes);
 
     return this.http.get<ProgramacionDia[]>(`${this.api}/programacion/turnos`, { params });
+  }
+
+  /** SIGO_IMPORTAR_TURNOS_TEXTO_V1. Apache POI lee, pero no guarda. */
+  previsualizarTextoTurnos(plazaId: number, anio: number, mes: number, archivo: File): Observable<VistaPreviaTurnosTextoExcel> {
+    const data = new FormData();
+    data.append('archivo', archivo);
+    data.append('plazaId', String(plazaId));
+    data.append('anio', String(anio));
+    data.append('mes', String(mes));
+    return this.http.post<VistaPreviaTurnosTextoExcel>(
+      `${this.api}/programacion/turnos/importar-excel/vista-previa`,
+      data
+    );
   }
 
   guardarTurnos(request: GuardarProgramacionRequest): Observable<ProgramacionDia[]> {

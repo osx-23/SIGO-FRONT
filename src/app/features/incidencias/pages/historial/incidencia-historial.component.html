@@ -150,10 +150,14 @@
 
 @if (detalle(); as item) {
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3 sm:p-4"
     (click)="cerrarDetalle()">
 
     <section
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-detalle-incidencia"
+      [attr.aria-busy]="cargandoDetalle()"
       class="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white shadow-2xl"
       (click)="$event.stopPropagation()">
 
@@ -163,7 +167,7 @@
             Incidencia #{{ item.id }}
           </p>
 
-          <h2 class="mt-1 text-xl font-bold text-slate-950">
+          <h2 id="titulo-detalle-incidencia" class="mt-1 text-xl font-bold text-slate-950">
             {{ item.tipoNombre }}
           </h2>
 
@@ -176,7 +180,9 @@
         <button
           type="button"
           (click)="cerrarDetalle()"
-          class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600">
+          [disabled]="guardandoEvidencia() || eliminandoEvidenciaId() !== null"
+          aria-label="Cerrar detalle de la incidencia"
+          class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50">
           Cerrar
         </button>
       </header>
@@ -253,6 +259,9 @@
           }
         }
       </div>
+
+      <footer class="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-5 py-3 backdrop-blur-sm sm:px-6">
+      </footer>
     </section>
   </div>
 }

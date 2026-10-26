@@ -1242,42 +1242,84 @@
   }
 
 
+  <!-- Confirmar la finalización: solo el botón principal ejecuta el guardado. -->
   @if (confirmarFinalizacion()) {
-    <div class="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-4"
+    <div class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-[2px] sm:p-6"
          role="presentation">
-      <section class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
-               role="dialog" aria-modal="true" aria-label="Confirmar finalización">
-        <h3 class="text-lg font-bold text-slate-900">¿Finalizar el relevo?</h3>
-        <p class="mt-2 text-sm text-slate-600">
-          Se registrará la hora real de finalización y el relevo pasará al historial.
-        </p>
-        <div class="mt-6 flex justify-end gap-3">
+      <section class="w-full max-w-lg overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-2xl shadow-slate-950/20"
+               role="dialog" aria-modal="true"
+               aria-labelledby="relevo-finalizar-titulo"
+               aria-describedby="relevo-finalizar-descripcion">
+        <div class="px-5 pb-5 pt-6 sm:px-7 sm:pt-7">
+          <div class="flex items-start gap-4">
+            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3v3M16 3v3M4 10h16M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/>
+                <path d="m9 15 2 2 4-4"/>
+              </svg>
+            </span>
+            <div class="min-w-0">
+              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Confirmar acción</p>
+              <h3 id="relevo-finalizar-titulo" class="mt-1 text-xl font-bold tracking-tight text-slate-950">¿Finalizar el relevo?</h3>
+              <p id="relevo-finalizar-descripcion" class="mt-2 text-sm leading-6 text-slate-600">
+                Se registrará la hora real de finalización y el relevo pasará al historial.
+              </p>
+            </div>
+          </div>
+          <div class="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
+            Comprueba que el checklist y las observaciones estén completos antes de continuar.
+          </div>
+        </div>
+        <div class="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
           <button type="button" (click)="confirmarFinalizacion.set(false)" [disabled]="guardando()"
-                  class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600">Volver</button>
+                  class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50">
+            Volver a revisar
+          </button>
           <button type="button" (click)="registrar()" [disabled]="guardando()"
-                  class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">
-            {{ guardando() ? 'Finalizando...' : 'Confirmar finalización' }}
+                  class="inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-50">
+            {{ guardando() ? 'Finalizando...' : 'Sí, finalizar relevo' }}
           </button>
         </div>
       </section>
     </div>
   }
 
+  <!-- Anulación: acción irreversible separada visualmente de finalizar. -->
   @if (confirmarAnulacion()) {
-    <div class="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 px-4"
+    <div class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/65 p-4 backdrop-blur-[2px] sm:p-6"
          role="presentation">
-      <section class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
-               role="dialog" aria-modal="true" aria-label="Anular sesión">
-        <h3 class="text-lg font-bold text-slate-900">¿Anular esta sesión?</h3>
-        <p class="mt-2 text-sm text-slate-600">
-          El avance de este relevo se descartará y podrás iniciar uno nuevo.
-        </p>
-        <div class="mt-6 flex justify-end gap-3">
+      <section class="w-full max-w-lg overflow-hidden rounded-[26px] border border-red-100 bg-white shadow-2xl shadow-slate-950/20"
+               role="alertdialog" aria-modal="true"
+               aria-labelledby="relevo-anular-titulo"
+               aria-describedby="relevo-anular-descripcion">
+        <div class="px-5 pb-5 pt-6 sm:px-7 sm:pt-7">
+          <div class="flex items-start gap-4">
+            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-red-50 text-red-600" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3 2.7 19a1.4 1.4 0 0 0 1.2 2h16.2a1.4 1.4 0 0 0 1.2-2L12 3Z"/>
+                <path d="M12 9v5M12 18h.01"/>
+              </svg>
+            </span>
+            <div class="min-w-0">
+              <p class="text-xs font-semibold uppercase tracking-[0.14em] text-red-600">Acción de anulación</p>
+              <h3 id="relevo-anular-titulo" class="mt-1 text-xl font-bold tracking-tight text-slate-950">¿Anular esta sesión?</h3>
+              <p id="relevo-anular-descripcion" class="mt-2 text-sm leading-6 text-slate-600">
+                El avance de este relevo se descartará y podrás iniciar uno nuevo.
+              </p>
+            </div>
+          </div>
+          <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-900">
+            <strong>Atención:</strong> revisa tu decisión antes de anular la sesión actual.
+          </div>
+        </div>
+        <div class="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
           <button type="button" (click)="confirmarAnulacion.set(false)" [disabled]="anulandoSesion()"
-                  class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600">Volver</button>
+                  class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-50">
+            Mantener sesión
+          </button>
           <button type="button" (click)="anularRelevo()" [disabled]="anulandoSesion()"
-                  class="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white">
-            {{ anulandoSesion() ? 'Anulando...' : 'Anular sesión' }}
+                  class="inline-flex min-h-11 items-center justify-center rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-300 disabled:cursor-not-allowed disabled:opacity-50">
+            {{ anulandoSesion() ? 'Anulando...' : 'Sí, anular sesión' }}
           </button>
         </div>
       </section>

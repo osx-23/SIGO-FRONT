@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
+  HostListener,
   OnDestroy,
   OnInit,
   inject,
@@ -660,6 +661,18 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
         this.error.set(err?.error?.message ?? 'No se pudo guardar el avance.');
       }
     });
+  }
+
+  /** Cierra las confirmaciones con Escape sin interrumpir una operación en curso. */
+  @HostListener('document:keydown.escape', ['$event'])
+cerrarConfirmacionesConEscape(event: Event): void {
+    if (this.confirmarFinalizacion() && !this.guardando()) {
+      this.confirmarFinalizacion.set(false);
+      event.preventDefault();
+    } else if (this.confirmarAnulacion() && !this.anulandoSesion()) {
+      this.confirmarAnulacion.set(false);
+      event.preventDefault();
+    }
   }
 
   solicitarFinalizacion(): void {

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 
@@ -24,7 +24,7 @@ import { RelevoApiService } from '../../services/relevo-api.service';
 
 @Component({ selector: 'app-relevo-historial', standalone: true, imports: [CommonModule, FormsModule, RouterLink], templateUrl: './relevo-historial.component.html', styleUrl: '../../../../shared/page.css' })
 
-export class RelevoHistorialComponent implements OnInit {
+export class RelevoHistorialComponent implements OnInit, OnDestroy {
 
   private readonly api = inject(RelevoApiService);
 
@@ -110,7 +110,29 @@ export class RelevoHistorialComponent implements OnInit {
 
   limpiarFiltros():void{const hoy=this.fechaHoy();this.inicio=this.esOperador?this.fechaInicioVentanaOperador():hoy;this.fin=hoy;if(!this.esOperador)this.plazaId=null;this.buscar();}
 
-  abrirDetalle(r:RelevoResponse):void{this.detalleSeleccionado.set(r);document.body.style.overflow='hidden';} cerrarDetalle():void{this.detalleSeleccionado.set(null);document.body.style.overflow='';}
+  private desbordamientoAnterior = '';
+
+  abrirDetalle(relevo: RelevoResponse): void {
+    if (this.detalleSeleccionado()) return;
+    this.desbordamientoAnterior = document.body.style.overflow;
+    this.detalleSeleccionado.set(relevo);
+    document.body.style.overflow = 'hidden';
+  }
+
+  cerrarDetalle(): void {
+    if (!this.detalleSeleccionado()) return;
+    this.detalleSeleccionado.set(null);
+    document.body.style.overflow = this.desbordamientoAnterior;
+  }
+
+  @HostListener('document:keydown.escape')
+  cerrarDetalleConEscape(): void {
+    if (this.detalleSeleccionado()) this.cerrarDetalle();
+  }
+
+  ngOnDestroy(): void {
+    this.cerrarDetalle();
+  }
 
   baseOperativa(r:RelevoResponse){return r.checklist.filter(i=>i.categoria==='BASE_OPERATIVA');} plazaPeaje(r:RelevoResponse){return r.checklist.filter(i=>i.categoria==='PLAZA_PEAJE');}
 

@@ -11,7 +11,10 @@ import {
 import { FormsModule } from '@angular/forms';
 
 import {
-  finalize
+  finalize,
+  Subscription,
+  switchMap,
+  throwError
 } from 'rxjs';
 
 import {
@@ -81,6 +84,17 @@ import {
 } from '../../state/programacion-lider.facade';
 
 
+import { ProgramacionApiService, VistaPreviaTurnosTextoExcel } from '../../data-access/programacion-api.service';
+
+/** Agrupa las filas omitidas sin eliminar el mensaje técnico original del backend. */
+interface OmisionTurnoExcelAgrupada {
+  codigo: string;
+  total: number;
+  fechas: string[];
+  motivos: string[];
+  detalles: string[];
+}
+
 @Component({
   selector: 'app-programacion-supervisor',
   standalone: true,
@@ -143,8 +157,14 @@ export class ProgramacionSupervisorComponent
   readonly generador =
     inject(ProgramacionGeneradorState);
 
+  /** Registra el modo de la propuesta aplicada, aunque el usuario cambie el selector. */
+  private propuestaPendientesActiva = false;
+
   readonly excepciones =
     inject(ProgramacionExcepcionState);
+
+  // SIGO_IMPORTAR_TURNOS_TEXTO_V1
+  private readonly apiExcelTurnos = inject(ProgramacionApiService);
 
   private readonly cdr =
     inject(ChangeDetectorRef);
@@ -228,6 +248,20 @@ export class ProgramacionSupervisorComponent
    * ESTADOS DE PROGRAMACIÓN
    * ============================================================
    */
+
+  // SIGO_IMPORTAR_TURNOS_TEXTO_V1: vista previa y borrador, sin cambios en BD.
+  importandoExcelTurnos = false;
+  vistaExcelTurnos: VistaPreviaTurnosTextoExcel | null = null;
+  archivoExcelTurnos = '';
+  omitidosExcelAgrupados: OmisionTurnoExcelAgrupada[] = [];
+  confirmacionExcelTurnosAbierta = false;
+  excelTurnosEliminaciones = 0;
+  excelTurnosNoRecomendados = 0;
+
+  // Identifica a qué plaza y mes pertenece la lectura (evita aplicar vistas antiguas).
+  private contextoExcelTurnos: { plazaId: number; anio: number; mes: number } | null = null;
+  private secuenciaExcelTurnos = 0;
+  private suscripcionExcelTurnos: Subscription | null = null;
 
   readonly estados:
     EstadoProgramacion[] = [
@@ -426,6 +460,193 @@ export class ProgramacionSupervisorComponent
    * INIT
    * ============================================================
    */
+
+  /** Vista previa de turnos: solo lee el Excel. No realiza guardados en PostgreSQL. */
+  seleccionarExcelTurnos(evento: Event): void {
+    const input = evento.target as HTMLInputElement;
+    const archivo = input.files?.item(0);
+    input.value = ''; // Permite volver a elegir el mismo archivo.
+    if (!archivo) return;
+    if (!this.plazaId) {
+      this.error = 'Selecciona una plaza antes de importar un Excel.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (this.cargando || this.guardando || this.importandoExcelTurnos) return;
+    if (this.cambios.size > 0) {
+      this.error = 'Ya tienes cambios de turnos pendientes. Guárdalos o descártalos antes de importar otro Excel.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (!archivo.name.toLowerCase().endsWith('.xlsx') || archivo.size > 2 * 1024 * 1024) {
+      this.error = 'Selecciona un Excel .xlsx de máximo 2 MB.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.cancelarExcelTurnos();
+    const solicitud = ++this.secuenciaExcelTurnos;
+    const contexto = { plazaId: this.plazaId, anio: this.anio, mes: this.mes };
+    this.contextoExcelTurnos = contexto;
+    this.error = '';
+    this.mensaje = '';
+    this.archivoExcelTurnos = archivo.name;
+    this.importandoExcelTurnos = true;
+    this.suscripcionExcelTurnos = this.apiExcelTurnos.previsualizarTextoTurnos(contexto.plazaId, contexto.anio, contexto.mes, archivo)
+      .pipe(finalize(() => {
+        if (solicitud === this.secuenciaExcelTurnos) {
+          this.importandoExcelTurnos = false;
+          this.suscripcionExcelTurnos = null;
+          this.cdr.detectChanges();
+        }
+      }))
+      .subscribe({
+        next: previa => {
+          if (solicitud !== this.secuenciaExcelTurnos || !this.esContextoExcelActual()) return;
+          this.vistaExcelTurnos = previa;
+          this.omitidosExcelAgrupados = this.agruparOmisionesExcel(previa.omitidos ?? []);
+          this.cdr.detectChanges();
+        },
+        error: e => {
+          if (solicitud !== this.secuenciaExcelTurnos || !this.esContextoExcelActual()) return;
+          this.error = this.mensajeError(e, 'No se pudo leer el Excel de turnos.');
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  cancelarExcelTurnos(): void {
+    // Invalida las respuestas HTTP que puedan llegar después de cancelar o cambiar el filtro.
+    this.secuenciaExcelTurnos++;
+    this.suscripcionExcelTurnos?.unsubscribe();
+    this.suscripcionExcelTurnos = null;
+    this.importandoExcelTurnos = false;
+    this.vistaExcelTurnos = null;
+    this.archivoExcelTurnos = '';
+    this.omitidosExcelAgrupados = [];
+    this.confirmacionExcelTurnosAbierta = false;
+    this.excelTurnosEliminaciones = 0;
+    this.excelTurnosNoRecomendados = 0;
+    this.contextoExcelTurnos = null;
+    this.cdr.detectChanges();
+  }
+
+  private esContextoExcelActual(): boolean {
+    const contexto = this.contextoExcelTurnos;
+    return !!contexto && contexto.plazaId === this.plazaId &&
+      contexto.anio === this.anio && contexto.mes === this.mes;
+  }
+
+  private agruparOmisionesExcel(omitidos: string[]): OmisionTurnoExcelAgrupada[] {
+    const grupos = new Map<string, OmisionTurnoExcelAgrupada>();
+
+    for (const detalle of omitidos) {
+      const codigo = /c[oó]digo\s*[:#-]?\s*(\d+)/i.exec(detalle)?.[1] ?? 'No identificado';
+      const fecha = /\b\d{4}-\d{2}-\d{2}\b/.exec(detalle)?.[0];
+      let motivo: string;
+      if (/\binactiv[oa]s?\b/i.test(detalle)) {
+        motivo = 'Trabajador inactivo';
+      } else if (/no corresponde.*activ[oa].*[uú]nic[oa]/i.test(detalle)) {
+        motivo = 'No corresponde a un trabajador activo y único de la plaza';
+      } else if (/sin programaci[oó]n|no existe programaci[oó]n/i.test(detalle)) {
+        motivo = 'Sin programación registrada';
+      } else {
+        // En motivos desconocidos, no afirmar que el trabajador está inactivo.
+        motivo = detalle.replace(/^.*?\b\d{4}-\d{2}-\d{2}\s*:\s*/, '')
+          .replace(/c[oó]digo\s*[:#-]?\s*\d+/i, 'Código')
+          .trim();
+      }
+      // Sin código no mezclamos errores diferentes en un mismo grupo.
+      const clave = codigo === 'No identificado' ? `sin-codigo:${detalle}` : `codigo:${codigo}`;
+      let grupo = grupos.get(clave);
+      if (!grupo) {
+        grupo = { codigo, total: 0, fechas: [], motivos: [], detalles: [] };
+        grupos.set(clave, grupo);
+      }
+      grupo.total++;
+      if (fecha && !grupo.fechas.includes(fecha)) grupo.fechas.push(fecha);
+      if (motivo && !grupo.motivos.includes(motivo)) grupo.motivos.push(motivo);
+      grupo.detalles.push(detalle);
+    }
+    return [...grupos.values()].map(grupo => ({
+      ...grupo,
+      fechas: [...grupo.fechas].sort()
+    })).sort((a, b) => a.codigo.localeCompare(b.codigo, 'es', { numeric: true }));
+  }
+
+  aplicarExcelTurnos(confirmado = false): void {
+    const previa = this.vistaExcelTurnos;
+    if (!previa || !this.plazaId || this.cargando || this.guardando || this.guardandoOrden ||
+        this.generador.procesando || this.agentesProcesando.size > 0 ||
+        this.importandoExcelTurnos || this.cambios.size > 0) return;
+    if (previa.cambios.length === 0) return;
+    if (!this.esContextoExcelActual()) {
+      this.cancelarExcelTurnos();
+      this.error = 'La plaza o el mes cambió. Importa el Excel nuevamente antes de aplicar.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    // La validación del backend se mantiene: solo se aplican sus cambios válidos.
+    // Además comprobamos que la tabla local no haya variado después de la vista previa.
+    const periodo = `${this.anio}-${String(this.mes).padStart(2, '0')}`;
+    const ids = new Set([...this.agentes, ...this.controladores].map(x => x.id));
+    const claves = new Set<string>();
+    for (const cambio of previa.cambios) {
+      const dia = Number(cambio.fecha.slice(8, 10));
+      const llave = this.key(cambio.trabajadorId, dia);
+      const fechaEsperada = `${periodo}-${String(dia).padStart(2, '0')}`;
+      if (!ids.has(cambio.trabajadorId) || !Number.isInteger(dia) ||
+          dia < 1 || dia > this.dias.length || cambio.fecha !== fechaEsperada ||
+          claves.has(llave) || (this.matrix.get(llave) ?? null) !== cambio.anterior) {
+        this.error = 'La vista previa ya no coincide con la programación actual. Vuelve a importar el Excel para evitar cambios incorrectos.';
+        this.cdr.detectChanges();
+        return;
+      }
+      claves.add(llave);
+    }
+
+    // Una única confirmación accesible reemplaza los diálogos nativos encadenados.
+    if (!confirmado) {
+      this.excelTurnosEliminaciones = previa.cambios.filter(c => c.nuevo === null).length;
+      this.excelTurnosNoRecomendados = previa.cambios.filter(c =>
+        (c.nuevo === 'A' || c.nuevo === 'B' || c.nuevo === 'C') &&
+        !this.turnoRecomendado(c.trabajadorId, c.nuevo)
+      ).length;
+      this.confirmacionExcelTurnosAbierta = true;
+      this.cdr.markForCheck();
+      return;
+    }
+    this.confirmacionExcelTurnosAbierta = false;
+
+    const matrixNueva = new Map(this.matrix);
+    let aplicados = 0;
+    for (const cambio of previa.cambios) {
+      const dia = Number(cambio.fecha.slice(8, 10));
+      const llave = this.key(cambio.trabajadorId, dia);
+      if ((matrixNueva.get(llave) ?? null) === cambio.nuevo) continue;
+      matrixNueva.set(llave, cambio.nuevo);
+      this.cambios.set(llave, cambio.nuevo);
+      aplicados++;
+    }
+    this.matrix = matrixNueva; // Nueva referencia para la tabla OnPush.
+    const omitidos = previa.omitidos.length;
+    this.cancelarExcelTurnos();
+    this.error = '';
+    this.mensaje = `${aplicados} turno(s) cargados al borrador. ${omitidos} registro(s) omitidos por validación, sin aplicar. Revisa la matriz y pulsa Guardar turnos para persistir.`;
+    this.cdr.detectChanges();
+  }
+
+  confirmarAplicacionExcelTurnos(): void {
+    if (!this.confirmacionExcelTurnosAbierta) return;
+    // Se repiten las validaciones para evitar aplicar datos desactualizados.
+    this.aplicarExcelTurnos(true);
+  }
+
+  cancelarConfirmacionExcelTurnos(): void {
+    this.confirmacionExcelTurnosAbierta = false;
+    this.cdr.markForCheck();
+  }
 
   ngOnInit(): void {
 
@@ -715,9 +936,12 @@ export class ProgramacionSupervisorComponent
     if (
       !this.plazaId
     ) {
+      this.cancelarExcelTurnos();
       return;
     }
 
+    // Nunca conservar la vista previa si recargamos los datos de una plaza/mes.
+    this.cancelarExcelTurnos();
 
     this.cargando =
       true;
@@ -729,6 +953,7 @@ export class ProgramacionSupervisorComponent
       '';
 
     this.generador.limpiarResultado();
+    this.propuestaPendientesActiva = false;
 
 
     this.diaSeleccionado = null;
@@ -1512,6 +1737,13 @@ export class ProgramacionSupervisorComponent
       return;
     }
 
+    if (this.generador.modoGeneracion === 'COMPLETAR_PENDIENTES'
+        && this.cambios.size > 0) {
+      this.error = 'Guarda o descarta los cambios pendientes de la matriz antes de completar turnos. Así protegemos la programación existente.';
+      this.mostrarConfirmacionAccion(this.error, 'Cambios sin guardar', 'error');
+      return;
+    }
+
     const errorValidacion =
       this.generador.validar(
         this.anio,
@@ -1556,6 +1788,8 @@ export class ProgramacionSupervisorComponent
       )
       .subscribe({
         next: propuesta => {
+          this.propuestaPendientesActiva =
+            this.generador.modoGeneracion === 'COMPLETAR_PENDIENTES';
           this.aplicarPropuesta(
             propuesta
           );
@@ -1566,8 +1800,14 @@ export class ProgramacionSupervisorComponent
           const deficits =
             this.diasPropuestaConDeficit();
 
-          this.mensaje =
-            'Propuesta generada. Revísala y edítala antes de guardar.';
+          const pendientesGenerados = propuesta.agentes.reduce(
+            (total, agente) => total + agente.dias.length, 0
+          );
+          this.mensaje = this.propuestaPendientesActiva
+            ? pendientesGenerados
+              ? `Se completaron ${pendientesGenerados} días sin turno en el borrador. La programación anterior permanece sin cambios.`
+              : 'No hay turnos pendientes que completar. La programación existente se conserva.'
+            : 'Propuesta generada. Revísala y edítala antes de guardar.';
 
           this.mostrarConfirmacionAccion(
             alertas > 0 || deficits > 0
@@ -1632,6 +1872,12 @@ export class ProgramacionSupervisorComponent
           celda.trabajadorId,
           dia
         );
+
+      // En completar pendientes, jamás sustituir una celda ya cargada.
+      if (this.propuestaPendientesActiva
+          && nuevaMatrix.get(key) != null) {
+        continue;
+      }
 
       nuevaMatrix.set(
         key,
@@ -2060,13 +2306,30 @@ export class ProgramacionSupervisorComponent
       '';
 
 
-    this.guardadoFacade
-      .guardar(
-        this.plazaId,
-        this.cambios,
-        this.anio,
-        this.mes
-      )
+    const plazaId = this.plazaId;
+    const cambios = new Map(this.cambios);
+    const solicitud = this.guardadoFacade.guardar(
+      plazaId, cambios, this.anio, this.mes);
+
+    // Detecta guardados concurrentes antes de escribir una propuesta
+    // parcial y exige actualizar si alguno de sus huecos fue ocupado.
+    const operacion = this.propuestaPendientesActiva
+        && this.generador.ultimaPropuesta
+      ? this.apiExcelTurnos.getTurnos(plazaId, this.anio, this.mes).pipe(
+          switchMap(turnosActuales => {
+            const ocupados = new Set(turnosActuales.map(turno =>
+              this.key(turno.trabajadorId, this.diaDeFecha(turno.fecha))));
+            if ([...cambios.keys()].some(key => ocupados.has(key))) {
+              return throwError(() => new Error(
+                'Se guardaron turnos mientras revisabas la propuesta. Actualiza la programación y genera nuevamente para no sobrescribirlos.'
+              ));
+            }
+            return solicitud;
+          })
+        )
+      : solicitud;
+
+    operacion
       .pipe(
 
         finalize(
@@ -2101,6 +2364,8 @@ export class ProgramacionSupervisorComponent
             );
 
           this.cambios.clear();
+          this.propuestaPendientesActiva = false;
+          this.generador.limpiarResultado();
 
 
           this.mensaje =

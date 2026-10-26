@@ -18,6 +18,8 @@ import { InventarioApiService } from '../../services/inventario-api.service';
 export class StockComponent implements OnInit {
   items: StockActual[] = [];
   plazas: CatalogoItem[] = [];
+  categorias: CatalogoItem[] = [];
+  private nombresCategoriaPorId = new Map<number, string>();
   private codigosPorProducto = new Map<number, string>();
   private catalogoCodigosCargado = false;
 
@@ -25,6 +27,7 @@ export class StockComponent implements OnInit {
   error = '';
   busqueda = '';
   plazaId: number | null = null;
+  categoriaId: number | null = null;
   estado: 'TODOS' | 'BAJO' | 'OK' = 'TODOS';
 
   constructor(
@@ -34,7 +37,8 @@ export class StockComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
-    if (!this.esSupervisor()) this.plazaId = this.auth.usuario()?.plazaId ?? null;
+    // Iniciar en la plaza de la sesión, también para supervisores.
+    this.plazaId = this.auth.usuario()?.plazaId ?? null;
     await this.inicializar();
   }
 
@@ -46,9 +50,8 @@ export class StockComponent implements OnInit {
     this.cargando = true;
     this.error = '';
     try {
-      const tareas: Promise<unknown>[] = [this.cargarStock()];
-      if (this.esSupervisor()) tareas.push(this.cargarPlazas());
-      await Promise.all(tareas);
+      // El listado de plazas es de consulta para supervisores y controladores.
+      await Promise.all([this.cargarStock(), this.cargarCategorias(), this.cargarPlazas()]);
     } catch (e: any) {
       this.error = this.extraerError(e);
     } finally {
@@ -59,7 +62,8 @@ export class StockComponent implements OnInit {
 
   async cargarStock(): Promise<void> {
     const stock = await firstValueFrom(this.api.stock({
-      plazaId: this.esSupervisor() ? this.plazaId : this.auth.usuario()?.plazaId ?? null,
+      // Se respeta la plaza elegida; la API valida el alcance de lectura.
+      plazaId: this.plazaId,
       buscar: this.busqueda
     }));
 
@@ -88,6 +92,13 @@ export class StockComponent implements OnInit {
     this.plazas = await firstValueFrom(this.api.catalogo('plazas'));
   }
 
+  async cargarCategorias(): Promise<void> {
+    this.categorias = await firstValueFrom(this.api.catalogo('categorias'));
+    this.nombresCategoriaPorId = new Map(
+      this.categorias.map(categoria => [categoria.id, categoria.nombre])
+    );
+  }
+
   async aplicarFiltros(): Promise<void> {
     this.cargando = true;
     this.error = '';
@@ -104,20 +115,43 @@ export class StockComponent implements OnInit {
   async limpiarFiltros(): Promise<void> {
     this.busqueda = '';
     this.estado = 'TODOS';
-    this.plazaId = this.esSupervisor() ? null : this.auth.usuario()?.plazaId ?? null;
+    this.categoriaId = null;
+    this.plazaId = this.auth.usuario()?.plazaId ?? null;
     await this.aplicarFiltros();
+  }
+
+  nombrePlazaSeleccionada(): string {
+    if (this.plazaId === null) return 'Todas las plazas';
+    const plaza = this.plazas.find(item => item.id === this.plazaId);
+    if (plaza) return plaza.codigo || plaza.nombre;
+    return this.plazaId === this.auth.usuario()?.plazaId
+      ? (this.auth.usuario()?.plaza || 'Tu plaza')
+      : 'Plaza seleccionada';
+  }
+
+  nombreCategoria(categoriaId: number | null): string {
+    if (categoriaId == null) return 'Sin categoría';
+    return this.nombresCategoriaPorId.get(categoriaId) ?? 'Categoría no disponible';
   }
 
   itemsVisibles(): StockActual[] {
     const filtrados = this.items.filter(item => {
+      // -1 representa los productos que todavía no tienen categoría asignada.
+      if (this.categoriaId === -1 && item.categoriaId != null) return false;
+      if (this.categoriaId !== null && this.categoriaId !== -1 && item.categoriaId !== this.categoriaId) return false;
       if (this.estado === 'BAJO') return item.bajoMinimo;
       if (this.estado === 'OK') return !item.bajoMinimo;
       return true;
     });
 
     return [...filtrados].sort((a, b) => {
-      if (a.bajoMinimo !== b.bajoMinimo) return a.bajoMinimo ? -1 : 1;
-      const porPlaza = a.plaza.localeCompare(b.plaza, undefined, { numeric: true });
+      // Stock adecuado disponible, luego bajo mínimo y finalmente agotado.
+      // "Agotado" se prioriza incluso si el mínimo configurado es cero.
+      const prioridad = (item: StockActual): number =>
+        Number(item.cantidadActual) <= 0 ? 2 : item.bajoMinimo ? 1 : 0;
+      const diferencia = prioridad(a) - prioridad(b);
+      if (diferencia !== 0) return diferencia;
+      const porPlaza = a.plaza.localeCompare(b.plaza, 'es', { numeric: true });
       return porPlaza !== 0 ? porPlaza : a.producto.localeCompare(b.producto);
     });
   }

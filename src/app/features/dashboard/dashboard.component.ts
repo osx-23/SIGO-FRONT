@@ -9,6 +9,8 @@ import {
 import { forkJoin } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { environment } from '../../../environments/environment';
+import { PrediccionAsistenciaComponent } from './prediccion/prediccion-asistencia.component';
 
 import {
   AusenciaMotivo,
@@ -57,12 +59,21 @@ interface ResumenLocal {
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    CommonModule
+    CommonModule,
+    PrediccionAsistenciaComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent implements OnInit {
+
+  readonly prediccionHabilitada = environment.prediccionAsistenciaEnabled;
+  readonly vistaDashboard = signal<'RESUMEN' | 'PREDICCION'>('RESUMEN');
+
+  setVistaDashboard(vista: 'RESUMEN' | 'PREDICCION'): void {
+    if (vista === 'PREDICCION' && !this.prediccionHabilitada) return;
+    this.vistaDashboard.set(vista);
+  }
 
   private readonly api =
     inject(AsistenciaApiService);

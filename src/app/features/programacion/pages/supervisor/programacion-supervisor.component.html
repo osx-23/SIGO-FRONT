@@ -62,6 +62,169 @@
   <!-- FILTROS -->
   <!-- ======================================================= -->
 
+  <!-- La importación solo prepara cambios en el borrador: Guardar turnos persiste en BD. -->
+  <section class="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
+    <div class="flex flex-col gap-5 p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between">
+      <div class="flex min-w-0 items-start gap-3">
+        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700" aria-hidden="true">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3M8 3h7l4 4v5M8 3v5h7V3M7 14h7M7 18h5"/>
+            <path d="m16 17 3 3 3-3M19 20v-7"/>
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Herramientas de programación</span>
+          <h2 class="mt-1 text-base font-bold text-slate-900">Importar turnos desde Excel</h2>
+          <p class="mt-1 max-w-xl text-sm leading-5 text-slate-500">
+            Carga un archivo .xlsx, revisa los cambios y aplícalos al borrador antes de guardar.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex w-full flex-wrap items-center gap-2 xl:w-auto xl:justify-end" aria-label="Acciones de programación">
+        <button class="secondary inline-flex items-center gap-2 border border-slate-200 bg-white text-slate-700"
+          type="button" (click)="abrirSinSecuencia()"
+          [disabled]="agentesSinSecuencia.length === 0 || !plazaId || cargando || guardando || guardandoOrden || generador.procesando || agentesProcesando.size > 0">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 4v16M4 12h16"/>
+          </svg>
+          Asignar secuencia
+          @if (agentesSinSecuencia.length > 0) {
+            <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800">{{ agentesSinSecuencia.length }}</span>
+          }
+        </button>
+        <button class="secondary inline-flex items-center gap-2 border border-slate-200 bg-white text-slate-700"
+          type="button" (click)="abrirModalExcepcion()"
+          [disabled]="!plazaId || cargando || guardando || guardandoOrden || generador.procesando || excepciones.guardando">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>
+          </svg>
+          Añadir excepción
+        </button>
+        <input #archivoTurnosExcel class="hidden" type="file" accept=".xlsx" (change)="seleccionarExcelTurnos($event)" aria-label="Seleccionar Excel de turnos" />
+        <button class="primary inline-flex items-center gap-2 whitespace-nowrap" type="button"
+          [disabled]="!plazaId || cargando || guardando || guardandoOrden || generador.procesando || agentesProcesando.size > 0 || importandoExcelTurnos || cambios.size > 0"
+          (click)="archivoTurnosExcel.click()">
+          <svg class="h-4 w-4" [class.animate-spin]="importandoExcelTurnos" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            @if (importandoExcelTurnos) {
+              <path d="M21 12a9 9 0 1 1-9-9"/>
+            } @else {
+              <path d="M12 16V4M7 9l5-5 5 5M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+            }
+          </svg>
+          {{ importandoExcelTurnos ? 'Leyendo archivo...' : 'Importar Excel' }}
+        </button>
+        @if (importandoExcelTurnos) {
+          <button class="secondary" type="button" (click)="cancelarExcelTurnos()">Cancelar lectura</button>
+        }
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-600 sm:px-5">
+      <span><strong class="text-slate-800">Formato:</strong> .xlsx · máximo 2 MB</span>
+      <span><strong class="text-slate-800">Turnos:</strong> A, B, C, D, V, COM, DM, LIC y -</span>
+      <span>Las celdas vacías no modifican turnos; los colores no se interpretan.</span>
+    </div>
+    @if (importandoExcelTurnos) {
+      <div class="flex items-center gap-2 border-t border-blue-100 bg-blue-50 px-5 py-3 text-sm text-blue-800" role="status" aria-live="polite">
+        <span class="h-2 w-2 animate-pulse rounded-full bg-blue-600"></span>
+        Revisando {{ archivoExcelTurnos }} y validando los turnos...
+      </div>
+    }
+    @if (cambios.size > 0) {
+      <div class="border-t border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-900" role="status">
+        Tienes <strong>{{ cambios.size }} cambio(s) pendientes</strong>. Guárdalos o descártalos antes de importar otro archivo.
+      </div>
+    }
+    @if (vistaExcelTurnos; as previa) {
+      <div class="m-4 rounded-xl border border-slate-200 bg-white p-4 sm:m-5">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-blue-700">Archivo analizado</span>
+            <h3 class="mt-1 font-semibold text-slate-900">Revisa los cambios antes de aplicarlos</h3>
+            <p class="break-all text-sm font-medium text-slate-700">{{ archivoExcelTurnos }}</p>
+            <p class="mt-1 text-sm text-slate-500">Solo se aplicarán los datos válidos al borrador. Nada se guarda hasta pulsar «Guardar turnos».</p>
+          </div>
+          <button type="button" class="secondary" (click)="cancelarExcelTurnos()">Cancelar importación</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4" aria-label="Resumen de importación">
+          <div class="rounded-lg bg-slate-50 p-3"><b class="block text-xl text-slate-900">{{ previa.leidos }}</b><span class="text-slate-600">Celdas leídas</span></div>
+          <div class="rounded-lg bg-green-50 p-3"><b class="block text-xl text-green-800">{{ previa.coinciden }}</b><span class="text-green-900">Ya coinciden</span></div>
+          <div class="rounded-lg bg-blue-50 p-3"><b class="block text-xl text-blue-800">{{ previa.cambios.length }}</b><span class="text-blue-900">Para importar</span></div>
+          <div class="rounded-lg bg-amber-50 p-3"><b class="block text-xl text-amber-800">{{ previa.omitidos.length }}</b><span class="text-amber-900">Omitidos</span></div>
+        </div>
+        @if (previa.errores.length > 0) {
+          <details class="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm">
+            <summary class="cursor-pointer font-semibold text-red-800">Errores en el Excel ({{ previa.errores.length }})</summary>
+            <ul class="mt-2 list-disc pl-5 text-red-900">
+              @for (e of previa.errores; track $index) { <li>{{ e }}</li> }
+            </ul>
+          </details>
+        }
+        @if (previa.omitidos.length > 0) {
+          <details class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
+            <summary class="cursor-pointer font-semibold text-amber-900">Omitidos ({{ previa.omitidos.length }} registros, {{ omitidosExcelAgrupados.length }} códigos o grupos)</summary>
+            <p class="mt-2 text-amber-900">Estos registros no se importarán. Puedes consultar el motivo y las fechas de cada código.</p>
+            <ul class="mt-2 space-y-2 text-amber-950">
+              @for (grupo of omitidosExcelAgrupados; track $index) {
+                <li class="rounded-lg border border-amber-200 bg-white p-3">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <b>Código {{ grupo.codigo }}</b>
+                    <span class="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold">{{ grupo.total }} registro(s) omitido(s)</span>
+                  </div>
+                  @for (motivo of grupo.motivos; track motivo) {
+                    <p class="mt-1 text-sm">Motivo: {{ motivo }}</p>
+                  }
+                  @if (grupo.fechas.length > 0) {
+                    <p class="mt-1 text-xs text-amber-800">Fechas: {{ grupo.fechas.join(', ') }}</p>
+                  }
+                  <details class="mt-2 text-xs">
+                    <summary class="cursor-pointer font-semibold">Ver detalles originales ({{ grupo.detalles.length }})</summary>
+                    <ul class="mt-2 list-disc space-y-1 pl-5">
+                      @for (detalle of grupo.detalles; track $index) { <li>{{ detalle }}</li> }
+                    </ul>
+                  </details>
+                </li>
+              }
+            </ul>
+          </details>
+        }
+        @if (previa.cambios.length > 0) {
+          <div class="mt-3 max-h-72 overflow-auto rounded-lg border border-slate-200">
+            <table class="w-full text-left text-sm">
+              <thead class="sticky top-0 bg-slate-100 text-slate-700">
+                <tr><th class="p-2">Fecha</th><th class="p-2">Trabajador</th><th class="p-2">En SIGO</th><th class="p-2">Excel</th></tr>
+              </thead>
+              <tbody>
+                @for (c of previa.cambios.slice(0, 80); track c.trabajadorId + '-' + c.fecha) {
+                  <tr class="border-t border-slate-100">
+                    <td class="p-2">{{ c.fecha }}</td>
+                    <td class="p-2">{{ c.codigoTrabajador }} · {{ c.nombre }}</td>
+                    <td class="p-2">{{ c.anterior || '-' }}</td>
+                    <td class="p-2 font-semibold">{{ c.nuevo || '-' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          @if (previa.cambios.length > 80) {
+            <p class="mt-2 text-xs text-slate-500">Se muestran las primeras 80 filas; se aplicarán las {{ previa.cambios.length }} propuestas válidas.</p>
+          }
+        } @else {
+          <p class="mt-3 text-sm text-green-800">No hay cambios nuevos que aplicar. Puedes cancelar esta vista previa o importar otro Excel.</p>
+        }
+        <div class="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-sm leading-5 text-blue-900">
+          <strong>¿Qué sucede al aplicar?</strong> Se actualiza únicamente la matriz de SIGO; puedes revisar y editar antes de guardar. El valor <strong>-</strong> elimina el turno y su caseta vinculada cuando guardes.
+        </div>
+        <div class="mt-3 flex justify-end">
+          <button class="primary" type="button"
+            [disabled]="previa.cambios.length === 0 || cambios.size > 0 || cargando || guardando || guardandoOrden || generador.procesando || agentesProcesando.size > 0 || importandoExcelTurnos"
+            (click)="aplicarExcelTurnos()">Revisar y aplicar {{ previa.cambios.length }} cambios</button>
+        </div>
+      </div>
+    }
+  </section>
+
   <section class="filters">
 
     <label>
@@ -135,31 +298,21 @@
   <!-- MENSAJES -->
   <!-- ======================================================= -->
 
-  @if(
-    error
-  ){
-
-    <div class="alert error">
-
-      {{ error }}
-
+  @if (error) {
+    <div class="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900" role="alert">
+      <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-red-100 font-bold" aria-hidden="true">!</span>
+      <p class="min-w-0 flex-1 leading-6">{{ error }}</p>
+      <button type="button" class="rounded-lg px-2 text-lg text-red-700 hover:bg-red-100" aria-label="Cerrar alerta de error" (click)="error = ''">×</button>
     </div>
-
   }
 
-
-  @if(
-    mensaje
-  ){
-
-    <div class="alert success">
-
-      {{ mensaje }}
-
+  @if (mensaje) {
+    <div class="mb-4 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900" role="status">
+      <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-100 font-bold" aria-hidden="true">✓</span>
+      <p class="min-w-0 flex-1 leading-6">{{ mensaje }}</p>
+      <button type="button" class="rounded-lg px-2 text-lg text-emerald-700 hover:bg-emerald-100" aria-label="Cerrar notificación" (click)="mensaje = ''">×</button>
     </div>
-
   }
-
 
   @if(generador.ultimaPropuesta){
     <section class="proposal-status">
@@ -250,8 +403,6 @@
       [mostrarDetalles]="mostrarDetalles"
       [diaSeleccionado]="diaSeleccionado"
       (abrirGenerador)="abrirGenerador()"
-      (abrirPendientes)="abrirSinSecuencia()"
-      (abrirExcepciones)="abrirModalExcepcion()"
       (alternarDetalles)="alternarDetalles()"
       (diaSeleccionadoChange)="seleccionarDia($event)"
       (secuenciaChange)="cambiarSecuencia($event.agenteId, $event.grupo)"
@@ -371,6 +522,62 @@
           SIGO está calculando los turnos del mes y validando
           cobertura, secuencias y excepciones.
         </p>
+      </div>
+    </section>
+  </div>
+}
+
+@if (confirmacionExcelTurnosAbierta && vistaExcelTurnos; as previa) {
+  <div class="shift-warning-backdrop" (click)="cancelarConfirmacionExcelTurnos()">
+    <section class="shift-warning-modal excel-confirm-modal" role="alertdialog" aria-modal="true"
+      aria-labelledby="excel-confirm-title" aria-describedby="excel-confirm-description"
+      (click)="$event.stopPropagation()">
+      <div class="shift-warning-accent"></div>
+      <div class="shift-warning-content">
+        <div class="shift-warning-heading">
+          <div class="shift-warning-icon" aria-hidden="true">!</div>
+          <div>
+            <span class="shift-warning-kicker">CONFIRMAR IMPORTACIÓN</span>
+            <h2 id="excel-confirm-title">¿Aplicar los turnos del Excel?</h2>
+            <p id="excel-confirm-description">Los cambios se cargarán al borrador. No se guardarán en la base de datos hasta pulsar «Guardar turnos».</p>
+          </div>
+        </div>
+        <p class="mt-4 break-all text-xs font-semibold text-slate-600">{{ archivoExcelTurnos }}</p>
+        <div class="excel-confirm-metrics">
+          <div><strong>{{ previa.cambios.length }}</strong><span>Cambios válidos</span></div>
+          <div><strong>{{ previa.omitidos.length }}</strong><span>Omitidos</span></div>
+          <div><strong>{{ previa.errores.length }}</strong><span>Errores</span></div>
+        </div>
+        @if (previa.errores.length > 0 || previa.omitidos.length > 0) {
+          <div class="excel-confirm-notice warning">
+            <strong>Registros no aplicados</strong>
+            <p>Los {{ previa.errores.length }} errores y {{ previa.omitidos.length }} registros omitidos no modificarán la programación. Puedes revisarlos en la vista previa.</p>
+          </div>
+        }
+        @if (excelTurnosEliminaciones > 0) {
+          <div class="excel-confirm-notice danger">
+            <strong>{{ excelTurnosEliminaciones }} día(s) se marcarán con «-»</strong>
+            <p>La programación de esos días y sus casetas vinculadas se eliminarán al guardar los turnos.</p>
+          </div>
+        }
+        @if (excelTurnosNoRecomendados > 0) {
+          <div class="excel-confirm-notice warning">
+            <strong>{{ excelTurnosNoRecomendados }} turno(s) fuera de recomendación</strong>
+            <p>Revisa las excepciones de los agentes antes de guardar la programación.</p>
+          </div>
+        }
+        @if (previa.errores.length === 0 && previa.omitidos.length === 0 && excelTurnosEliminaciones === 0 && excelTurnosNoRecomendados === 0) {
+          <div class="excel-confirm-notice success">
+            <strong>Validación sin advertencias</strong>
+            <p>Los turnos válidos están listos para cargarse al borrador.</p>
+          </div>
+        }
+      </div>
+      <div class="shift-warning-actions">
+        <button class="secondary" type="button" (click)="cancelarConfirmacionExcelTurnos()" autofocus>Volver a revisar</button>
+        <button class="shift-warning-confirm" type="button" (click)="confirmarAplicacionExcelTurnos()">
+          Aplicar {{ previa.cambios.length }} cambios al borrador
+        </button>
       </div>
     </section>
   </div>

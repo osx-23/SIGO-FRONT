@@ -23,6 +23,8 @@ export class ProgramacionGeneradorState {
   readonly modalAbierto = signal(false);
   procesando = false;
 
+  modoGeneracion: 'MES_COMPLETO' | 'COMPLETAR_PENDIENTES' = 'MES_COMPLETO';
+
   coberturaNormal = {
     a: 7,
     b: 7,
@@ -196,6 +198,7 @@ export class ProgramacionGeneradorState {
       plazaId,
       anio,
       mes,
+      completarPendientes: this.modoGeneracion === 'COMPLETAR_PENDIENTES',
       coberturaNormal: {
         ...this.coberturaNormal
       },

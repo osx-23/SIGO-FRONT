@@ -64,8 +64,37 @@ export class PedidosComponent implements OnInit {
     return this.metadata.get(item.productoId)?.categoria ?? 'Sin categoría';
   }
 
+  private categoriaDeProducto(productoId: number): string {
+    return this.metadata.get(productoId)?.categoria ?? 'Sin categoría';
+  }
+
   get categoriasDisponibles(): string[] {
-    return [...new Set(this.sugerencias.map(s => this.categoriaDe(s)))].sort((a, b) => a.localeCompare(b));
+    // Mantener opciones útiles al pasar entre Planificar, Histórico y Consolidado.
+    const categorias = [
+      ...this.sugerencias.map(s => this.categoriaDe(s)),
+      ...this.consumo.map(item => this.categoriaDeProducto(item.productoId)),
+      ...this.consolidado.map(item => this.categoriaDeProducto(item.productoId))
+    ];
+    return [...new Set(categorias)].sort((a, b) => a.localeCompare(b, 'es'));
+  }
+
+  get pedidosVisibles(): PedidoLista[] {
+    // El supervisor puede consultar todas las plazas; el selector muestra la elegida.
+    return this.plazaId === null
+      ? this.pedidos
+      : this.pedidos.filter(pedido => pedido.plazaId === this.plazaId);
+  }
+
+  get consolidadoVisible(): MaterialConsolidado[] {
+    return this.consolidado.filter(item =>
+      this.categoriaFiltro === 'TODAS' || this.categoriaDeProducto(item.productoId) === this.categoriaFiltro
+    );
+  }
+
+  get consumoVisible(): ConsumoHistorico[] {
+    return this.consumo.filter(item =>
+      this.categoriaFiltro === 'TODAS' || this.categoriaDeProducto(item.productoId) === this.categoriaFiltro
+    );
   }
 
   get productosBase(): SugerenciaPedido[] {
@@ -128,8 +157,13 @@ export class PedidosComponent implements OnInit {
     }
     this.seleccionados = nuevo;
   }
-  alCambiarCantidad(item: SugerenciaPedido): void {
-    if (Number(item.cantidad) > 0) this.seleccionar(item.productoId, true);
+  actualizarCantidad(item: SugerenciaPedido, valor: number | null): void {
+    item.cantidad = valor === null ? 0 : Number(valor);
+    if (item.cantidad > 0) {
+      this.seleccionar(item.productoId, true);
+    } else {
+      this.seleccionar(item.productoId, false);
+    }
   }
   aplicarSugerencias(): void {
     let aplicadas = 0;
@@ -175,6 +209,8 @@ export class PedidosComponent implements OnInit {
   async cambiarContexto(): Promise<void> {
     this.editandoId = null;
     this.revisionAbierta = false;
+    // Evitar mostrar un pedido de otra plaza o periodo al cambiar filtros.
+    this.seleccionado = null;
     this.categoriaFiltro = 'TODAS';
     this.filtroStock = 'TODOS';
     this.busqueda = '';
@@ -261,10 +297,9 @@ export class PedidosComponent implements OnInit {
       if (p) {
         tareas.push(firstValueFrom(this.api.sugerencias(p, this.mes))
           .then(datos => {
-            this.sugerencias = datos.map(s => ({ ...s, cantidad: Number(s.sugerido ?? 0) }));
-            this.seleccionados = new Set(this.sugerencias
-              .filter(s => Number(s.sugerido ?? 0) > 0)
-              .map(s => s.productoId));
+            // La sugerencia es informativa: no llenar ni seleccionar cantidades al entrar.
+            this.sugerencias = datos.map(s => ({ ...s, cantidad: 0 }));
+            this.seleccionados = new Set<number>();
           }));
         tareas.push(firstValueFrom(this.api.consumo(p))
           .then(datos => { this.consumo = datos; }));

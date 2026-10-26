@@ -29,6 +29,44 @@
       }
     </header>
 
+    <!-- Filtros compartidos visibles en las cuatro vistas del planificador. -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-label="Filtros generales del planificador">
+      <div class="mb-3">
+        <h2 class="text-sm font-extrabold text-slate-800">Filtros de consulta</h2>
+        <p class="mt-1 text-xs text-slate-500">Selecciona la plaza, el mes y la categoría de materiales.</p>
+      </div>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <label class="flex min-w-0 flex-col justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Plaza</span>
+          @if (esSupervisor()) {
+            <select [(ngModel)]="plazaId" (ngModelChange)="cambiarContexto()"
+              [disabled]="cargando" class="w-full min-w-0 cursor-pointer bg-transparent text-sm font-bold text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+              @for (plaza of plazas; track plaza.id) {
+                <option [ngValue]="plaza.id">{{ plaza.codigo || plaza.nombre }}</option>
+              }
+            </select>
+          } @else {
+            <span class="text-sm font-bold text-slate-800">{{ plazaSeleccionadaTexto }}</span>
+          }
+        </label>
+        <label class="flex min-w-0 flex-col justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Mes de solicitud</span>
+          <input type="month" [(ngModel)]="mes" (change)="cambiarContexto()" [disabled]="cargando"
+            class="min-w-0 w-full bg-transparent text-sm font-bold text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+        </label>
+        <label class="flex min-w-0 flex-col justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Categoría</span>
+          <select [(ngModel)]="categoriaFiltro" class="min-w-0 w-full cursor-pointer bg-transparent text-sm font-bold text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+            <option value="TODAS">Todas las categorías</option>
+            @for (cat of categoriasDisponibles; track cat) {
+              <option [value]="cat">{{ cat }}</option>
+            }
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <!-- Accesos a las cuatro vistas del planificador (acciones y permisos originales). -->
     <nav class="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-3" aria-label="Secciones de pedidos">
       <div class="grid grid-cols-2 gap-2" [ngClass]="esSupervisor() ? 'xl:grid-cols-4' : 'xl:grid-cols-3'">
         <button type="button" (click)="vista='nuevo'" [attr.aria-pressed]="vista === 'nuevo'"
@@ -103,41 +141,19 @@
     }
 
     @if (vista === 'nuevo') {
-      <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-label="Filtros del planificador">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div class="flex flex-wrap items-center gap-3">
-            <label class="flex h-[56px] min-w-[142px] flex-col justify-center rounded-lg border border-slate-200 bg-white px-3 shadow-sm">
-              <span class="text-[9px] font-extrabold uppercase tracking-wide text-slate-400">Plaza</span>
-              @if (esSupervisor()) {
-                <select [(ngModel)]="plazaId" (ngModelChange)="cambiarContexto()" class="mt-0.5 w-full cursor-pointer bg-transparent text-xs font-extrabold text-slate-800 outline-none">
-                  @for (plaza of plazas; track plaza.id) { <option [ngValue]="plaza.id">{{ plaza.codigo || plaza.nombre }}</option> }
-                </select>
-              } @else { <span class="mt-0.5 text-xs font-extrabold text-slate-800">{{ plazaSeleccionadaTexto }}</span> }
-            </label>
-            <label class="flex h-[56px] min-w-[165px] flex-col justify-center rounded-lg border border-slate-200 bg-white px-3 shadow-sm">
-              <span class="text-[9px] font-extrabold uppercase tracking-wide text-slate-400">Mes de solicitud</span>
-              <input type="month" [(ngModel)]="mes" (change)="cambiarContexto()"
-                class="mt-0.5 max-w-[145px] bg-transparent text-xs font-extrabold text-slate-800 outline-none">
-            </label>
-            <label class="flex h-[56px] min-w-[160px] flex-col justify-center rounded-lg border border-slate-200 bg-white px-3 shadow-sm">
-              <span class="text-[9px] font-extrabold uppercase tracking-wide text-slate-400">Categoría</span>
-              <select [(ngModel)]="categoriaFiltro" class="mt-0.5 w-full cursor-pointer bg-transparent text-xs font-extrabold text-slate-800 outline-none">
-                <option value="TODAS">Todas</option>
-                @for (cat of categoriasDisponibles; track cat) { <option [value]="cat">{{ cat }}</option> }
-              </select>
-            </label>
+      <section class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:px-5" aria-label="Búsqueda de materiales">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 class="text-sm font-extrabold text-slate-800">Buscar materiales</h2>
+            <p class="mt-1 text-xs text-slate-500">Busca por nombre o código dentro de la plaza y categoría seleccionadas.</p>
           </div>
-          <div class="relative w-full lg:w-[275px]">
+          <div class="relative w-full sm:max-w-xs">
             <svg viewBox="0 0 24 24" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 fill-none stroke-slate-400 stroke-2" aria-hidden="true">
               <circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5" stroke-linecap="round"/>
             </svg>
             <input type="search" [(ngModel)]="busqueda" aria-label="Buscar materiales" placeholder="Buscar material o código..."
-              class="h-[43px] w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+              class="h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
           </div>
-        </div>
-        <div class="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] text-blue-800">
-          <strong>Datos de referencia (setiembre 2026):</strong> las cantidades sugeridas reproducen el requerimiento del Excel.
-          El stock reportado no equivale a un conteo actualizado a la fecha.
         </div>
         @if (fueraDePlazo()) {
           <p class="mt-3 text-xs font-semibold text-amber-700">La fecha límite habitual del pedido mensual es el día 8.</p>
@@ -174,7 +190,6 @@
         <div class="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             <h2 class="text-[15px] font-extrabold text-[#152945]">Consolidado de materiales · {{ plazaSeleccionadaTexto }}</h2>
-            <p class="mt-1 text-[11px] text-slate-400">La sugerencia usa la solicitud de septiembre como referencia. Puedes ajustar cualquier cantidad antes de enviar.</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <button type="button" (click)="aplicarSugerencias()" [disabled]="cargando"
@@ -182,24 +197,71 @@
             <span class="rounded-full bg-rose-50 px-3 py-2 text-[10px] font-bold text-rose-600">{{ materialesReposicion }} requieren atención</span>
           </div>
         </div>
-        <div class="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div class="flex flex-wrap gap-2">
-            <button type="button" (click)="filtroStock='TODOS'"
-              [class.bg-slate-100]="filtroStock==='TODOS'" [class.text-slate-700]="filtroStock==='TODOS'"
-              class="rounded-full px-4 py-2 text-[11px] font-bold text-slate-500 hover:bg-slate-100">Todos: {{ materialesEvaluados }}</button>
-            <button type="button" (click)="filtroStock='REPOSICION'"
-              [class.bg-rose-50]="filtroStock==='REPOSICION'" [class.text-rose-600]="filtroStock==='REPOSICION'"
-              class="rounded-full px-4 py-2 text-[11px] font-bold text-slate-500 hover:bg-rose-50">Stock insuficiente: {{ materialesReposicion }}</button>
-            <button type="button" (click)="filtroStock='SUFICIENTE'"
-              [class.bg-emerald-50]="filtroStock==='SUFICIENTE'" [class.text-emerald-700]="filtroStock==='SUFICIENTE'"
-              class="rounded-full px-4 py-2 text-[11px] font-bold text-slate-500 hover:bg-emerald-50">Stock suficiente: {{ materialesSuficientes }}</button>
+        <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+          <div class="grid grid-cols-2 gap-2 xl:grid-cols-4" role="group" aria-label="Filtrar por nivel de stock">
+            <button type="button" (click)="filtroStock='TODOS'" [attr.aria-pressed]="filtroStock==='TODOS'"
+              [ngClass]="filtroStock==='TODOS' ? 'border-blue-500 bg-blue-50 text-blue-800 shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50/60'"
+              class="flex min-h-[76px] min-w-0 items-center gap-3 rounded-xl border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 sm:px-4">
+              <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-blue-100 text-blue-700" aria-hidden="true">
+                <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current stroke-[1.8]" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                </svg>
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-xs font-extrabold leading-4 sm:text-sm">Todos</span>
+                <span class="mt-1 block text-[11px] opacity-75">Todos los materiales</span>
+              </span>
+              <span class="shrink-0 rounded-lg bg-blue-100 px-2 py-1 text-xs font-black text-blue-800">{{ materialesEvaluados }}</span>
+            </button>
+
+            <button type="button" (click)="filtroStock='REPOSICION'" [attr.aria-pressed]="filtroStock==='REPOSICION'"
+              [ngClass]="filtroStock==='REPOSICION' ? 'border-rose-400 bg-rose-50 text-rose-800 shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-rose-200 hover:bg-rose-50/60'"
+              class="flex min-h-[76px] min-w-0 items-center gap-3 rounded-xl border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 sm:px-4">
+              <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-rose-100 text-rose-700" aria-hidden="true">
+                <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current stroke-[1.8]" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5m0 3h.01"/>
+                </svg>
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-xs font-extrabold leading-4 sm:text-sm">Stock insuficiente</span>
+                <span class="mt-1 block text-[11px] opacity-75">Necesitan reposición</span>
+              </span>
+              <span class="shrink-0 rounded-lg bg-rose-100 px-2 py-1 text-xs font-black text-rose-800">{{ materialesReposicion }}</span>
+            </button>
+
+            <button type="button" (click)="filtroStock='SUFICIENTE'" [attr.aria-pressed]="filtroStock==='SUFICIENTE'"
+              [ngClass]="filtroStock==='SUFICIENTE' ? 'border-emerald-400 bg-emerald-50 text-emerald-800 shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50/60'"
+              class="flex min-h-[76px] min-w-0 items-center gap-3 rounded-xl border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 sm:px-4">
+              <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-100 text-emerald-700" aria-hidden="true">
+                <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current stroke-[1.8]" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>
+                </svg>
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-xs font-extrabold leading-4 sm:text-sm">Stock suficiente</span>
+                <span class="mt-1 block text-[11px] opacity-75">Cobertura adecuada</span>
+              </span>
+              <span class="shrink-0 rounded-lg bg-emerald-100 px-2 py-1 text-xs font-black text-emerald-800">{{ materialesSuficientes }}</span>
+            </button>
+
             @if (materialesSinDatos > 0) {
-              <button type="button" (click)="filtroStock='SIN_DATOS'"
-                [class.bg-amber-50]="filtroStock==='SIN_DATOS'" [class.text-amber-700]="filtroStock==='SIN_DATOS'"
-                class="rounded-full px-4 py-2 text-[11px] font-bold text-slate-500 hover:bg-amber-50">Sin histórico: {{ materialesSinDatos }}</button>
+              <button type="button" (click)="filtroStock='SIN_DATOS'" [attr.aria-pressed]="filtroStock==='SIN_DATOS'"
+                [ngClass]="filtroStock==='SIN_DATOS' ? 'border-amber-400 bg-amber-50 text-amber-900 shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-amber-200 hover:bg-amber-50/60'"
+                class="flex min-h-[76px] min-w-0 items-center gap-3 rounded-xl border px-3 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500 sm:px-4">
+                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-800" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" class="h-5 w-5 fill-none stroke-current stroke-[1.8]" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 4h.01"/>
+                  </svg>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-xs font-extrabold leading-4 sm:text-sm">Sin histórico</span>
+                  <span class="mt-1 block text-[11px] opacity-75">Información pendiente</span>
+                </span>
+                <span class="shrink-0 rounded-lg bg-amber-100 px-2 py-1 text-xs font-black text-amber-900">{{ materialesSinDatos }}</span>
+              </button>
             }
           </div>
-          <span class="text-[10px] text-slate-400">Cobertura = stock reportado / consumo mensual disponible</span>
+          <p class="mt-3 text-[11px] text-slate-500">Cobertura = stock registrado ÷ consumo mensual disponible</p>
         </div>
 
         @if (cargando) {
@@ -270,14 +332,12 @@
                     </td>
                     <td class="px-3 py-3 text-xs font-extrabold text-[#6080a8]">
                       <div>{{ s.sugerido === null ? '—' : (s.sugerido | number:'1.0-2') }}</div>
-                      @if (s.fuenteSugerencia === 'SOLICITUD_SEPTIEMBRE') {
-                        <span class="mt-1 block text-[9px] font-semibold text-blue-500">Pedido set. 2026</span>
-                      }
                     </td>
                     <td class="px-4 py-3">
-                      <input type="number" min="0" step="0.01" [(ngModel)]="s.cantidad"
-                        (ngModelChange)="alCambiarCantidad(s)" [attr.aria-label]="'Cantidad a pedir de ' + s.producto"
-                        class="h-8 w-[95px] rounded-lg border border-slate-200 bg-[#f8fafc] px-2 text-center text-xs font-extrabold text-blue-700 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100">
+                      <input type="number" min="0" step="0.01" [ngModel]="s.cantidad > 0 ? s.cantidad : null"
+                        (ngModelChange)="actualizarCantidad(s, $event)" [attr.aria-label]="'Cantidad a pedir de ' + s.producto"
+                        placeholder="—"
+                        class="h-8 w-[95px] rounded-lg border border-slate-200 bg-[#f8fafc] px-2 text-center text-xs font-extrabold text-blue-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100">
                     </td>
                   </tr>
                 } @empty {
@@ -317,7 +377,7 @@
           <div class="border-b border-slate-100 p-5"><h2 class="text-lg font-extrabold">Pedidos del mes</h2>
             <p class="text-sm text-slate-500">Selecciona un pedido para revisar su detalle.</p></div>
           <div class="max-h-[550px] divide-y divide-slate-100 overflow-y-auto">
-            @for (p of pedidos; track p.id) {
+            @for (p of pedidosVisibles; track p.id) {
               <button type="button" (click)="abrir(p.id)"
                 class="block w-full p-4 text-left hover:bg-blue-50"
                 [class.bg-blue-50]="seleccionado?.id===p.id">
@@ -444,7 +504,7 @@
       <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div class="flex flex-wrap items-center justify-between gap-4 p-5">
           <div><h2 class="text-lg font-extrabold">Consolidado para Planificación</h2>
-            <p class="mt-1 text-sm text-slate-500">Agrupa pedidos aprobados y entregados de todas las plazas, sin repetir cantidades por recepción.</p></div>
+            <p class="mt-1 text-sm text-slate-500">Agrupa pedidos aprobados y entregados de todas las plazas, sin repetir cantidades por recepción. La plaza seleccionada no limita este consolidado general.</p></div>
           <button type="button" (click)="elevar()" [disabled]="guardando || cargando"
             class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
             Consolidar requerimientos
@@ -456,7 +516,7 @@
               <tr><th class="p-4">Material</th><th class="p-4">Unidad</th><th class="p-4">Plazas</th><th class="p-4">Cantidad total</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              @for (item of consolidado; track item.productoId) {
+              @for (item of consolidadoVisible; track item.productoId) {
                 <tr><td class="p-4 font-semibold">{{ item.producto }}<span class="block text-xs font-bold text-blue-700">Código: {{ item.codigo }}</span></td><td class="p-4">{{ item.unidad }}</td>
                   <td class="p-4">{{ item.plazas }}</td><td class="p-4 font-extrabold">{{ item.cantidadTotal | number:'1.0-2' }}</td></tr>
               } @empty {
@@ -472,7 +532,7 @@
       <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div class="p-5">
           <h2 class="text-xl font-extrabold">Histórico de consumo por plaza</h2>
-          <p class="mt-2 text-sm text-slate-500">Consumo calculado entre dos conteos finalizados, considerando los materiales recibidos durante el periodo. No se generan datos cuando falta evidencia.</p>
+          <p class="mt-2 text-sm text-slate-500">Consumo calculado entre dos conteos finalizados, considerando los materiales recibidos durante el periodo. El historial muestra todos los meses disponibles; el mes de solicitud se utiliza para pedidos.</p>
         </div>
         <div class="overflow-x-auto">
           <table class="min-w-full text-left text-sm">
@@ -480,7 +540,7 @@
               <tr><th class="p-4">Mes</th><th class="p-4">Material</th><th class="p-4">Consumo registrado</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              @for (x of consumo; track x.periodo + '-' + x.productoId) {
+              @for (x of consumoVisible; track x.periodo + '-' + x.productoId) {
                 <tr><td class="p-4">{{ x.periodo }}</td><td class="p-4 font-semibold">{{ x.producto }}<span class="block text-xs font-bold text-blue-700">Código: {{ x.codigo }}</span></td>
                   <td class="p-4">{{ x.consumo | number:'1.0-2' }}</td></tr>
               } @empty {

@@ -62,6 +62,7 @@ export interface StockActual {
   bajoMinimo: boolean;
   inventarioId: number;
   actualizadoEn: string;
+  categoriaId: number | null;
 }
 
 export interface ProductoAdmin {

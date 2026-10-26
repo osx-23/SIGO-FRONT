@@ -115,14 +115,6 @@ export class ProgramacionTablaComponent {
     new EventEmitter<void>();
 
   @Output()
-  readonly abrirPendientes =
-    new EventEmitter<void>();
-
-  @Output()
-  readonly abrirExcepciones =
-    new EventEmitter<void>();
-
-  @Output()
   readonly alternarDetalles =
     new EventEmitter<void>();
 

@@ -414,7 +414,9 @@ export class GeneradorAsignacionCasetasComponent
           })
         );
 
-      if (
+      if (!this.propuesta.asignaciones.length && !this.propuesta.conflictos.length) {
+        this.mensaje = 'Todos los turnos operativos del periodo ya tienen caseta. No hay asignaciones pendientes.';
+      } else if (
         this.propuesta
           .conflictos.length
       ) {
@@ -450,6 +452,28 @@ export class GeneradorAsignacionCasetasComponent
     this.mensaje = '';
 
     try {
+      // Antes de guardar, comprobar que nadie haya asignado estas casetas
+      // después de generar la propuesta. Nunca sobrescribir una existente.
+      if (this.propuesta.plazaId !== this.plazaId ||
+          this.propuesta.anio !== Number(this.periodoMes.split('-')[0]) ||
+          this.propuesta.mes !== Number(this.periodoMes.split('-')[1])) {
+        throw new Error('Cambió la plaza o el mes. Genera nuevamente la propuesta.');
+      }
+
+      const existentes = await firstValueFrom(
+        this.api.getDistribucion(this.plazaId, this.propuesta.anio, this.propuesta.mes)
+      );
+      const turnosOcupados = new Set(existentes.map(item => item.programacionTurnoId));
+      const casetasOcupadas = new Set(existentes.map(item =>
+        `${item.fecha}|${item.estado}|${item.ubicacionId}`
+      ));
+      for (const item of this.propuesta.asignaciones) {
+        if (turnosOcupados.has(item.programacionTurnoId) ||
+            casetasOcupadas.has(`${item.fecha}|${item.turno}|${item.ubicacionId}`)) {
+          throw new Error('Hay nuevas casetas asignadas desde que generaste la propuesta. Actualiza y vuelve a generar para no sobrescribirlas.');
+        }
+      }
+
       await firstValueFrom(
         this.api.guardarDistribucion({
           plazaId: this.plazaId,
@@ -467,8 +491,9 @@ export class GeneradorAsignacionCasetasComponent
         })
       );
 
+      this.propuesta = null;
       this.mensaje =
-        'Distribución guardada correctamente. Ya está disponible para el controlador.';
+        'Casetas pendientes guardadas. Las asignaciones que ya existían permanecen sin cambios.';
     } catch (error) {
       this.error =
         this.mensajeError(

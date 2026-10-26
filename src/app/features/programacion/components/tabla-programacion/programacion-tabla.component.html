@@ -36,36 +36,6 @@
       </button>
 
       <button
-        class="secondary"
-        type="button"
-        (click)="abrirPendientes.emit()"
-        [disabled]="
-          agentesSinSecuencia === 0 ||
-          generador.procesando ||
-          guardandoTurnos ||
-          guardandoOrden ||
-          agentesProcesando.size > 0
-        "
-      >
-        Asignar secuencia
-
-        @if(agentesSinSecuencia > 0){
-          <span class="badge">
-            {{ agentesSinSecuencia }}
-          </span>
-        }
-      </button>
-
-      <button
-        class="secondary exception-main-button"
-        type="button"
-        (click)="abrirExcepciones.emit()"
-        [disabled]="excepciones.guardando"
-      >
-        Añadir excepción
-      </button>
-
-      <button
         class="secondary details-toggle"
         type="button"
         (click)="alternarDetalles.emit()"
@@ -118,7 +88,7 @@
       <table [class.details-hidden]="!mostrarDetalles">
         <thead>
           <tr>
-            <th class="order-column">Pos.</th>
+            @if(mostrarDetalles){ <th class="order-column">Pos.</th> }
             <th class="sticky-code">Cód.</th>
             <th class="sticky-name">Nombre</th>
 
@@ -172,6 +142,7 @@
                 )
               "
             >
+              @if(mostrarDetalles){
               <td class="order-column">
                 <div class="order-control">
                   <span class="order-number">
@@ -219,6 +190,7 @@
                   </div>
                 </div>
               </td>
+              }
 
               <td class="sticky-code">
                 {{ agente.codigo }}

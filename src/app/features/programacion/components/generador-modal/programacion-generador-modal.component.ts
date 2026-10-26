@@ -24,8 +24,10 @@ import {
     FormsModule
   ],
   templateUrl: './programacion-generador-modal.component.html',
-  styleUrl:
-    '../../pages/supervisor/programacion-supervisor.component.css'
+  styleUrls: [
+    '../../pages/supervisor/programacion-supervisor.component.css',
+    './programacion-generador-modal.component.css'
+  ]
 })
 export class ProgramacionGeneradorModalComponent {
   readonly generador =

@@ -423,6 +423,13 @@ import {
       .co-photo-drop{min-height:180px}
     }
   `]})
+type CategoriaEvidencia = 'PLAZA' | 'INGRESO' | 'INCIDENTE' | 'COLA';
+interface FotoControlOperativo {
+  file: File;
+  url: string;
+  categoria: CategoriaEvidencia;
+}
+
 export class ControlOperativoComponent implements OnInit, OnDestroy {
   private readonly api = inject(ControlOperativoApiService);
   private readonly catalogos = inject(AsistenciaApiService);
@@ -444,14 +451,14 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   error = '';
   mensaje = '';
   editandoId: number | null = null;
-  fotos: {file: File;url:string;categoria:'PLAZA'|'INGRESO'|'INCIDENTE'|'COLA'}[] = [];
+  fotos: FotoControlOperativo[] = [];
   filtros: {inicio:string;fin:string;tipo:string;plazaId:number|null} =
     {inicio: this.restarDias(30), fin: this.fechaHoy(), tipo:'', plazaId:null};
   form: ControlOperativoInput = this.nuevoForm();
 
-  readonly situaciones = ['Fluida','Tráfico moderado','Congestionada','Tráfico en contra','Tráfico detenido','Otro'];
-  readonly ingresos = ['Con motorizado','Sin motorizado','Motorizado en camino','Ingreso restringido','Sin novedad'];
-  readonly incidentes = ['PNP en el semáforo','Falla en el sistema','Accidente vehicular','Vehículo averiado','Manifestación','Bloqueo de vía','Sin incidente','Otro'];
+  readonly situaciones = ['Fluida','Tráfico en contra'];
+  readonly ingresos = ['Con motorizado','Sin motorizado'];
+  readonly incidentes = ['PNP en el semáforo','Falla en el sistema','Sin incidente'];
 
   get esSupervisor(): boolean { return this.auth.tieneRol('SUPERVISOR'); }
   get totalReportes(): number { return this.reportes.filter(r=>r.tipo==='REPORTE').length; }
@@ -528,30 +535,56 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     }catch(e){this.error=this.errorHttp(e);}
     finally{this.cargando=false;}
   }
-  private agregarFoto(file:File):void {
-    if(this.fotos.length>=5){this.error='Máximo 5 evidencias.';return;}
-    if(!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size>10*1024*1024) {
-      this.error='Se permiten imágenes JPG, PNG o WEBP de máximo 10 MB.';return;
+  fotoCategoria(categoria: CategoriaEvidencia): FotoControlOperativo | undefined {
+    return this.fotos.find(f => f.categoria === categoria);
+  }
+
+  private agregarFoto(file: File, categoria: CategoriaEvidencia): void {
+    this.error = '';
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024 || file.size === 0) {
+      this.error = 'Solo se admiten imágenes JPG, PNG o WEBP de hasta 10 MB.';
+      return;
     }
-    this.fotos.push({file,url:URL.createObjectURL(file),categoria:'PLAZA'});
-  }
-  seleccionarImagenes(event:Event):void {
-    const el=event.target as HTMLInputElement;
-    for(const file of Array.from(el.files||[]))this.agregarFoto(file);
-    el.value='';
-  }
-  pegarImagen(event:ClipboardEvent):void {
-    for(const item of Array.from(event.clipboardData?.items||[])){
-      if(item.kind==='file'){
-        const file=item.getAsFile();
-        if(file){event.preventDefault();this.agregarFoto(file);}
-      }
+    const anterior = this.fotos.findIndex(f => f.categoria === categoria);
+    if (anterior >= 0) {
+      URL.revokeObjectURL(this.fotos[anterior].url);
+      this.fotos.splice(anterior,1);
     }
+    this.fotos.push({file, url: URL.createObjectURL(file), categoria});
   }
-  quitarFoto(index:number):void {
-    const [foto]=this.fotos.splice(index,1);
-    if(foto)URL.revokeObjectURL(foto.url);
+
+  seleccionarImagenCategoria(event: Event, categoria: CategoriaEvidencia): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) this.agregarFoto(file,categoria);
+    input.value = '';
   }
+
+  pegarImagenCategoria(event: ClipboardEvent, categoria: CategoriaEvidencia): void {
+    const item = Array.from(event.clipboardData?.items ?? []).find(i => i.kind === 'file' && i.type.startsWith('image/'));
+    const file = item?.getAsFile();
+    if (!file) return;
+    event.preventDefault();
+    this.agregarFoto(file,categoria);
+  }
+
+  permitirArrastre(event: DragEvent): void {
+    event.preventDefault();
+  }
+
+  soltarImagenCategoria(event: DragEvent, categoria: CategoriaEvidencia): void {
+    event.preventDefault();
+    const file = Array.from(event.dataTransfer?.files ?? []).find(f => f.type.startsWith('image/'));
+    if (file) this.agregarFoto(file,categoria);
+  }
+
+  quitarFotoCategoria(categoria: CategoriaEvidencia): void {
+    const i = this.fotos.findIndex(f => f.categoria === categoria);
+    if (i === -1) return;
+    URL.revokeObjectURL(this.fotos[i].url);
+    this.fotos.splice(i,1);
+  }
+
   limpiar():void {
     this.fotos.forEach(f=>URL.revokeObjectURL(f.url));this.fotos=[];
     const actual=this.auth.usuario();

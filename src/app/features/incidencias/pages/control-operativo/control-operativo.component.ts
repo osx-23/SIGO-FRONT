@@ -8,7 +8,7 @@ import { Plaza, Turno } from '../../../asistencia/models/asistencia.models';
 import { IncidenciaApiService } from '../../services/incidencia-api.service';
 import { ViaIncidencia } from '../../models/incidencia.models';
 import {
-  ControlOperativoApiService, ControlOperativoEvidencia, ControlOperativoVia, ControlOperativoInput,
+  ControlOperativoApiService, ControlOperativoEvidencia, ControlOperativoInput,
   ControlOperativoReporte, ControlOperativoResponsable, TipoControlOperativo
 } from '../../services/control-operativo-api.service';
 
@@ -462,15 +462,11 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   private readonly incidenciaApi = inject(IncidenciaApiService);
   readonly auth = inject(AuthService);
   private readonly cdr = inject(ChangeDetectorRef);
-  vista: 'nuevo' | 'historial' | 'dashboard' | 'vias' = 'nuevo';
+  vista: 'nuevo' | 'historial' | 'dashboard' = 'nuevo';
   plazas: Plaza[] = [];
   turnos: Turno[] = [];
   responsables: ControlOperativoResponsable[] = [];
   vias: ViaIncidencia[] = [];
-  viasGestion: ControlOperativoVia[] = [];
-  plazaGestion = 0;
-  desdeVia = 101;
-  hastaVia = 105;
   reportes: ControlOperativoReporte[] = [];
   evidencias: ControlOperativoEvidencia[] = [];
   reporteEvidencias: ControlOperativoReporte | null = null;
@@ -514,7 +510,6 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     const usuario = this.auth.usuario();
     this.form.plazaId = usuario?.plazaId ?? 0;
     this.form.responsableId = usuario?.trabajadorId ?? usuario?.id ?? 0;
-    this.plazaGestion = this.form.plazaId;
 
     // Mostrar inmediatamente los valores de la sesión; luego completar catálogos.
     if (usuario?.plazaId) {
@@ -550,7 +545,6 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       const activas = (plazas || []).filter(p => p.activo);
       // Mantener la plaza de sesión visible aunque el catálogo llegue vacío.
       if (activas.length) this.plazas = activas;
-      if (!this.plazaGestion) this.plazaGestion = this.form.plazaId || this.plazas[0]?.id || 0;
     } catch (e) {
       this.error = 'No se pudo cargar el catálogo de plazas. ' + this.errorHttp(e);
     } finally {
@@ -587,11 +581,9 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void { this.fotos.forEach(f=>URL.revokeObjectURL(f.url)); }
 
-  cambiarVista(vista:'nuevo'|'historial'|'dashboard'|'vias'):void {
+  cambiarVista(vista:'nuevo'|'historial'|'dashboard'):void {
     this.vista=vista;this.error='';this.mensaje='';
-    if (vista==='vias') {
-      void this.cargarViasGestion();
-    } else if ((vista==='historial'||vista==='dashboard') && !this.historialCargado && !this.cargando) {
+    if ((vista==='historial'||vista==='dashboard') && !this.historialCargado && !this.cargando) {
       void this.cargarHistorial();
     }
   }
@@ -769,37 +761,6 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     catch(e){this.error=this.errorHttp(e);}
     finally{this.cdr.markForCheck();}
   }
-  async cargarViasGestion():Promise<void> {
-    if(!this.esSupervisor || !this.plazaGestion)return;
-    this.error='';
-    try{this.viasGestion=await firstValueFrom(this.api.vias(this.plazaGestion));}
-    catch(e){this.error=this.errorHttp(e);}
-    finally{this.cdr.markForCheck();}
-  }
-  async asignarVias():Promise<void> {
-    const desde=Number(this.desdeVia),hasta=Number(this.hastaVia);
-    if(!this.esSupervisor || !this.plazaGestion)return;
-    if(!Number.isInteger(desde)||!Number.isInteger(hasta)||desde<1||hasta<desde||hasta>999999||hasta-desde>99){
-      this.error='Ingresa un rango válido de máximo 100 vías.';return;
-    }
-    this.guardando=true;this.error='';this.mensaje='';
-    try{
-      this.viasGestion=await firstValueFrom(this.api.asignarVias(this.plazaGestion,desde,hasta));
-      this.mensaje='Vías asignadas o reactivadas correctamente.';
-    }catch(e){this.error=this.errorHttp(e);}
-    finally{this.guardando=false;this.cdr.markForCheck();}
-  }
-  async desactivarVia(numero:number):Promise<void> {
-    if(!this.esSupervisor || !this.plazaGestion)return;
-    this.guardando=true;this.error='';this.mensaje='';
-    try{
-      await firstValueFrom(this.api.desactivarVia(this.plazaGestion,numero));
-      await this.cargarViasGestion();
-      this.mensaje='Vía '+numero+' desactivada.';
-    }catch(e){this.error=this.errorHttp(e);}
-    finally{this.guardando=false;this.cdr.markForCheck();}
-  }
-
   private errorHttp(e:unknown):string {
     const err=e as {error?:{message?:string;detail?:string};message?:string};
     return err?.error?.message || err?.error?.detail || err?.message || 'No se pudo completar la operación.';

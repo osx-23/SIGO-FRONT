@@ -93,12 +93,12 @@ interface FotoControlOperativo {
             <div>
               <p class="co-section-kicker">DATOS GENERALES</p>
               <h2>{{editandoId ? 'Editar control operativo #' + editandoId : 'Nuevo control operativo'}}</h2>
-              <p>La plaza y el responsable se precargan desde la sesión. El turno se sugiere según la hora, pero puedes modificarlo.</p>
+              <p>La plaza y el responsable se precargan desde tu sesión. Puedes elegir otra plaza para brindar apoyo; las vías se actualizarán según la selección.</p>
             </div>
           </div>
           <div class="co-grid co-general-grid">
             <label>Plaza
-              <select name="plaza" [(ngModel)]="form.plazaId" (ngModelChange)="cambioPlaza()" [disabled]="!esSupervisor" required>
+              <select name="plaza" [(ngModel)]="form.plazaId" (ngModelChange)="cambioPlaza()" required>
                 <option [ngValue]="0">Selecciona una plaza</option>
                 <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
               </select>
@@ -320,8 +320,6 @@ interface FotoControlOperativo {
                 <td>
                   <div class="co-table-actions">
                     <button type="button" class="co-action-button co-action-edit" (click)="editar(r)"
-                      [disabled]="!puedeEditarRegistro(r)"
-                      [title]="puedeEditarRegistro(r) ? 'Editar reporte' : 'Solo puedes editar registros de tu plaza asignada'"
                       [attr.aria-label]="'Editar reporte '+r.id">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -830,11 +828,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     } catch(e){this.error=this.errorHttp(e);}
     finally{this.guardando=false;this.cdr.markForCheck();}
   }
-  puedeEditarRegistro(registro:ControlOperativoReporte):boolean {
-    return this.esSupervisor || registro.plazaId === this.auth.usuario()?.plazaId;
-  }
   async editar(registro:ControlOperativoReporte):Promise<void> {
-    if (!this.puedeEditarRegistro(registro)) return;
     this.vista='nuevo';this.editandoId=registro.id;this.error='';this.mensaje='';
     this.form={plazaId:registro.plazaId,turnoId:registro.turnoId,
       viaId:null,responsableId:registro.responsableId || registro.registradoPorId,

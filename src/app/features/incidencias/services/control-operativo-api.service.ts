@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 export type TipoControlOperativo = 'REPORTE' | 'MEDICION';
-export type EstadoControlOperativo = 'REGISTRADO' | 'EN_OBSERVACION' | 'ATENDIDO';
 
 export interface ControlOperativoInput {
   plazaId: number;
@@ -19,7 +18,6 @@ export interface ControlOperativoInput {
   incidente: string;
   colaMetros: number | null;
   descripcion: string;
-  estado: EstadoControlOperativo;
 }
 export interface ControlOperativoReporte extends ControlOperativoInput {
   id: number;

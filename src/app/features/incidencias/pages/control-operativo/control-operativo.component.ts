@@ -270,19 +270,12 @@ interface FotoControlOperativo {
 
         <section class="co-panel co-bottom">
           <div class="co-panel-head">
-            <div><h2>Observaciones y seguimiento</h2><p>Agrega información adicional cuando sea necesario.</p></div>
+            <div><h2>Observaciones</h2><p>Agrega información adicional cuando sea necesario.</p></div>
           </div>
           <div class="co-bottom-fields">
             <label>Descripción / observaciones
               <textarea name="descripcion" [(ngModel)]="form.descripcion" maxlength="10000" rows="4"
                 placeholder="Detalle adicional de la situación registrada"></textarea>
-            </label>
-            <label>Estado
-              <select name="estado" [(ngModel)]="form.estado">
-                <option value="REGISTRADO">Registrado</option>
-                <option value="EN_OBSERVACION">En observación</option>
-                <option value="ATENDIDO">Atendido</option>
-              </select>
             </label>
           </div>
           <div class="co-actions">
@@ -314,14 +307,13 @@ interface FotoControlOperativo {
         <p *ngIf="!cargando && !reportes.length">No se encontraron reportes en el período.</p>
         <div class="co-table-wrap" *ngIf="reportes.length">
           <table>
-            <thead><tr><th>Fecha / hora</th><th>Plaza / vía</th><th>Responsable</th><th>Situación</th><th>Cola</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Fecha / hora</th><th>Plaza / vía</th><th>Responsable</th><th>Situación</th><th>Cola</th><th>Acciones</th></tr></thead>
             <tbody>
               <tr *ngFor="let r of reportes">
                 <td>{{r.fecha}} {{r.hora}}</td>
                 <td>{{r.plazaCodigo}} <span *ngIf="r.viaNumero">/ {{r.viaNumero}}</span></td>
                 <td>{{r.responsableNombre || r.registradoPor}}</td>
                 <td>{{r.situacion||'—'}}</td><td>{{r.colaMetros==null?'—':r.colaMetros+' m'}}</td>
-                <td>{{r.estado.replace('_',' ')}}</td>
                 <td><button type="button" class="co-link" (click)="editar(r)">Editar</button>
                   <button type="button" class="co-link" (click)="verEvidencias(r)">Fotos</button></td>
               </tr>
@@ -411,7 +403,7 @@ interface FotoControlOperativo {
     .co-meter-input input{border-radius:10px 0 0 10px;flex:1;min-width:0}
     .co-meter-input span{padding:11px 13px;background:#eff6ff;color:#1d4ed8;border:1px solid #cbd5e1;border-left:0;font-weight:700;border-radius:0 10px 10px 0;white-space:nowrap}
     .co-helper{font-size:12px;color:#64748b;margin:12px 0 0}
-    .co-bottom-fields{display:grid;grid-template-columns:2fr 1fr;align-items:start;gap:16px}
+    .co-bottom-fields{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:16px}
     .co-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
     .co-secondary{background:#eaf0f8!important;color:#334155!important}
     .co-error,.co-success{padding:12px 16px;border-radius:10px;margin:12px 0;font-size:13px;font-weight:650}
@@ -617,7 +609,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   }
   private nuevoForm():ControlOperativoInput {
     return {plazaId:0,turnoId:0,responsableId:0,viaId:null,tipo:'REPORTE',fecha:this.fechaHoy(),hora:this.horaAhora(),
-      situacion:'',ingreso:'',incidente:'',colaMetros:null,descripcion:'',estado:'REGISTRADO'};
+      situacion:'',ingreso:'',incidente:'',colaMetros:null,descripcion:''};
   }
   async cambioPlaza():Promise<void> {
     const solicitud = ++this.viasSolicitud;
@@ -750,7 +742,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       tipo:registro.tipo as TipoControlOperativo,fecha:registro.fecha,
       hora:registro.hora,situacion:registro.situacion,ingreso:registro.ingreso,
       incidente:registro.incidente,colaMetros:registro.colaMetros,
-      descripcion:registro.descripcion,estado:registro.estado};
+      descripcion:registro.descripcion};
     // Conservar el turno registrado, incluso si se eligió manualmente.
     await this.cambioPlaza();this.form.viaId=registro.viaId;
     this.cdr.markForCheck();

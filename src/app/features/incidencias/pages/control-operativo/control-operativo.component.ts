@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -8,7 +8,7 @@ import { Plaza, Turno } from '../../../asistencia/models/asistencia.models';
 import { IncidenciaApiService } from '../../services/incidencia-api.service';
 import { ViaIncidencia } from '../../models/incidencia.models';
 import {
-  ControlOperativoApiService, ControlOperativoEvidencia, ControlOperativoVia, ControlOperativoInput,
+  ControlOperativoApiService, ControlOperativoEvidencia, ControlOperativoInput,
   ControlOperativoReporte, ControlOperativoResponsable, TipoControlOperativo
 } from '../../services/control-operativo-api.service';
 
@@ -38,11 +38,50 @@ interface FotoControlOperativo {
         </div>
       </header>
 
-      <nav class="co-tabs" aria-label="Secciones del control operativo">
-        <button type="button" [class.selected]="vista==='nuevo'" (click)="cambiarVista('nuevo')">Nuevo reporte</button>
-        <button type="button" [class.selected]="vista==='historial'" (click)="cambiarVista('historial')">Historial</button>
-        <button type="button" [class.selected]="vista==='dashboard'" (click)="cambiarVista('dashboard')">Dashboard</button>
-        <button *ngIf="esSupervisor" type="button" [class.selected]="vista==='vias'" (click)="cambiarVista('vias')">Vías por plaza</button>
+      <nav class="co-tabs" aria-label="Secciones de control operativo">
+        <div class="co-tabs-grid">
+          <button type="button" class="co-subtab" [class.is-active]="vista==='nuevo'"
+            [attr.aria-pressed]="vista==='nuevo'" (click)="cambiarVista('nuevo')">
+            <span class="co-tab-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/>
+                <path d="M16 4h6M19 1v6M8 12h8M8 16h5"/>
+              </svg>
+            </span>
+            <span class="co-tab-copy">
+              <span class="co-tab-title">Nuevo reporte</span>
+              <span class="co-tab-description">Registra las condiciones operativas de la plaza</span>
+            </span>
+          </button>
+          <button type="button" class="co-subtab" [class.is-active]="vista==='historial'"
+            [attr.aria-pressed]="vista==='historial'" (click)="cambiarVista('historial')">
+            <span class="co-tab-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="4" width="14" height="17" rx="2"/>
+                <path d="M9 4.5V3h6v1.5M9 10h6M9 14h6M9 18h4"/>
+              </svg>
+            </span>
+            <span class="co-tab-copy">
+              <span class="co-tab-title">Historial</span>
+              <span class="co-tab-description">Consulta los reportes operativos registrados</span>
+            </span>
+          </button>
+          <button type="button" class="co-subtab" [class.is-active]="vista==='dashboard'"
+            [attr.aria-pressed]="vista==='dashboard'" (click)="cambiarVista('dashboard')">
+            <span class="co-tab-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18M7 16v-4M12 16V8M17 16V5"/>
+              </svg>
+            </span>
+            <span class="co-tab-copy">
+              <span class="co-tab-title">Dashboard</span>
+              <span class="co-tab-description">Visualiza indicadores y mediciones de cola</span>
+            </span>
+          </button>
+        </div>
       </nav>
       <p class="co-error" role="alert" *ngIf="error">{{error}}</p>
       <p class="co-success" role="status" *ngIf="mensaje">{{mensaje}}</p>
@@ -64,14 +103,14 @@ interface FotoControlOperativo {
               </select>
             </label>
             <label>Turno
-              <select name="turno" [(ngModel)]="form.turnoId" required>
-                <option [ngValue]="0">Selecciona un turno</option>
+              <select name="turno" [(ngModel)]="form.turnoId" [disabled]="cargandoTurnos" required>
+                <option [ngValue]="0">{{cargandoTurnos ? 'Cargando turnos…' : 'Selecciona un turno'}}</option>
                 <option *ngFor="let turno of turnos" [ngValue]="turno.id">Turno {{turno.codigo.trim()}}</option>
               </select>
             </label>
             <label>Responsable
-              <select name="responsable" [(ngModel)]="form.responsableId" required>
-                <option [ngValue]="0">Selecciona un responsable</option>
+              <select name="responsable" [(ngModel)]="form.responsableId" [disabled]="cargandoResponsables" required>
+                <option [ngValue]="0">{{cargandoResponsables ? 'Cargando responsables…' : 'Selecciona un responsable'}}</option>
                 <option *ngFor="let responsable of responsables" [ngValue]="responsable.id">
                   {{responsable.nombreCompleto}}
                 </option>
@@ -248,7 +287,7 @@ interface FotoControlOperativo {
           </div>
           <div class="co-actions">
             <button type="button" class="co-secondary" (click)="limpiar()">Limpiar</button>
-            <button type="submit" [disabled]="guardando || !coForm.form.valid || !form.plazaId || !form.turnoId">
+            <button type="submit" [disabled]="guardando || cargandoTurnos || cargandoResponsables || !coForm.form.valid || !form.plazaId || !form.turnoId || !form.responsableId">
               {{guardando ? 'Guardando…' : editandoId ? 'Guardar cambios' : 'Registrar control operativo'}}
             </button>
           </div>
@@ -301,30 +340,6 @@ interface FotoControlOperativo {
         </div>
       </section>
 
-      <section class="co-panel" *ngIf="vista==='vias' && esSupervisor">
-        <div class="co-panel-head">
-          <div><h2>Vías por plaza</h2><p>Utiliza el catálogo de SIGO que también consultan otros módulos. Desactivar una vía la ocultará en sus nuevos registros.</p></div>
-        </div>
-        <div class="co-filters">
-          <label>Plaza
-            <select [(ngModel)]="plazaGestion" (ngModelChange)="cargarViasGestion()">
-              <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
-            </select>
-          </label>
-          <label>Desde <input type="number" min="1" max="999999" [(ngModel)]="desdeVia"></label>
-          <label>Hasta <input type="number" min="1" max="999999" [(ngModel)]="hastaVia"></label>
-          <button type="button" (click)="asignarVias()" [disabled]="guardando">Asignar / reactivar vías</button>
-        </div>
-        <div *ngIf="viasGestion.length" class="co-vias">
-          <article *ngFor="let v of viasGestion">
-            <span><strong>Vía {{v.numero}}</strong> — {{v.activa?'Activa':'Inactiva'}}</span>
-            <button type="button" *ngIf="v.activa" class="co-secondary" [disabled]="guardando"
-              (click)="desactivarVia(v.numero)">Desactivar</button>
-          </article>
-        </div>
-        <p *ngIf="!viasGestion.length">No hay vías configuradas para esta plaza.</p>
-      </section>
-
       <section class="co-panel" *ngIf="vista==='dashboard'">
         <div class="co-panel-head"><div><h2>Dashboard operativo</h2><p>Indicadores del conjunto de reportes filtrados en el historial.</p></div>
           <button type="button" class="co-secondary" (click)="cargarHistorial()">Actualizar datos</button></div>
@@ -355,12 +370,20 @@ interface FotoControlOperativo {
     .co h2{font-size:19px;letter-spacing:-.015em;color:var(--co-navy);margin:4px 0 5px}
     .co h3{font-size:15px;line-height:1.3;color:var(--co-navy);margin:0}
     .co-header p:not(.co-eyebrow),.co-panel-head p:not(.co-section-kicker){color:var(--co-muted);font-size:13px;line-height:1.6;margin:0}
-    .co-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+    .co-tabs{padding:8px 10px;margin:0 0 18px;border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 2px 9px rgba(15,23,42,.04)}
+    .co-tabs-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
     .co button{cursor:pointer;border:0;border-radius:11px;padding:11px 17px;background:var(--co-blue);color:#fff;font-weight:700;font:inherit;font-size:13px}
     .co button:disabled{opacity:.5;cursor:not-allowed}
     .co button:focus-visible,.co input:focus-visible,.co select:focus-visible,.co textarea:focus-visible{outline:2px solid var(--co-blue);outline-offset:2px}
-    .co-tabs button{background:#eaf0f8;color:#38516e}
-    .co-tabs button.selected{background:var(--co-navy);color:#fff;box-shadow:0 3px 12px rgba(11,35,66,.14)}
+    .co-tabs .co-subtab{display:flex;align-items:center;justify-content:flex-start;gap:12px;min-width:0;min-height:82px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;color:#475569;text-align:left;transition:background-color .15s,border-color .15s,color .15s,box-shadow .15s}
+    .co-tabs .co-subtab:hover:not(.is-active){border-color:#bfdbfe;background:#eff6ff;color:#1d4ed8}
+    .co-tabs .co-subtab.is-active{border-color:#2563eb;background:#2563eb;color:#fff;box-shadow:0 4px 12px rgba(37,99,235,.14)}
+    .co-tab-icon{display:flex;align-items:center;justify-content:center;flex:0 0 42px;width:42px;height:42px;border-radius:10px;background:#eff6ff;color:#2563eb}
+    .co-tab-icon svg{width:22px;height:22px}
+    .co-subtab.is-active .co-tab-icon{background:rgba(255,255,255,.17);color:#fff}
+    .co-tab-copy{display:block;min-width:0}
+    .co-tab-title{display:block;font-size:14px;line-height:1.35;font-weight:800}
+    .co-tab-description{display:block;margin-top:4px;font-size:11px;line-height:1.4;font-weight:500;opacity:.85}
     .co-panel{background:var(--co-panel);border:1px solid #e2e8f0;box-shadow:0 4px 14px rgba(15,23,42,.035);border-radius:20px;padding:24px;margin-top:16px}
     .co-panel-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:19px;flex-wrap:wrap}
     .co-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
@@ -405,9 +428,6 @@ interface FotoControlOperativo {
     .co-photos>a{display:flex;flex-direction:column;align-items:start;gap:5px}
     .co-photos img{width:150px;height:105px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0}
     .co-evidence{border-top:1px solid #e2e8f0;margin-top:20px;padding-top:10px}
-    .co-vias{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
-    .co-vias article{border:1px solid #e2e8f0;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-    .co-vias button{padding:7px 10px;font-size:12px}
     .co-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
     .co-kpis article{display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
     .co-kpis small{color:#64748b}
@@ -422,6 +442,13 @@ interface FotoControlOperativo {
       .co-header{padding:20px 16px;border-radius:18px;gap:12px}
       .co-heading-icon{width:42px;height:42px;flex-basis:42px}
       .co-panel{padding:16px;border-radius:16px}
+      .co-tabs{padding:8px}
+      .co-tabs-grid{grid-template-columns:minmax(0,1fr);gap:8px}
+      .co-tabs .co-subtab{min-height:76px;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;text-align:left}
+      .co-tab-icon{flex-basis:40px;width:40px;height:40px;border-radius:9px}
+      .co-tab-icon svg{width:20px;height:20px}
+      .co-tab-title{font-size:13px}
+      .co-tab-description{font-size:11px}
       .co-general-grid,.co-evidence-grid,.co-bottom-fields{grid-template-columns:minmax(0,1fr)}
       .co-actions{flex-direction:column}
       .co-actions button{width:100%}
@@ -434,15 +461,12 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   private readonly catalogos = inject(AsistenciaApiService);
   private readonly incidenciaApi = inject(IncidenciaApiService);
   readonly auth = inject(AuthService);
-  vista: 'nuevo' | 'historial' | 'dashboard' | 'vias' = 'nuevo';
+  private readonly cdr = inject(ChangeDetectorRef);
+  vista: 'nuevo' | 'historial' | 'dashboard' = 'nuevo';
   plazas: Plaza[] = [];
   turnos: Turno[] = [];
   responsables: ControlOperativoResponsable[] = [];
   vias: ViaIncidencia[] = [];
-  viasGestion: ControlOperativoVia[] = [];
-  plazaGestion = 0;
-  desdeVia = 101;
-  hastaVia = 105;
   reportes: ControlOperativoReporte[] = [];
   evidencias: ControlOperativoEvidencia[] = [];
   reporteEvidencias: ControlOperativoReporte | null = null;
@@ -451,6 +475,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   cargandoResponsables = true;
   private historialCargado = false;
   private historialSolicitud = 0;
+  private viasSolicitud = 0;
   guardando = false;
   error = '';
   mensaje = '';
@@ -485,16 +510,23 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     const usuario = this.auth.usuario();
     this.form.plazaId = usuario?.plazaId ?? 0;
     this.form.responsableId = usuario?.trabajadorId ?? usuario?.id ?? 0;
-    this.plazaGestion = this.form.plazaId;
 
-    if (!this.esSupervisor && usuario?.plazaId) {
-      // El controlador ya tiene una plaza validada en la sesión SIGO.
+    // Mostrar inmediatamente los valores de la sesión; luego completar catálogos.
+    if (usuario?.plazaId) {
       this.plazas = [{
         id: usuario.plazaId,
         codigo: usuario.plaza || 'Plaza asignada',
         descripcion: null,
         activo: true
       }];
+    }
+    if (this.form.responsableId && usuario?.nombre) {
+      this.responsables = [{
+        id: this.form.responsableId,
+        nombreCompleto: usuario.nombre
+      }];
+    }
+    if (!this.esSupervisor && usuario?.plazaId) {
       this.filtros.plazaId = usuario.plazaId;
     } else {
       void this.cargarPlazasIniciales();
@@ -510,42 +542,48 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   private async cargarPlazasIniciales(): Promise<void> {
     try {
       const plazas = await firstValueFrom(this.catalogos.getPlazas());
-      this.plazas = (plazas || []).filter(p => p.activo);
-      if (!this.plazaGestion) this.plazaGestion = this.form.plazaId || this.plazas[0]?.id || 0;
+      const activas = (plazas || []).filter(p => p.activo);
+      // Mantener la plaza de sesión visible aunque el catálogo llegue vacío.
+      if (activas.length) this.plazas = activas;
     } catch (e) {
       this.error = 'No se pudo cargar el catálogo de plazas. ' + this.errorHttp(e);
+    } finally {
+      // Los cambios posteriores a await requieren notificar a Angular.
+      this.cdr.markForCheck();
     }
   }
 
   private async cargarTurnosIniciales(): Promise<void> {
     try {
       this.turnos = await firstValueFrom(this.catalogos.getTurnos());
-      // Aplicar el turno sugerido una sola vez. El usuario puede editarlo luego.
+      // Sugerir A/B/C solo en la primera carga, sin sobrescribir cambios manuales.
       if (!this.form.turnoId) this.sincronizarTurno(this.form.hora);
     } catch (e) {
       this.error = 'No se pudo cargar el catálogo de turnos. ' + this.errorHttp(e);
     } finally {
       this.cargandoTurnos = false;
+      this.cdr.markForCheck();
     }
   }
 
   private async cargarResponsablesIniciales(): Promise<void> {
     try {
-      this.responsables = await firstValueFrom(this.api.responsables());
+      const responsables = await firstValueFrom(this.api.responsables());
+      // Si la lista llega vacía, conservar como referencia el usuario autenticado.
+      if (responsables.length) this.responsables = responsables;
     } catch (e) {
       this.error = 'No se pudo cargar la lista de responsables. ' + this.errorHttp(e);
     } finally {
       this.cargandoResponsables = false;
+      this.cdr.markForCheck();
     }
   }
 
   ngOnDestroy(): void { this.fotos.forEach(f=>URL.revokeObjectURL(f.url)); }
 
-  cambiarVista(vista:'nuevo'|'historial'|'dashboard'|'vias'):void {
+  cambiarVista(vista:'nuevo'|'historial'|'dashboard'):void {
     this.vista=vista;this.error='';this.mensaje='';
-    if (vista==='vias') {
-      void this.cargarViasGestion();
-    } else if ((vista==='historial'||vista==='dashboard') && !this.historialCargado && !this.cargando) {
+    if ((vista==='historial'||vista==='dashboard') && !this.historialCargado && !this.cargando) {
       void this.cargarHistorial();
     }
   }
@@ -582,13 +620,21 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       situacion:'',ingreso:'',incidente:'',colaMetros:null,descripcion:'',estado:'REGISTRADO'};
   }
   async cambioPlaza():Promise<void> {
-    this.form.viaId=null;this.vias=[];
-    if(!this.form.plazaId)return;
-    const plazaId=this.form.plazaId;
+    const solicitud = ++this.viasSolicitud;
+    this.form.viaId = null;
+    this.vias = [];
+    if (!this.form.plazaId) return;
+    const plazaId = this.form.plazaId;
     try {
-      const vias=await firstValueFrom(this.incidenciaApi.getVias(plazaId));
-      if(this.form.plazaId===plazaId)this.vias=vias.filter(v=>v.activa!==false);
-    } catch(e) { this.error=this.errorHttp(e); }
+      const vias = await firstValueFrom(this.incidenciaApi.getVias(plazaId));
+      if (solicitud === this.viasSolicitud && this.form.plazaId === plazaId) {
+        this.vias = vias.filter(v => v.activa !== false);
+      }
+    } catch (e) {
+      if (solicitud === this.viasSolicitud) this.error = this.errorHttp(e);
+    } finally {
+      this.cdr.markForCheck();
+    }
   }
   async cargarHistorial(): Promise<void> {
     const solicitud = ++this.historialSolicitud;
@@ -607,6 +653,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       if (solicitud === this.historialSolicitud) this.error = this.errorHttp(e);
     } finally {
       if (solicitud === this.historialSolicitud) this.cargando = false;
+      this.cdr.markForCheck();
     }
   }
   fotoCategoria(categoria: CategoriaEvidencia): FotoControlOperativo | undefined {
@@ -694,7 +741,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
         ? 'Reporte #'+registro.id+' guardado, pero falló la subida de '+fallidas+' imagen(es). Puedes editarlas nuevamente.'
         : 'Reporte operativo #'+registro.id+' guardado correctamente.';
     } catch(e){this.error=this.errorHttp(e);}
-    finally{this.guardando=false;}
+    finally{this.guardando=false;this.cdr.markForCheck();}
   }
   async editar(registro:ControlOperativoReporte):Promise<void> {
     this.vista='nuevo';this.editandoId=registro.id;this.error='';this.mensaje='';
@@ -706,42 +753,14 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       descripcion:registro.descripcion,estado:registro.estado};
     // Conservar el turno registrado, incluso si se eligió manualmente.
     await this.cambioPlaza();this.form.viaId=registro.viaId;
+    this.cdr.markForCheck();
   }
   async verEvidencias(registro:ControlOperativoReporte):Promise<void> {
     this.reporteEvidencias=registro;this.evidencias=[];this.error='';
     try{this.evidencias=await firstValueFrom(this.api.evidencias(registro.id));}
     catch(e){this.error=this.errorHttp(e);}
+    finally{this.cdr.markForCheck();}
   }
-  async cargarViasGestion():Promise<void> {
-    if(!this.esSupervisor || !this.plazaGestion)return;
-    this.error='';
-    try{this.viasGestion=await firstValueFrom(this.api.vias(this.plazaGestion));}
-    catch(e){this.error=this.errorHttp(e);}
-  }
-  async asignarVias():Promise<void> {
-    const desde=Number(this.desdeVia),hasta=Number(this.hastaVia);
-    if(!this.esSupervisor || !this.plazaGestion)return;
-    if(!Number.isInteger(desde)||!Number.isInteger(hasta)||desde<1||hasta<desde||hasta>999999||hasta-desde>99){
-      this.error='Ingresa un rango válido de máximo 100 vías.';return;
-    }
-    this.guardando=true;this.error='';this.mensaje='';
-    try{
-      this.viasGestion=await firstValueFrom(this.api.asignarVias(this.plazaGestion,desde,hasta));
-      this.mensaje='Vías asignadas o reactivadas correctamente.';
-    }catch(e){this.error=this.errorHttp(e);}
-    finally{this.guardando=false;}
-  }
-  async desactivarVia(numero:number):Promise<void> {
-    if(!this.esSupervisor || !this.plazaGestion)return;
-    this.guardando=true;this.error='';this.mensaje='';
-    try{
-      await firstValueFrom(this.api.desactivarVia(this.plazaGestion,numero));
-      await this.cargarViasGestion();
-      this.mensaje='Vía '+numero+' desactivada.';
-    }catch(e){this.error=this.errorHttp(e);}
-    finally{this.guardando=false;}
-  }
-
   private errorHttp(e:unknown):string {
     const err=e as {error?:{message?:string;detail?:string};message?:string};
     return err?.error?.message || err?.error?.detail || err?.message || 'No se pudo completar la operación.';

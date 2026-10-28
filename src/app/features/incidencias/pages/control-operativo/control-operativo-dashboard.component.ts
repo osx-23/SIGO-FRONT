@@ -188,7 +188,7 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
             <div><small>Situación de la plaza</small><strong>{{reporteSeleccionado?.situacion || p.situacion || 'Sin información'}}</strong></div>
             <div><small>Ingreso</small><strong>{{reporteSeleccionado?.ingreso || p.ingreso || 'Sin información'}}</strong></div>
             <div><small>Incidente</small><strong>{{reporteSeleccionado?.incidente || p.incidente || 'Sin incidente indicado'}}</strong></div>
-            <div *ngIf="reporteSeleccionado?.viaNumero"><small>Vía</small><strong>{{reporteSeleccionado?.viaNumero}}</strong></div>
+            <div *ngIf="reporteSeleccionado?.viaNumero"><small>Vía</small><strong>{{reporteSeleccionado.viaNumero}}</strong></div>
           </div>
           <p *ngIf="!puntoSeleccionado" class="nota">
             Haz clic en un punto para ver los datos de ese registro en este panel.

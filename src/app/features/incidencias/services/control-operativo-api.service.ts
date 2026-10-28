@@ -30,6 +30,13 @@ export interface ControlOperativoReporte extends ControlOperativoInput {
   creadoEn: string;
   actualizadoEn: string;
 }
+export interface ControlOperativoVia {
+  id: number;
+  numero: number;
+  nombre: string | null;
+  activa: boolean;
+}
+
 export interface ControlOperativoEvidencia {
   id: number;
   reporteId: number;
@@ -67,6 +74,16 @@ export class ControlOperativoApiService {
     data.append('file', file);
     data.append('categoria', categoria);
     return this.http.post<ControlOperativoEvidencia>(this.base + '/' + id + '/evidencias', data);
+  }
+  vias(plazaId: number): Observable<ControlOperativoVia[]> {
+    return this.http.get<ControlOperativoVia[]>(this.base + '/plazas/' + plazaId + '/vias');
+  }
+  asignarVias(plazaId: number, desde: number, hasta: number): Observable<ControlOperativoVia[]> {
+    return this.http.post<ControlOperativoVia[]>(
+      this.base + '/plazas/' + plazaId + '/vias', { desde, hasta });
+  }
+  desactivarVia(plazaId: number, numero: number): Observable<void> {
+    return this.http.delete<void>(this.base + '/plazas/' + plazaId + '/vias/' + numero);
   }
   eliminarEvidencia(id: number, evidenciaId: number): Observable<void> {
     return this.http.delete<void>(this.base + '/' + id + '/evidencias/' + evidenciaId);

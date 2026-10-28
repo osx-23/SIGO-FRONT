@@ -34,10 +34,7 @@ export interface ControlOperativoReporte extends ControlOperativoInput {
 }
 export interface ControlOperativoResponsable {
   id: number;
-  codigo: number;
   nombreCompleto: string;
-  rol: 'CONTROLADOR' | 'SUPERVISOR';
-  plazaCodigo: string | null;
 }
 
 export interface ControlOperativoVia {

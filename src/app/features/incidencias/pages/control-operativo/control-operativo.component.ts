@@ -53,7 +53,7 @@ interface FotoControlOperativo {
             <div>
               <p class="co-section-kicker">DATOS GENERALES</p>
               <h2>{{editandoId ? 'Editar control operativo #' + editandoId : 'Nuevo control operativo'}}</h2>
-              <p>La plaza y el responsable se cargan desde la sesión; el turno se calcula automáticamente según la hora de Lima.</p>
+              <p>La plaza y el responsable se precargan desde la sesión. El turno se sugiere según la hora, pero puedes modificarlo.</p>
             </div>
           </div>
           <div class="co-grid co-general-grid">
@@ -63,14 +63,17 @@ interface FotoControlOperativo {
                 <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
               </select>
             </label>
-            <label>Turno (automático)
-              <input type="text" [value]="turnoSeleccionadoTexto" readonly aria-label="Turno asignado automáticamente">
+            <label>Turno
+              <select name="turno" [(ngModel)]="form.turnoId" required>
+                <option [ngValue]="0">Selecciona un turno</option>
+                <option *ngFor="let turno of turnos" [ngValue]="turno.id">Turno {{turno.codigo.trim()}}</option>
+              </select>
             </label>
             <label>Responsable
               <select name="responsable" [(ngModel)]="form.responsableId" required>
                 <option [ngValue]="0">Selecciona un responsable</option>
                 <option *ngFor="let responsable of responsables" [ngValue]="responsable.id">
-                  {{responsable.nombreCompleto}} · {{responsable.codigo}} ({{responsable.rol}})
+                  {{responsable.nombreCompleto}}
                 </option>
               </select>
             </label>
@@ -84,9 +87,12 @@ interface FotoControlOperativo {
               <input type="date" name="fecha" [(ngModel)]="form.fecha" required>
             </label>
             <label>Hora
-              <input type="time" name="hora" [(ngModel)]="form.hora" (ngModelChange)="sincronizarTurno($event)" required>
+              <input type="time" name="hora" [(ngModel)]="form.hora" required>
             </label>
           </div>
+          <p class="co-helper" *ngIf="cargandoTurnos || cargandoResponsables">
+            {{cargandoTurnos ? 'Cargando turnos… ' : ''}}{{cargandoResponsables ? 'Cargando responsables…' : ''}}
+          </p>
         </section>
 
         <section class="co-panel co-details">
@@ -441,6 +447,10 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   evidencias: ControlOperativoEvidencia[] = [];
   reporteEvidencias: ControlOperativoReporte | null = null;
   cargando = false;
+  cargandoTurnos = true;
+  cargandoResponsables = true;
+  private historialCargado = false;
+  private historialSolicitud = 0;
   guardando = false;
   error = '';
   mensaje = '';
@@ -456,14 +466,6 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
 
   get esSupervisor(): boolean { return this.auth.tieneRol('SUPERVISOR'); }
   get totalConCola(): number { return this.reportes.filter(r=>r.colaMetros!=null).length; }
-  get turnoSeleccionadoTexto(): string {
-    const turno = this.turnos.find(t => t.id === this.form.turnoId);
-    const codigo = turno?.codigo?.trim();
-    const horario = codigo === 'A' ? '06:00 a 14:00' :
-      codigo === 'B' ? '14:00 a 22:00' :
-      codigo === 'C' ? '22:00 a 06:00' : '';
-    return codigo ? 'Turno ' + codigo + ' · ' + horario : 'Turno no disponible';
-  }
   get maxCola(): number { return Math.max(0,...this.reportes.map(r=>r.colaMetros??0)); }
   get promedioCola(): number {
     const conCola=this.reportes.filter(r=>r.colaMetros!=null);
@@ -477,36 +479,75 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       .sort((a,b)=>b.total-a.total);
   }
 
-  async ngOnInit(): Promise<void> {
-    this.cargando=true;
-    try {
-      const [plazas,turnos,responsables]=await Promise.all([
-        firstValueFrom(this.catalogos.getPlazas()),
-        firstValueFrom(this.catalogos.getTurnos()),
-        firstValueFrom(this.api.responsables())
-      ]);
-      this.plazas=plazas.filter(p=>p.activo);
-      this.plazaGestion=this.plazas[0]?.id ?? 0;
-      this.turnos=turnos;
-      this.responsables=responsables;
-      const usuario=this.auth.usuario();
-      this.form.plazaId=usuario?.plazaId ?? 0;
-      this.form.responsableId=usuario?.trabajadorId ?? usuario?.id ?? 0;
-      if(!this.esSupervisor && usuario?.plazaId) {
-        this.filtros.plazaId=usuario.plazaId;
-      }
-      this.sincronizarTurno(this.form.hora);
-      await this.cambioPlaza();
-      await this.cargarHistorial();
-    } catch (e) { this.error=this.errorHttp(e); }
-    finally { this.cargando=false; }
+  ngOnInit(): void {
+    // Mostrar el formulario inmediatamente: evitar esperar tres catálogos,
+    // las vías y hasta 500 filas del historial antes de permitir registrar.
+    const usuario = this.auth.usuario();
+    this.form.plazaId = usuario?.plazaId ?? 0;
+    this.form.responsableId = usuario?.trabajadorId ?? usuario?.id ?? 0;
+    this.plazaGestion = this.form.plazaId;
+
+    if (!this.esSupervisor && usuario?.plazaId) {
+      // El controlador ya tiene una plaza validada en la sesión SIGO.
+      this.plazas = [{
+        id: usuario.plazaId,
+        codigo: usuario.plaza || 'Plaza asignada',
+        descripcion: null,
+        activo: true
+      }];
+      this.filtros.plazaId = usuario.plazaId;
+    } else {
+      void this.cargarPlazasIniciales();
+    }
+
+    // Cada catálogo se carga de forma independiente, sin bloquear la interfaz.
+    void this.cargarTurnosIniciales();
+    void this.cargarResponsablesIniciales();
+    if (this.form.plazaId) void this.cambioPlaza();
+    // El historial y dashboard se consultan únicamente cuando se abren.
   }
+
+  private async cargarPlazasIniciales(): Promise<void> {
+    try {
+      const plazas = await firstValueFrom(this.catalogos.getPlazas());
+      this.plazas = (plazas || []).filter(p => p.activo);
+      if (!this.plazaGestion) this.plazaGestion = this.form.plazaId || this.plazas[0]?.id || 0;
+    } catch (e) {
+      this.error = 'No se pudo cargar el catálogo de plazas. ' + this.errorHttp(e);
+    }
+  }
+
+  private async cargarTurnosIniciales(): Promise<void> {
+    try {
+      this.turnos = await firstValueFrom(this.catalogos.getTurnos());
+      // Aplicar el turno sugerido una sola vez. El usuario puede editarlo luego.
+      if (!this.form.turnoId) this.sincronizarTurno(this.form.hora);
+    } catch (e) {
+      this.error = 'No se pudo cargar el catálogo de turnos. ' + this.errorHttp(e);
+    } finally {
+      this.cargandoTurnos = false;
+    }
+  }
+
+  private async cargarResponsablesIniciales(): Promise<void> {
+    try {
+      this.responsables = await firstValueFrom(this.api.responsables());
+    } catch (e) {
+      this.error = 'No se pudo cargar la lista de responsables. ' + this.errorHttp(e);
+    } finally {
+      this.cargandoResponsables = false;
+    }
+  }
+
   ngOnDestroy(): void { this.fotos.forEach(f=>URL.revokeObjectURL(f.url)); }
 
   cambiarVista(vista:'nuevo'|'historial'|'dashboard'|'vias'):void {
     this.vista=vista;this.error='';this.mensaje='';
-    if (vista==='vias') void this.cargarViasGestion();
-    else if (vista!=='nuevo') void this.cargarHistorial();
+    if (vista==='vias') {
+      void this.cargarViasGestion();
+    } else if ((vista==='historial'||vista==='dashboard') && !this.historialCargado && !this.cargando) {
+      void this.cargarHistorial();
+    }
   }
   private fechaHoy():string {
     const partes = new Intl.DateTimeFormat('en-US',{
@@ -549,15 +590,24 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       if(this.form.plazaId===plazaId)this.vias=vias.filter(v=>v.activa!==false);
     } catch(e) { this.error=this.errorHttp(e); }
   }
-  async cargarHistorial():Promise<void> {
-    this.cargando=true;this.error='';
-    try{
-      this.reportes=await firstValueFrom(this.api.listar({
-        inicio:this.filtros.inicio,fin:this.filtros.fin,
-        plazaId:this.esSupervisor?this.filtros.plazaId:this.auth.usuario()?.plazaId
+  async cargarHistorial(): Promise<void> {
+    const solicitud = ++this.historialSolicitud;
+    this.cargando = true;
+    this.error = '';
+    try {
+      const datos = await firstValueFrom(this.api.listar({
+        inicio: this.filtros.inicio, fin: this.filtros.fin,
+        plazaId: this.esSupervisor ? this.filtros.plazaId : this.auth.usuario()?.plazaId
       }));
-    }catch(e){this.error=this.errorHttp(e);}
-    finally{this.cargando=false;}
+      // No sobrescribir un filtro nuevo con la respuesta de una petición anterior.
+      if (solicitud !== this.historialSolicitud) return;
+      this.reportes = datos;
+      this.historialCargado = true;
+    } catch (e) {
+      if (solicitud === this.historialSolicitud) this.error = this.errorHttp(e);
+    } finally {
+      if (solicitud === this.historialSolicitud) this.cargando = false;
+    }
   }
   fotoCategoria(categoria: CategoriaEvidencia): FotoControlOperativo | undefined {
     return this.fotos.find(f => f.categoria === categoria);
@@ -622,7 +672,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   async guardar():Promise<void> {
     this.error='';this.mensaje='';
     if(!this.form.plazaId || !this.form.turnoId || !this.form.responsableId || !this.form.fecha || !this.form.hora) {
-      this.error='Completa plaza, responsable, fecha y hora; verifica el turno automático.';return;
+      this.error='Completa plaza, turno, responsable, fecha y hora.';return;
     }
     if(this.form.tipo==='MEDICION' && this.form.colaMetros==null){
       this.error='Indica el tamaño de cola para la medición.';return;
@@ -633,16 +683,16 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       const registro=this.editandoId
         ? await firstValueFrom(this.api.actualizar(this.editandoId,payload))
         : await firstValueFrom(this.api.crear(payload));
-      const fallidas:string[]=[];
-      for(const f of this.fotos){
-        try{await firstValueFrom(this.api.subirEvidencia(registro.id,f.file,f.categoria));}
-        catch{fallidas.push(f.file.name);}
-      }
+      // Hasta cuatro evidencias independientes: subirlas en paralelo.
+      const subidas = await Promise.allSettled(
+        this.fotos.map(f => firstValueFrom(this.api.subirEvidencia(registro.id,f.file,f.categoria)))
+      );
+      const fallidas = subidas.filter(r => r.status === 'rejected').length;
+      this.historialCargado = false; // Se actualizará cuando el usuario abra Historial.
       this.limpiar();
-      this.mensaje=fallidas.length
-        ? 'Reporte #'+registro.id+' guardado, pero no se pudieron subir '+fallidas.length+' imagen(es). Puedes volver a adjuntarlas.'
+      this.mensaje = fallidas
+        ? 'Reporte #'+registro.id+' guardado, pero falló la subida de '+fallidas+' imagen(es). Puedes editarlas nuevamente.'
         : 'Reporte operativo #'+registro.id+' guardado correctamente.';
-      await this.cargarHistorial();
     } catch(e){this.error=this.errorHttp(e);}
     finally{this.guardando=false;}
   }
@@ -654,7 +704,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       hora:registro.hora,situacion:registro.situacion,ingreso:registro.ingreso,
       incidente:registro.incidente,colaMetros:registro.colaMetros,
       descripcion:registro.descripcion,estado:registro.estado};
-    this.sincronizarTurno(registro.hora);
+    // Conservar el turno registrado, incluso si se eligió manualmente.
     await this.cambioPlaza();this.form.viaId=registro.viaId;
   }
   async verEvidencias(registro:ControlOperativoReporte):Promise<void> {

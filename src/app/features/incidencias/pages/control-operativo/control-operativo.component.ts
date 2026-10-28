@@ -114,6 +114,12 @@ import {
             <div class="co-photos" *ngIf="fotos.length">
               <div *ngFor="let foto of fotos; let i=index">
                 <img [src]="foto.url" alt="Vista previa de evidencia">
+                <select [(ngModel)]="foto.categoria" [name]="'categoriaEvidencia'+i" aria-label="Categoría de evidencia">
+                  <option value="PLAZA">Plaza</option>
+                  <option value="INGRESO">Ingreso</option>
+                  <option value="INCIDENTE">Incidente</option>
+                  <option value="COLA">Cola</option>
+                </select>
                 <button type="button" (click)="quitarFoto(i)">Quitar</button>
               </div>
             </div>
@@ -281,7 +287,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   error = '';
   mensaje = '';
   editandoId: number | null = null;
-  fotos: {file: File;url:string}[] = [];
+  fotos: {file: File;url:string;categoria:'PLAZA'|'INGRESO'|'INCIDENTE'|'COLA'}[] = [];
   filtros: {inicio:string;fin:string;tipo:string;plazaId:number|null} =
     {inicio: this.restarDias(30), fin: this.fechaHoy(), tipo:'', plazaId:null};
   form: ControlOperativoInput = this.nuevoForm();
@@ -369,7 +375,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     if(!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size>10*1024*1024) {
       this.error='Se permiten imágenes JPG, PNG o WEBP de máximo 10 MB.';return;
     }
-    this.fotos.push({file,url:URL.createObjectURL(file)});
+    this.fotos.push({file,url:URL.createObjectURL(file),categoria:'PLAZA'});
   }
   seleccionarImagenes(event:Event):void {
     const el=event.target as HTMLInputElement;
@@ -412,7 +418,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
         : await firstValueFrom(this.api.crear(payload));
       const fallidas:string[]=[];
       for(const f of this.fotos){
-        try{await firstValueFrom(this.api.subirEvidencia(registro.id,f.file,'PLAZA'));}
+        try{await firstValueFrom(this.api.subirEvidencia(registro.id,f.file,f.categoria));}
         catch{fallidas.push(f.file.name);}
       }
       this.limpiar();

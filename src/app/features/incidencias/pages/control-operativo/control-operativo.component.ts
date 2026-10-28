@@ -9,7 +9,7 @@ import { IncidenciaApiService } from '../../services/incidencia-api.service';
 import { ViaIncidencia } from '../../models/incidencia.models';
 import {
   ControlOperativoApiService, ControlOperativoEvidencia, ControlOperativoVia, ControlOperativoInput,
-  ControlOperativoReporte, TipoControlOperativo
+  ControlOperativoReporte, ControlOperativoResponsable, TipoControlOperativo
 } from '../../services/control-operativo-api.service';
 
 type CategoriaEvidencia = 'PLAZA' | 'INGRESO' | 'INCIDENTE' | 'COLA';
@@ -53,7 +53,7 @@ interface FotoControlOperativo {
             <div>
               <p class="co-section-kicker">DATOS GENERALES</p>
               <h2>{{editandoId ? 'Editar control operativo #' + editandoId : 'Nuevo control operativo'}}</h2>
-              <p>Selecciona la plaza, el turno y la fecha del registro.</p>
+              <p>La plaza y el responsable se cargan desde la sesión; el turno se calcula automáticamente según la hora de Lima.</p>
             </div>
           </div>
           <div class="co-grid co-general-grid">
@@ -63,16 +63,15 @@ interface FotoControlOperativo {
                 <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
               </select>
             </label>
-            <label>Turno
-              <select name="turno" [(ngModel)]="form.turnoId" required>
-                <option [ngValue]="0">Selecciona un turno</option>
-                <option *ngFor="let t of turnos" [ngValue]="t.id">Turno {{t.codigo}}{{t.nombre ? ' · ' + t.nombre : ''}}</option>
-              </select>
+            <label>Turno (automático)
+              <input type="text" [value]="turnoSeleccionadoTexto" readonly aria-label="Turno asignado automáticamente">
             </label>
-            <label>Tipo
-              <select name="tipo" [(ngModel)]="form.tipo" required>
-                <option value="REPORTE">Reporte operativo</option>
-                <option value="MEDICION">Medición de cola</option>
+            <label>Responsable
+              <select name="responsable" [(ngModel)]="form.responsableId" required>
+                <option [ngValue]="0">Selecciona un responsable</option>
+                <option *ngFor="let responsable of responsables" [ngValue]="responsable.id">
+                  {{responsable.nombreCompleto}} · {{responsable.codigo}} ({{responsable.rol}})
+                </option>
               </select>
             </label>
             <label>Vía
@@ -85,7 +84,7 @@ interface FotoControlOperativo {
               <input type="date" name="fecha" [(ngModel)]="form.fecha" required>
             </label>
             <label>Hora
-              <input type="time" name="hora" [(ngModel)]="form.hora" required>
+              <input type="time" name="hora" [(ngModel)]="form.hora" (ngModelChange)="sincronizarTurno($event)" required>
             </label>
           </div>
         </section>
@@ -258,14 +257,7 @@ interface FotoControlOperativo {
         <div class="co-filters">
           <label>Desde <input type="date" [(ngModel)]="filtros.inicio"></label>
           <label>Hasta <input type="date" [(ngModel)]="filtros.fin"></label>
-          <label>Tipo
-            <select [(ngModel)]="filtros.tipo">
-              <option value="">Todos</option>
-              <option value="REPORTE">Reportes</option>
-              <option value="MEDICION">Mediciones</option>
-            </select>
-          </label>
-          <label *ngIf="esSupervisor">Plaza
+           <label *ngIf="esSupervisor">Plaza
             <select [(ngModel)]="filtros.plazaId">
               <option [ngValue]="null">Todas</option>
               <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
@@ -277,12 +269,12 @@ interface FotoControlOperativo {
         <p *ngIf="!cargando && !reportes.length">No se encontraron reportes en el período.</p>
         <div class="co-table-wrap" *ngIf="reportes.length">
           <table>
-            <thead><tr><th>Fecha / hora</th><th>Plaza / vía</th><th>Tipo</th><th>Situación</th><th>Cola</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Fecha / hora</th><th>Plaza / vía</th><th>Responsable</th><th>Situación</th><th>Cola</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody>
               <tr *ngFor="let r of reportes">
                 <td>{{r.fecha}} {{r.hora}}</td>
                 <td>{{r.plazaCodigo}} <span *ngIf="r.viaNumero">/ {{r.viaNumero}}</span></td>
-                <td>{{r.tipo==='MEDICION'?'Medición':'Reporte'}}</td>
+                <td>{{r.responsableNombre || r.registradoPor}}</td>
                 <td>{{r.situacion||'—'}}</td><td>{{r.colaMetros==null?'—':r.colaMetros+' m'}}</td>
                 <td>{{r.estado.replace('_',' ')}}</td>
                 <td><button type="button" class="co-link" (click)="editar(r)">Editar</button>
@@ -332,8 +324,8 @@ interface FotoControlOperativo {
           <button type="button" class="co-secondary" (click)="cargarHistorial()">Actualizar datos</button></div>
         <div class="co-kpis">
           <article><small>Registros</small><strong>{{reportes.length}}</strong></article>
-          <article><small>Reportes operativos</small><strong>{{totalReportes}}</strong></article>
-          <article><small>Mediciones de cola</small><strong>{{totalMediciones}}</strong></article>
+          <article><small>Reportes operativos</small><strong>{{reportes.length}}</strong></article>
+          <article><small>Registros con cola</small><strong>{{totalConCola}}</strong></article>
           <article><small>Máxima cola</small><strong>{{maxCola}} m</strong></article>
           <article><small>Promedio de cola</small><strong>{{promedioCola | number:'1.0-1'}} m</strong></article>
         </div>
@@ -439,6 +431,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   vista: 'nuevo' | 'historial' | 'dashboard' | 'vias' = 'nuevo';
   plazas: Plaza[] = [];
   turnos: Turno[] = [];
+  responsables: ControlOperativoResponsable[] = [];
   vias: ViaIncidencia[] = [];
   viasGestion: ControlOperativoVia[] = [];
   plazaGestion = 0;
@@ -453,8 +446,8 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   mensaje = '';
   editandoId: number | null = null;
   fotos: FotoControlOperativo[] = [];
-  filtros: {inicio:string;fin:string;tipo:string;plazaId:number|null} =
-    {inicio: this.restarDias(30), fin: this.fechaHoy(), tipo:'', plazaId:null};
+  filtros: {inicio:string;fin:string;plazaId:number|null} =
+    {inicio: this.restarDias(30), fin: this.fechaHoy(), plazaId:null};
   form: ControlOperativoInput = this.nuevoForm();
 
   readonly situaciones = ['Fluida','Tráfico en contra'];
@@ -462,8 +455,15 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   readonly incidentes = ['PNP en el semáforo','Falla en el sistema','Sin incidente'];
 
   get esSupervisor(): boolean { return this.auth.tieneRol('SUPERVISOR'); }
-  get totalReportes(): number { return this.reportes.filter(r=>r.tipo==='REPORTE').length; }
-  get totalMediciones(): number { return this.reportes.filter(r=>r.tipo==='MEDICION').length; }
+  get totalConCola(): number { return this.reportes.filter(r=>r.colaMetros!=null).length; }
+  get turnoSeleccionadoTexto(): string {
+    const turno = this.turnos.find(t => t.id === this.form.turnoId);
+    const codigo = turno?.codigo?.trim();
+    const horario = codigo === 'A' ? '06:00 a 14:00' :
+      codigo === 'B' ? '14:00 a 22:00' :
+      codigo === 'C' ? '22:00 a 06:00' : '';
+    return codigo ? 'Turno ' + codigo + ' · ' + horario : 'Turno no disponible';
+  }
   get maxCola(): number { return Math.max(0,...this.reportes.map(r=>r.colaMetros??0)); }
   get promedioCola(): number {
     const conCola=this.reportes.filter(r=>r.colaMetros!=null);
@@ -480,17 +480,22 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     this.cargando=true;
     try {
-      const [plazas,turnos]=await Promise.all([
-        firstValueFrom(this.catalogos.getPlazas()),firstValueFrom(this.catalogos.getTurnos())
+      const [plazas,turnos,responsables]=await Promise.all([
+        firstValueFrom(this.catalogos.getPlazas()),
+        firstValueFrom(this.catalogos.getTurnos()),
+        firstValueFrom(this.api.responsables())
       ]);
       this.plazas=plazas.filter(p=>p.activo);
       this.plazaGestion=this.plazas[0]?.id ?? 0;
       this.turnos=turnos;
+      this.responsables=responsables;
       const usuario=this.auth.usuario();
+      this.form.plazaId=usuario?.plazaId ?? 0;
+      this.form.responsableId=usuario?.trabajadorId ?? usuario?.id ?? 0;
       if(!this.esSupervisor && usuario?.plazaId) {
-        this.form.plazaId=usuario.plazaId;
         this.filtros.plazaId=usuario.plazaId;
       }
+      this.sincronizarTurno(this.form.hora);
       await this.cambioPlaza();
       await this.cargarHistorial();
     } catch (e) { this.error=this.errorHttp(e); }
@@ -504,17 +509,35 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     else if (vista!=='nuevo') void this.cargarHistorial();
   }
   private fechaHoy():string {
-    const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+    const partes = new Intl.DateTimeFormat('en-US',{
+      timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'
+    }).formatToParts(new Date());
+    const valor = (tipo:string) => partes.find(p=>p.type===tipo)?.value ?? '';
+    return valor('year')+'-'+valor('month')+'-'+valor('day');
   }
   private horaAhora():string {
-    const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    const partes = new Intl.DateTimeFormat('en-US',{
+      timeZone:'America/Lima',hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+    }).formatToParts(new Date());
+    const valor = (tipo:string) => partes.find(p=>p.type===tipo)?.value ?? '00';
+    return valor('hour')+':'+valor('minute');
   }
   private restarDias(dias:number):string {
-    const d=new Date();d.setDate(d.getDate()-dias);
-    return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+    const [y,m,d] = this.fechaHoy().split('-').map(Number);
+    const fecha = new Date(Date.UTC(y,m-1,d));
+    fecha.setUTCDate(fecha.getUTCDate()-dias);
+    return fecha.toISOString().slice(0,10);
+  }
+  sincronizarTurno(hora:string):void {
+    const match = /^([01]\\d|2[0-3]):[0-5]\\d$/.exec(hora);
+    if (!match) {this.form.turnoId=0;return;}
+    const minutos = Number(hora.slice(0,2))*60 + Number(hora.slice(3,5));
+    const codigo = minutos>=360 && minutos<840 ? 'A' :
+      minutos>=840 && minutos<1320 ? 'B' : 'C';
+    this.form.turnoId=this.turnos.find(t=>t.codigo.trim().toUpperCase()===codigo)?.id ?? 0;
   }
   private nuevoForm():ControlOperativoInput {
-    return {plazaId:0,turnoId:0,viaId:null,tipo:'REPORTE',fecha:this.fechaHoy(),hora:this.horaAhora(),
+    return {plazaId:0,turnoId:0,responsableId:0,viaId:null,tipo:'REPORTE',fecha:this.fechaHoy(),hora:this.horaAhora(),
       situacion:'',ingreso:'',incidente:'',colaMetros:null,descripcion:'',estado:'REGISTRADO'};
   }
   async cambioPlaza():Promise<void> {
@@ -531,7 +554,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     try{
       this.reportes=await firstValueFrom(this.api.listar({
         inicio:this.filtros.inicio,fin:this.filtros.fin,
-        tipo:this.filtros.tipo,plazaId:this.esSupervisor?this.filtros.plazaId:this.auth.usuario()?.plazaId
+        plazaId:this.esSupervisor?this.filtros.plazaId:this.auth.usuario()?.plazaId
       }));
     }catch(e){this.error=this.errorHttp(e);}
     finally{this.cargando=false;}
@@ -590,14 +613,16 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     this.fotos.forEach(f=>URL.revokeObjectURL(f.url));this.fotos=[];
     const actual=this.auth.usuario();
     this.form=this.nuevoForm();
-    if(!this.esSupervisor && actual?.plazaId)this.form.plazaId=actual.plazaId;
+    this.form.plazaId=actual?.plazaId ?? 0;
+    this.form.responsableId=actual?.trabajadorId ?? actual?.id ?? 0;
+    this.sincronizarTurno(this.form.hora);
     this.editandoId=null;this.error='';this.mensaje='';
     void this.cambioPlaza();
   }
   async guardar():Promise<void> {
     this.error='';this.mensaje='';
-    if(!this.form.plazaId || !this.form.turnoId || !this.form.fecha || !this.form.hora) {
-      this.error='Completa plaza, turno, fecha y hora.';return;
+    if(!this.form.plazaId || !this.form.turnoId || !this.form.responsableId || !this.form.fecha || !this.form.hora) {
+      this.error='Completa plaza, responsable, fecha y hora; verifica el turno automático.';return;
     }
     if(this.form.tipo==='MEDICION' && this.form.colaMetros==null){
       this.error='Indica el tamaño de cola para la medición.';return;
@@ -624,10 +649,12 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   async editar(registro:ControlOperativoReporte):Promise<void> {
     this.vista='nuevo';this.editandoId=registro.id;this.error='';this.mensaje='';
     this.form={plazaId:registro.plazaId,turnoId:registro.turnoId,
-      viaId:null,tipo:registro.tipo as TipoControlOperativo,fecha:registro.fecha,
+      viaId:null,responsableId:registro.responsableId || registro.registradoPorId,
+      tipo:registro.tipo as TipoControlOperativo,fecha:registro.fecha,
       hora:registro.hora,situacion:registro.situacion,ingreso:registro.ingreso,
       incidente:registro.incidente,colaMetros:registro.colaMetros,
       descripcion:registro.descripcion,estado:registro.estado};
+    this.sincronizarTurno(registro.hora);
     await this.cambioPlaza();this.form.viaId=registro.viaId;
   }
   async verEvidencias(registro:ControlOperativoReporte):Promise<void> {

@@ -42,11 +42,35 @@ export interface ControlOperativoDiaDashboard {
   mediciones: number;
 }
 
+export type TurnoOperativo = 'A' | 'B' | 'C';
+
+export interface ControlOperativoTurnoDashboard {
+  fecha: string;
+  turno: TurnoOperativo;
+  colaMaxima: number | null;
+  registros: number;
+  mediciones: number;
+  reporteId: number;
+  hora: string;
+  plazaCodigo: string;
+  responsableNombre: string;
+  situacion: string;
+  ingreso: string;
+  incidente: string;
+}
+
 export interface ControlOperativoDashboard {
   incidenciasRegistradas: number;
   colaMaxima: number;
   promedioMaximos: number;
   dias: ControlOperativoDiaDashboard[];
+  turnos: ControlOperativoTurnoDashboard[];
+}
+
+export interface ControlOperativoDetalleDia {
+  fecha: string;
+  reportes: ControlOperativoReporte[];
+  evidencias: ControlOperativoEvidencia[];
 }
 
 export interface ControlOperativoEvidencia {
@@ -79,6 +103,12 @@ export class ControlOperativoApiService {
       .set('fin', filtros.fin);
     if (filtros.plazaId != null) params = params.set('plazaId', filtros.plazaId);
     return this.http.get<ControlOperativoDashboard>(this.base + '/dashboard', { params });
+  }
+
+  detalleDia(fecha: string, plazaId?: number | null): Observable<ControlOperativoDetalleDia> {
+    let params = new HttpParams().set('fecha', fecha);
+    if (plazaId != null) params = params.set('plazaId', plazaId);
+    return this.http.get<ControlOperativoDetalleDia>(this.base + '/dashboard/dia', {params});
   }
 
   responsables(): Observable<ControlOperativoResponsable[]> {

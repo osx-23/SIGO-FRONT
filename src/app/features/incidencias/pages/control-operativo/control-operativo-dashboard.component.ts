@@ -1,25 +1,39 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, Input, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, Input, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { Plaza } from '../../../asistencia/models/asistencia.models';
 import {
-  ControlOperativoApiService, ControlOperativoDashboard, ControlOperativoDiaDashboard
+  ControlOperativoApiService, ControlOperativoDashboard, ControlOperativoDetalleDia,
+  ControlOperativoDiaDashboard, ControlOperativoEvidencia, ControlOperativoReporte,
+  ControlOperativoTurnoDashboard, TurnoOperativo
 } from '../../services/control-operativo-api.service';
 
-interface PuntoCola {
+type Periodo = 'SEMANA' | 'MES' | 'ANIO';
+interface Punto {
+  turno: TurnoOperativo;
   fecha: string;
-  metros: number;
+  clave: string;
+  etiqueta: string;
+  cola: number;
+  registros: number;
+  mediciones: number;
+  plaza: string;
+  responsable: string;
+  hora: string;
+  situacion: string;
+  ingreso: string;
+  incidente: string;
   x: number;
   y: number;
-  etiqueta: string;
 }
-
-interface EjeCola {
-  valor: number;
-  y: number;
-}
+interface Serie { turno: TurnoOperativo; color: string; puntos: Punto[]; linea: string; }
+interface Eje { valor: number; y: number; }
+const COLORES: Record<TurnoOperativo,string> = {
+  A: '#2563eb', B: '#14b8a6', C: '#8b5cf6'
+};
+const TURNOS: TurnoOperativo[] = ['A','B','C'];
 
 @Component({
   selector: 'app-control-operativo-dashboard',
@@ -28,197 +42,297 @@ interface EjeCola {
   template: `
     <section class="dash" aria-label="Dashboard de control operativo">
       <header class="dash-toolbar">
-        <div class="dash-intro">
-          <p class="dash-eyebrow">SIGO · Control operativo</p>
+        <div>
+          <p class="eyebrow">SIGO · CONTROL OPERATIVO</p>
           <h2>Visión general</h2>
-          <p>Indicadores y evolución de la cola por día.</p>
+          <p>Seguimiento de la cola vehicular por turno y período.</p>
         </div>
-        <div class="dash-filtros">
+        <div class="filtros">
           <label>Plaza
             <select [(ngModel)]="plazaId" (ngModelChange)="cargar()" [disabled]="!esSupervisor">
               <option [ngValue]="null">Todas las plazas</option>
-              <option *ngFor="let plaza of plazas" [ngValue]="plaza.id">{{plaza.codigo}}</option>
+              <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
             </select>
           </label>
-          <label>Desde
-            <input type="date" [(ngModel)]="inicio" (change)="cargar()" [max]="fin">
-          </label>
-          <label>Hasta
-            <input type="date" [(ngModel)]="fin" (change)="cargar()" [min]="inicio">
-          </label>
-          <button type="button" class="dash-refresh" (click)="cargar()" [disabled]="cargando" aria-label="Actualizar dashboard" title="Actualizar dashboard">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <div class="periodo-wrap">
+            <span class="field-caption">Ver por</span>
+            <div class="periodo-botones" role="group" aria-label="Agrupación del gráfico">
+              <button type="button" *ngFor="let p of periodos" [class.actual]="periodo===p.valor"
+                [attr.aria-pressed]="periodo===p.valor" (click)="cambiarPeriodo(p.valor)">
+                {{p.texto}}
+              </button>
+            </div>
+          </div>
+          <div class="navegacion">
+            <span class="field-caption">Período seleccionado</span>
+            <div class="periodo-nav">
+              <button type="button" aria-label="Período anterior" (click)="mover(-1)">‹</button>
+              <strong>{{tituloPeriodo}}</strong>
+              <button type="button" aria-label="Período siguiente" (click)="mover(1)">›</button>
+            </div>
+          </div>
+          <button type="button" class="recargar" (click)="cargar()" [disabled]="cargando"
+            title="Actualizar" aria-label="Actualizar dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>
             </svg>
           </button>
         </div>
       </header>
 
-      <div *ngIf="error" class="dash-error" role="alert">{{error}}</div>
+      <p *ngIf="error" class="error" role="alert">{{error}}</p>
 
-      <div class="dash-kpis" aria-label="Indicadores del período">
-        <article class="dash-kpi">
-          <span class="dash-kpi-icon kpi-flag" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M6 20V4m0 1c5-3 7 3 13 0v10c-6 3-8-3-13 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </span>
-          <span class="dash-kpi-label">Incidencias registradas</span>
+      <section class="indicadores" aria-label="Indicadores principales">
+        <article class="indicador">
+          <span class="indicador-icono verde" aria-hidden="true">⚑</span>
+          <span class="indicador-etiqueta">Incidencias registradas</span>
           <strong>{{resumen?.incidenciasRegistradas ?? 0}}</strong>
-          <small>Reportes del período seleccionado</small>
+          <small>Reportes del período</small>
         </article>
-        <article class="dash-kpi">
-          <span class="dash-kpi-icon kpi-up" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M5 19 19 5M10 5h9v9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </span>
-          <span class="dash-kpi-label">Cola máxima</span>
+        <article class="indicador">
+          <span class="indicador-icono azul" aria-hidden="true">↗</span>
+          <span class="indicador-etiqueta">Cola máxima</span>
           <strong>{{resumen?.colaMaxima ?? 0}}<span> m</span></strong>
           <small>Mayor longitud registrada</small>
         </article>
-        <article class="dash-kpi">
-          <span class="dash-kpi-icon kpi-ruler" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16H5zM9 5v6M13 5v4M17 5v6M9 16v3M13 14v5M17 16v3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
-          </span>
-          <span class="dash-kpi-label">Promedio de máximos</span>
+        <article class="indicador">
+          <span class="indicador-icono naranja" aria-hidden="true">▥</span>
+          <span class="indicador-etiqueta">Promedio de máximos</span>
           <strong>{{(resumen?.promedioMaximos ?? 0) | number:'1.0-0'}}<span> m</span></strong>
-          <small>Promedio de máximos diarios con datos</small>
+          <small>Promedio de máximos diarios</small>
         </article>
-      </div>
+      </section>
 
-      <div class="dash-main">
-        <section class="dash-card dash-grafica" aria-label="Gráfica de cola máxima diaria">
-          <div class="dash-card-head">
-            <div>
-              <h3>Cola máxima diaria</h3>
-              <p>Selecciona un punto para consultar los registros de ese día.</p>
-            </div>
-            <span class="dash-legend"><span aria-hidden="true"></span>Cola máxima (m)</span>
-          </div>
-          <div *ngIf="cargando" class="dash-cargando" role="status">Cargando estadísticas…</div>
-          <div *ngIf="!cargando && !puntos.length" class="dash-vacio">
-            <span class="dash-vacio-icon" aria-hidden="true">↗</span>
-            No hay mediciones de cola en las fechas seleccionadas.
-          </div>
-          <div *ngIf="!cargando && puntos.length" class="dash-chart-scroll">
-            <svg class="dash-svg" viewBox="0 0 820 320" role="img" aria-label="Gráfica de la cola máxima por fecha en metros">
-              <defs>
-                <linearGradient id="sigo-cola-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#14b8a6" stop-opacity=".19"/>
-                  <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
-                </linearGradient>
-              </defs>
-              <g *ngFor="let eje of ejes">
-                <line x1="64" [attr.y1]="eje.y" x2="790" [attr.y2]="eje.y" stroke="#e5edf5" stroke-dasharray="4 5"/>
-                <text x="53" [attr.y]="eje.y + 4" text-anchor="end" class="dash-axis-text">{{eje.valor}}</text>
-              </g>
-              <text x="22" y="22" class="dash-axis-text">m</text>
-              <path *ngIf="areaCola" [attr.d]="areaCola" fill="url(#sigo-cola-fill)" stroke="none"/>
-              <path [attr.d]="lineaCola" fill="none" stroke="#14b8a6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-              <g *ngFor="let p of puntos">
-                <circle [attr.cx]="p.x" [attr.cy]="p.y" r="13" fill="transparent" stroke="none"
-                  tabindex="0" role="button" [attr.aria-label]="'Seleccionar '+formatoFecha(p.fecha)+': '+p.metros+' metros'"
-                  (click)="seleccionarDia(p.fecha)" (keydown.enter)="seleccionarDia(p.fecha)" (keydown.space)="seleccionarDia(p.fecha);$event.preventDefault()"/>
-                <circle [attr.cx]="p.x" [attr.cy]="p.y" [attr.r]="diaSeleccionado===p.fecha ? 7 : 5.2"
-                  [attr.fill]="diaSeleccionado===p.fecha ? '#2563eb' : '#14b8a6'" stroke="#fff" stroke-width="2.2"
-                  pointer-events="none"/>
-              </g>
-              <g *ngFor="let punto of etiquetasEje">
-                <text [attr.x]="punto.x" y="291" text-anchor="middle" class="dash-axis-text">{{punto.etiqueta}}</text>
-              </g>
-            </svg>
-          </div>
-          <div class="dash-card-footer">
-            <span>Cada punto corresponde a un día con alguna medición.</span>
-            <span>Datos de reportes operativos con cola registrada</span>
-          </div>
-        </section>
-        <aside class="dash-card dash-detalle" aria-label="Detalle diario">
-          <div class="dash-detail-head">
+      <div class="principal">
+        <aside class="panel detalle" aria-label="Detalle del día">
+          <div class="panel-head">
             <div>
               <h3>Detalle del día</h3>
-              <p>{{diaSeleccionado ? formatoFecha(diaSeleccionado) : 'Sin día seleccionado'}}</p>
+              <p>{{diaSeleccionado ? formatoFecha(diaSeleccionado) : 'Selecciona un punto'}}</p>
             </div>
-            <span class="dash-count">{{detalleDia?.incidencias ?? 0}} {{(detalleDia?.incidencias ?? 0)===1 ? 'reporte' : 'reportes'}}</span>
+            <span class="pildora">{{detalleDia?.incidencias ?? 0}} reportes</span>
           </div>
-          <div class="dash-detail-value">
+          <div class="cola-dia">
             <span>Mayor cola registrada</span>
             <strong>{{detalleDia?.colaMaxima ?? 0}}<small> m</small></strong>
-            <span class="dash-detail-arrow" aria-hidden="true">↗</span>
+            <span class="flecha" aria-hidden="true">↗</span>
           </div>
-          <p class="dash-detail-note" *ngIf="detalleDia && !detalleDia.incidencias && detalleDia.mediciones">
-            Sin reportes de incidente ese día. La cola máxima proviene de las mediciones registradas.
-          </p>
-          <p class="dash-detail-note" *ngIf="detalleDia && detalleDia.incidencias">
-            {{detalleDia.incidencias}} {{detalleDia.incidencias===1 ? 'reporte registrado' : 'reportes registrados'}} en esta fecha.
-          </p>
-          <p class="dash-detail-note" *ngIf="!detalleDia">
-            Selecciona un punto de la gráfica para consultar los datos de un día.
-          </p>
-          <p class="dash-detail-measure" *ngIf="detalleDia">
-            {{detalleDia.mediciones}} {{detalleDia.mediciones===1 ? 'medición de cola' : 'mediciones de cola'}} ese día.
-          </p>
+          <p class="nota" *ngIf="detalleDia">{{detalleDia.mediciones}} {{detalleDia.mediciones === 1 ? 'medición' : 'mediciones'}} de cola registrada(s) el día seleccionado.</p>
+          <p class="nota" *ngIf="!detalleDia">Elige una medición del gráfico para ver el detalle.</p>
+          <div class="desglose" *ngIf="detalleDia">
+            <h4>Cola máxima por turno</h4>
+            <div class="turno-mini" *ngFor="let t of turnos">
+              <span class="punto-leyenda" [style.background]="colorTurno(t)"></span>
+              <span>Turno {{t}}</span>
+              <strong>{{maximoDiaTurno(t)}}{{maximoDiaTurno(t)===null?'':' m'}}</strong>
+            </div>
+          </div>
+          <button type="button" class="abrir-modal" (click)="abrirDetalle()" [disabled]="!diaSeleccionado">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/>
+            </svg>
+            Ver detalle y fotografías
+          </button>
         </aside>
+
+        <section class="panel grafica" aria-label="Gráfica de la cola por turno">
+          <div class="panel-head grafica-head">
+            <div>
+              <h3>Cola máxima por turno</h3>
+              <p>{{descripcionGrafica}}</p>
+            </div>
+            <div class="leyendas">
+              <span *ngFor="let t of turnos"><i [style.background]="colorTurno(t)"></i>Turno {{t}}</span>
+            </div>
+          </div>
+          <div *ngIf="cargando" class="sin-datos" role="status">Cargando datos…</div>
+          <div *ngIf="!cargando && !hayPuntos" class="sin-datos">No hay mediciones de cola en este período.</div>
+          <div class="grafica-contenido" *ngIf="!cargando && hayPuntos" (mouseleave)="tooltip=null">
+            <svg viewBox="0 0 820 320" class="svg-grafica" role="img"
+              aria-label="Gráfica de máximo de cola por turno A, B y C">
+              <g *ngFor="let eje of ejes">
+                <line x1="60" [attr.y1]="eje.y" x2="787" [attr.y2]="eje.y"
+                  stroke="#e3eaf3" stroke-dasharray="4 5"/>
+                <text x="51" [attr.y]="eje.y+4" text-anchor="end" class="eje-texto">{{eje.valor}}</text>
+              </g>
+              <text x="23" y="24" class="eje-texto">m</text>
+              <g *ngFor="let serie of series">
+                <path [attr.d]="serie.linea" fill="none" [attr.stroke]="serie.color"
+                  stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <g *ngFor="let p of serie.puntos">
+                  <circle [attr.cx]="p.x" [attr.cy]="p.y" r="15" fill="transparent"
+                    tabindex="0" role="button"
+                    [attr.aria-label]="'Turno '+p.turno+', '+p.etiqueta+', '+p.cola+' metros'"
+                    (mouseenter)="mostrarTooltip(p)" (mouseleave)="tooltip=null"
+                    (focus)="mostrarTooltip(p)" (blur)="tooltip=null"
+                    (click)="seleccionarDia(p.fecha)"
+                    (keydown.enter)="seleccionarDia(p.fecha)"
+                    (keydown.space)="seleccionarDia(p.fecha);$event.preventDefault()">
+                    <title>Turno {{p.turno}} · {{p.etiqueta}} · {{p.cola}} m · {{p.plaza}}</title>
+                  </circle>
+                  <circle [attr.cx]="p.x" [attr.cy]="p.y"
+                    [attr.r]="diaSeleccionado===p.fecha ? 7 : 5.2"
+                    [attr.fill]="serie.color" stroke="#fff" stroke-width="2.4"
+                    pointer-events="none"/>
+                </g>
+              </g>
+              <text *ngFor="let t of etiquetasEje" [attr.x]="t.x" y="291"
+                text-anchor="middle" class="eje-texto">{{t.texto}}</text>
+            </svg>
+            <div *ngIf="tooltip as p" class="tooltip" role="status"
+              [style.left.%]="p.x/820*100" [style.top.%]="p.y/320*100"
+              [class.tooltip-invertido]="p.x > 530">
+              <strong [style.color]="colorTurno(p.turno)">Turno {{p.turno}} · {{p.etiqueta}}</strong>
+              <b>{{p.cola}} m</b>
+              <span>Plaza: {{p.plaza || 'No indicada'}} · {{p.hora}}</span>
+              <span>Responsable: {{p.responsable || 'No indicado'}}</span>
+              <span *ngIf="p.situacion">Situación: {{p.situacion}}</span>
+              <span *ngIf="p.incidente">Incidente: {{p.incidente}}</span>
+              <small>{{p.registros}} reporte(s) · Haz clic para ver el día</small>
+            </div>
+          </div>
+          <div class="pie-grafica">
+            <span>Colores por turno · pasa el cursor para ver información.</span>
+            <span>{{periodo === 'ANIO' ? 'Máximo de cada mes' : 'Máximo de cada día'}}</span>
+          </div>
+        </section>
       </div>
     </section>
+
+    <div *ngIf="modalAbierto" class="modal-fondo" (click)="cerrarModal()">
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="tituloDetalleCO"
+        (click)="$event.stopPropagation()">
+        <header class="modal-cabecera">
+          <div>
+            <p class="eyebrow">SIGO · CONTROL OPERATIVO</p>
+            <h2 id="tituloDetalleCO">Detalle del {{formatoFecha(diaSeleccionado)}}</h2>
+            <p>Registros operativos y fotografías de evidencia.</p>
+          </div>
+          <button type="button" class="cerrar" aria-label="Cerrar detalle" (click)="cerrarModal()">×</button>
+        </header>
+        <div class="modal-cuerpo">
+          <p *ngIf="detalleCargando" class="aviso" role="status">Cargando registros y evidencias…</p>
+          <p *ngIf="detalleError" class="error" role="alert">{{detalleError}}</p>
+          <p *ngIf="!detalleCargando && detalleCompleto && !detalleCompleto.reportes.length" class="aviso">
+            No hay registros para este día y plaza.
+          </p>
+          <article *ngFor="let r of detalleCompleto?.reportes" class="reporte">
+            <div class="reporte-titulo">
+              <div><strong>Reporte #{{r.id}}</strong><p>{{r.plazaCodigo}} · Turno {{r.turnoCodigo}} · {{r.hora}}</p></div>
+              <span class="medida-reporte">{{r.colaMetros===null ? 'Sin medición' : r.colaMetros+' m'}}</span>
+            </div>
+            <div class="datos-reporte">
+              <div><small>Responsable</small><strong>{{r.responsableNombre || r.registradoPor}}</strong></div>
+              <div><small>Registrado por</small><strong>{{r.registradoPor}}</strong></div>
+              <div><small>Vía</small><strong>{{r.viaNumero || 'Plaza general'}}</strong></div>
+              <div><small>Situación de la plaza</small><strong>{{r.situacion || 'Sin información'}}</strong></div>
+              <div><small>Ingreso</small><strong>{{r.ingreso || 'Sin información'}}</strong></div>
+              <div><small>Incidente</small><strong>{{r.incidente || 'Sin incidente indicado'}}</strong></div>
+            </div>
+            <p *ngIf="r.descripcion" class="observaciones"><b>Observaciones:</b> {{r.descripcion}}</p>
+            <div class="evidencias">
+              <h4>Fotografías de evidencia</h4>
+              <div class="evidencias-grid" *ngIf="fotosReporte(r.id).length; else sinFotos">
+                <a *ngFor="let foto of fotosReporte(r.id)" [href]="foto.urlArchivo"
+                  target="_blank" rel="noopener noreferrer" class="foto">
+                  <img [src]="foto.urlArchivo" [alt]="'Evidencia '+foto.categoria+' del reporte '+r.id" loading="lazy">
+                  <span>{{etiquetaFoto(foto.categoria)}}</span>
+                </a>
+              </div>
+              <ng-template #sinFotos><p class="nota">Este reporte no tiene imágenes adjuntas.</p></ng-template>
+            </div>
+          </article>
+        </div>
+        <footer class="modal-pie">
+          <button type="button" (click)="cerrarModal()">Cerrar</button>
+        </footer>
+      </section>
+    </div>
   `,
   styles: [`
-    :host { display:block; }
-    .dash{color:#17243b;background:#f4f7fb;padding:20px;border-radius:22px}
-    .dash-toolbar{display:flex;align-items:end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:20px}
-    .dash-eyebrow{font-size:11px;letter-spacing:.12em;font-weight:800;color:#2563eb;text-transform:uppercase;margin:0 0 7px}
-    .dash-intro h2{font-size:20px;font-weight:800;letter-spacing:-.025em;margin:0 0 5px}
-    .dash-intro p:last-child{margin:0;color:#7b8aa2;font-size:12px}
-    .dash-filtros{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
-    .dash-filtros label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;color:#667894;min-width:132px}
-    .dash-filtros input,.dash-filtros select{width:100%;height:42px;padding:0 11px;border:1px solid #d8e2ef;border-radius:9px;background:#fff;color:#17243b;font-size:12px;font-weight:500;outline:none}
-    .dash-filtros input:focus,.dash-filtros select:focus{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
-    .dash-filtros select:disabled{background:#eef2f7;color:#65748a}
-    .dash-filtros .dash-refresh{height:42px;width:42px;border:1px solid #d8e2ef;border-radius:9px;background:#fff;color:#2563eb;display:grid;place-items:center;cursor:pointer;padding:0}
-    .dash-refresh svg{width:19px;height:19px}.dash-refresh:disabled{opacity:.55;cursor:wait}
-    .dash-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
-    .dash-kpi{position:relative;min-height:146px;padding:22px 20px;background:#fff;border:1px solid #e1e8f2;border-radius:16px;box-shadow:0 6px 22px rgba(17,35,60,.035);display:flex;flex-direction:column;gap:9px}
-    .dash-kpi-label{font-size:12px;color:#7486a2;font-weight:750;max-width:calc(100% - 53px)}
-    .dash-kpi strong{font-size:31px;font-weight:850;letter-spacing:-.04em;line-height:1.25;color:#17243b}
-    .dash-kpi strong span{font-size:20px;font-weight:750}
-    .dash-kpi small{font-size:11px;color:#7b8da8}
-    .dash-kpi-icon{position:absolute;right:18px;top:17px;width:39px;height:39px;border-radius:12px;display:grid;place-items:center}
-    .dash-kpi-icon svg{width:19px;height:19px}
-    .kpi-flag{color:#0f9488;background:#e6f7f4}.kpi-up{color:#2563eb;background:#ebf1ff}.kpi-ruler{color:#d97706;background:#fff3e6}
-    .dash-main{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(300px,1fr);gap:16px}
-    .dash-card{min-width:0;background:#fff;border:1px solid #e1e8f2;border-radius:17px;padding:21px;box-shadow:0 6px 22px rgba(17,35,60,.035)}
-    .dash-card-head,.dash-detail-head{display:flex;justify-content:space-between;align-items:start;gap:12px}
-    .dash-card h3{margin:0;color:#17243b;font-size:16px;font-weight:800}
-    .dash-card-head p,.dash-detail-head p{margin:5px 0 0;font-size:12px;color:#7788a3;line-height:1.5}
-    .dash-legend{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:#7386a4;font-size:11px}
-    .dash-legend span{width:9px;height:9px;border-radius:50%;background:#14b8a6}
-    .dash-chart-scroll{margin-top:12px;overflow:hidden}
-    .dash-svg{display:block;width:100%;height:auto;max-height:370px}
-    .dash-axis-text{fill:#8092ad;font-size:12px;font-family:Inter,Arial,sans-serif}
-    .dash-svg [role=button]{cursor:pointer;outline:0}
-    .dash-svg [role=button]:focus{stroke:#2563eb;stroke-width:3}
-    .dash-card-footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:10px;color:#8190a8;line-height:1.5;margin-top:6px}
-    .dash-count{background:#eaf2ff;border-radius:99px;color:#3f6bac;font-size:10px;font-weight:800;padding:6px 10px;white-space:nowrap}
-    .dash-detail-value{background:#edf9f6;border:1px solid #cceee6;border-radius:12px;padding:18px;margin-top:25px;position:relative;display:flex;flex-direction:column;gap:6px}
-    .dash-detail-value>span:first-child{color:#5c8a83;font-size:11px}
-    .dash-detail-value strong{font-size:26px;font-weight:850;color:#0d8779;line-height:1.2}
-    .dash-detail-value strong small{font-size:13px}
-    .dash-detail-arrow{position:absolute;right:17px;top:25px;font-size:26px;font-weight:700;color:#14b8a6}
-    .dash-detail-note,.dash-detail-measure{color:#8090aa;font-size:11px;line-height:1.6;margin:15px 0 0}
-    .dash-detail-measure{margin-top:10px}
-    .dash-cargando,.dash-vacio{height:280px;display:flex;align-items:center;justify-content:center;text-align:center;color:#71839d;font-size:13px;gap:12px}
-    .dash-vacio-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#eff6ff;color:#2563eb;font-size:22px}
-    .dash-error{margin-bottom:14px;padding:12px;border-radius:10px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;font-size:13px}
-    @media(max-width:1050px){.dash-toolbar{align-items:start}.dash-main{grid-template-columns:1fr}.dash-kpi{min-height:142px}}
-    @media(max-width:670px){
-      .dash{padding:12px;border-radius:16px}
-      .dash-filtros{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
-      .dash-filtros label:first-child{grid-column:1 / -1}
-      .dash-filtros .dash-refresh{width:100%}
-      .dash-kpis{grid-template-columns:1fr;gap:10px}
-      .dash-kpi{min-height:115px;padding:15px}
-      .dash-kpi strong{font-size:27px}
-      .dash-card{padding:15px}
-      .dash-legend{font-size:10px}
-      .dash-main{gap:12px}
-    }
+    :host{display:block;color:#19283d}
+    .dash{background:#f3f6fb;padding:20px;border-radius:20px}
+    .dash-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px;margin-bottom:20px}
+    .eyebrow{color:#2563eb;font-size:10px;font-weight:800;letter-spacing:.13em;margin:0 0 6px}
+    .dash-toolbar h2{font-size:21px;font-weight:850;letter-spacing:-.025em;margin:0 0 5px}
+    .dash-toolbar p:last-child{color:#7787a0;font-size:12px;margin:0}
+    .filtros{display:flex;align-items:end;flex-wrap:wrap;gap:12px}
+    .filtros label,.periodo-wrap,.navegacion{display:flex;flex-direction:column;gap:6px;min-width:125px;font-size:11px;color:#64748b;font-weight:800}
+    .field-caption{display:block}
+    .filtros select{height:42px;padding:0 12px;border:1px solid #d8e2ef;border-radius:10px;background:#fff;color:#19283d;font:inherit;font-size:12px}
+    .filtros select:disabled{opacity:.7}
+    .periodo-botones,.periodo-nav{display:flex;align-items:center;border:1px solid #d8e2ef;background:#fff;border-radius:10px;overflow:hidden;height:42px}
+    .periodo-botones button,.periodo-nav button{height:100%;border:0;background:transparent;color:#50617b;font-size:12px;font-weight:800;cursor:pointer;padding:0 12px}
+    .periodo-botones button.actual{background:#2563eb;color:white}
+    .periodo-botones button:hover:not(.actual),.periodo-nav button:hover{background:#eff6ff}
+    .periodo-nav strong{font-size:12px;color:#19283d;min-width:106px;text-align:center;padding:0 2px}
+    .periodo-nav button{font-size:25px;line-height:1}
+    .recargar{height:42px;width:42px;padding:0;display:grid;place-items:center;border:1px solid #d8e2ef;border-radius:10px;background:white;color:#2563eb;cursor:pointer}
+    .recargar svg{width:18px;height:18px}.recargar:disabled{opacity:.4}
+    .indicadores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
+    .indicador{display:flex;flex-direction:column;gap:9px;position:relative;min-height:137px;padding:22px 20px;background:#fff;border:1px solid #e0e7f1;border-radius:16px}
+    .indicador-etiqueta{font-size:12px;font-weight:800;color:#7183a0;padding-right:44px}
+    .indicador>strong{font-size:32px;letter-spacing:-.04em;color:#19283d;line-height:1.25}
+    .indicador>strong span{font-size:18px}
+    .indicador small{color:#8191a9;font-size:11px}
+    .indicador-icono{display:grid;place-items:center;position:absolute;right:18px;top:16px;width:38px;height:38px;border-radius:12px;font-size:22px}
+    .indicador-icono.verde{background:#e5f7f2;color:#0d9488}.indicador-icono.azul{background:#edf2ff;color:#2563eb}.indicador-icono.naranja{background:#fff2e5;color:#d97706}
+    .principal{display:grid;grid-template-columns:minmax(270px,.8fr) minmax(0,1.6fr);gap:16px}
+    .panel{min-width:0;padding:20px;background:#fff;border:1px solid #e0e7f1;border-radius:16px}
+    .panel-head{display:flex;justify-content:space-between;align-items:start;gap:12px}
+    .panel-head h3{font-size:16px;font-weight:800;margin:0}
+    .panel-head p{font-size:12px;color:#7487a0;margin:6px 0 0;line-height:1.5}
+    .pildora{border-radius:99px;background:#edf4ff;color:#3567a8;font-size:10px;white-space:nowrap;padding:6px 10px;font-weight:800}
+    .cola-dia{position:relative;margin:22px 0 13px;padding:18px;background:#effaf7;border:1px solid #ceeee5;border-radius:13px;display:flex;flex-direction:column;gap:7px}
+    .cola-dia>span:first-child{font-size:11px;color:#648c83}
+    .cola-dia strong{font-size:28px;color:#0b8978}.cola-dia strong small{font-size:14px}
+    .flecha{position:absolute;right:20px;top:22px;font-size:25px;color:#14b8a6}
+    .nota{color:#8191a7;font-size:12px;line-height:1.6;margin:12px 0}
+    .desglose{border-top:1px solid #e4eaf3;padding-top:13px;margin-top:15px}
+    .desglose h4{font-size:12px;font-weight:800;margin:0 0 12px}
+    .turno-mini{display:flex;align-items:center;gap:8px;margin:9px 0;font-size:12px;color:#64748b}
+    .turno-mini strong{margin-left:auto;color:#19283d}
+    .punto-leyenda{width:9px;height:9px;border-radius:50%;flex:none}
+    .abrir-modal{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:20px;width:100%;border:0;border-radius:11px;background:#2563eb;color:#fff;padding:13px;font-weight:800;font-size:12px;cursor:pointer}
+    .abrir-modal svg{width:17px;height:17px}.abrir-modal:disabled{opacity:.45;cursor:default}
+    .grafica-head{flex-wrap:wrap}
+    .leyendas{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#71839d;font-size:11px}
+    .leyendas span{display:inline-flex;align-items:center;gap:5px}
+    .leyendas i{display:block;width:9px;height:9px;border-radius:50%}
+    .grafica-contenido{position:relative;margin:10px 0}
+    .svg-grafica{width:100%;height:auto;display:block;max-height:380px}
+    .eje-texto{fill:#8191ad;font-size:12px;font-family:Arial,sans-serif}
+    .svg-grafica circle[role=button]{cursor:pointer}
+    .tooltip{pointer-events:none;position:absolute;transform:translate(-15%,-105%);min-width:210px;max-width:260px;padding:11px 13px;display:flex;flex-direction:column;gap:4px;z-index:3;background:#fff;border:1px solid #d9e3ef;box-shadow:0 9px 26px #0f172a22;border-radius:11px;font-size:11px;color:#475569}
+    .tooltip-invertido{transform:translate(-90%,-105%)}
+    .tooltip b{font-size:19px;color:#0b2342}.tooltip small{font-size:10px;color:#7a8ca5}
+    .pie-grafica{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#8594aa;font-size:10px;line-height:1.5}
+    .sin-datos{min-height:255px;display:flex;align-items:center;justify-content:center;color:#8191a7;font-size:13px}
+    .error{padding:12px 15px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;font-size:13px;margin:12px 0}
+    .modal-fondo{position:fixed;z-index:1200;inset:0;background:#0f172acc;display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal{width:min(960px,100%);max-height:92vh;overflow:hidden;display:flex;flex-direction:column;background:#fff;border-radius:20px;box-shadow:0 22px 70px #0004}
+    .modal-cabecera,.modal-pie{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 24px;background:white}
+    .modal-cabecera{border-bottom:1px solid #e2e8f0}.modal-cabecera h2{font-size:20px;margin:3px 0}.modal-cabecera p:last-child{color:#64748b;font-size:12px;margin:3px 0}
+    .cerrar{border:0;border-radius:10px;background:#eff4fa;color:#475569;width:36px;height:36px;font-size:24px;cursor:pointer}
+    .modal-cuerpo{overflow:auto;padding:22px 24px;flex:1;background:#f8fafc}
+    .modal-pie{border-top:1px solid #e2e8f0;justify-content:flex-end}.modal-pie button{border:0;background:#2563eb;border-radius:10px;color:#fff;font-weight:800;padding:10px 24px;cursor:pointer}
+    .aviso{font-size:13px;color:#64748b}
+    .reporte{padding:18px;margin-bottom:14px;background:#fff;border:1px solid #dfe7f1;border-radius:14px}
+    .reporte-titulo{display:flex;align-items:start;justify-content:space-between;gap:10px}
+    .reporte-titulo strong{font-size:15px}.reporte-titulo p{font-size:12px;color:#64748b;margin:4px 0}
+    .medida-reporte{background:#e6f7f2;color:#0f8274;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:800}
+    .datos-reporte{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:16px}
+    .datos-reporte div{display:flex;flex-direction:column;gap:5px;min-width:0}
+    .datos-reporte small{font-size:11px;color:#64748b}.datos-reporte strong{font-size:12px;color:#17243b;overflow-wrap:anywhere}
+    .observaciones{font-size:12px;color:#334155;line-height:1.5;border-top:1px solid #edf1f6;padding-top:13px;margin:16px 0}
+    .evidencias{margin-top:18px;border-top:1px solid #edf1f6;padding-top:15px}.evidencias h4{font-size:13px;margin:0 0 12px}
+    .evidencias-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+    .foto{display:flex;flex-direction:column;gap:7px;color:#1d4ed8;font-size:11px;text-decoration:none;font-weight:750}
+    .foto img{width:100%;height:125px;border-radius:9px;object-fit:cover;border:1px solid #dfe7f1}
+    @media(max-width:1040px){.principal{grid-template-columns:1fr}.grafica{order:0}.detalle{order:1}.filtros{justify-content:start}}
+    @media(max-width:680px){.dash{padding:12px}.filtros{width:100%;display:grid;grid-template-columns:1fr 1fr}.filtros label{grid-column:1 / -1}.periodo-wrap,.navegacion{min-width:0}.periodo-wrap{grid-column:1 / -1}.recargar{display:none}.indicadores{grid-template-columns:1fr;gap:10px}.indicador{min-height:110px;padding:15px}.panel{padding:15px}.tooltip{max-width:190px;min-width:175px}.modal-fondo{padding:8px}.modal-cabecera,.modal-cuerpo,.modal-pie{padding:14px}.datos-reporte{grid-template-columns:1fr 1fr}}
   `]
 })
 export class ControlOperativoDashboardComponent implements OnInit {
@@ -227,132 +341,215 @@ export class ControlOperativoDashboardComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  inicio = this.fechaLima(-29);
-  fin = this.fechaLima(0);
+  readonly periodos: {valor: Periodo; texto:string}[] = [
+    {valor:'SEMANA',texto:'Semana'},{valor:'MES',texto:'Mes'},{valor:'ANIO',texto:'Año'}
+  ];
+  readonly turnos = TURNOS;
+  periodo: Periodo = 'MES';
+  referencia = this.fechaLima();
   plazaId: number | null = null;
   resumen: ControlOperativoDashboard | null = null;
-  cargando = false;
   error = '';
+  cargando = false;
   diaSeleccionado = '';
-  puntos: PuntoCola[] = [];
-  etiquetasEje: PuntoCola[] = [];
-  ejes: EjeCola[] = [];
-  lineaCola = '';
-  areaCola = '';
-  private solicitud = 0;
+  series: Serie[] = [];
+  etiquetasEje: {x:number;texto:string}[] = [];
+  ejes: Eje[] = [];
+  tooltip: Punto | null = null;
 
-  get esSupervisor(): boolean { return this.auth.tieneRol('SUPERVISOR'); }
-  get detalleDia(): ControlOperativoDiaDashboard | null {
-    return this.resumen?.dias.find(d => d.fecha === this.diaSeleccionado) ?? null;
+  modalAbierto = false;
+  detalleCargando = false;
+  detalleError = '';
+  detalleCompleto: ControlOperativoDetalleDia | null = null;
+  private solicitud = 0;
+  private solicitudDetalle = 0;
+
+  get esSupervisor(): boolean {return this.auth.tieneRol('SUPERVISOR');}
+  get detalleDia():ControlOperativoDiaDashboard|null {
+    return this.resumen?.dias.find(d=>d.fecha===this.diaSeleccionado) ?? null;
+  }
+  get hayPuntos():boolean {return this.series.some(s=>s.puntos.length>0);}
+  get tituloPeriodo():string {
+    const {inicio,fin}=this.rango();
+    if(this.periodo==='SEMANA') return this.fechaCorta(inicio)+' – '+this.fechaCorta(fin);
+    if(this.periodo==='ANIO') return inicio.slice(0,4);
+    const fecha=new Date(inicio+'T12:00:00Z');
+    return new Intl.DateTimeFormat('es-PE',{month:'long',year:'numeric',timeZone:'UTC'}).format(fecha);
+  }
+  get descripcionGrafica():string {
+    return this.periodo==='ANIO' ? 'Máximo de cada mes por turno. Selecciona un punto para ver el día del pico.' :
+      'Máximo diario de cada turno. Pasa el cursor por un punto para ver sus datos.';
   }
 
-  ngOnInit(): void {
-    if (!this.esSupervisor) this.plazaId = this.auth.usuario()?.plazaId ?? null;
+  ngOnInit():void {
+    if(!this.esSupervisor) this.plazaId=this.auth.usuario()?.plazaId ?? null;
     void this.cargar();
   }
-
-  private fechaLima(diferenciaDias: number): string {
-    const fecha = new Date();
-    const fragmentos = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit'
-    }).formatToParts(fecha);
-    const valor = (tipo: string) => fragmentos.find(p => p.type === tipo)?.value ?? '';
-    const fechaUtc = new Date(Date.UTC(Number(valor('year')), Number(valor('month')) - 1, Number(valor('day'))));
-    fechaUtc.setUTCDate(fechaUtc.getUTCDate() + diferenciaDias);
-    return fechaUtc.toISOString().slice(0, 10);
+  private fechaLima():string {
+    const partes=new Intl.DateTimeFormat('en-US',{
+      timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'
+    }).formatToParts(new Date());
+    const v=(tipo:string)=>partes.find(p=>p.type===tipo)?.value??'';
+    return v('year')+'-'+v('month')+'-'+v('day');
   }
-
-  formatoFecha(fecha: string): string {
-    if (!fecha || fecha.length < 10) return fecha;
-    return fecha.slice(8,10) + '/' + fecha.slice(5,7) + '/' + fecha.slice(0,4);
+  private date(iso:string):Date {return new Date(iso+'T12:00:00Z');}
+  private iso(d:Date):string{return d.toISOString().slice(0,10);}
+  private rango():{inicio:string;fin:string} {
+    const d=this.date(this.referencia);
+    const y=d.getUTCFullYear(),m=d.getUTCMonth();
+    if(this.periodo==='ANIO') return {inicio:y+'-01-01',fin:y+'-12-31'};
+    if(this.periodo==='MES') return {inicio:this.iso(new Date(Date.UTC(y,m,1,12))),
+      fin:this.iso(new Date(Date.UTC(y,m+1,0,12)))};
+    const dia=d.getUTCDay(),lunes=new Date(d);
+    lunes.setUTCDate(d.getUTCDate()-((dia+6)%7));
+    const domingo=new Date(lunes);domingo.setUTCDate(lunes.getUTCDate()+6);
+    return {inicio:this.iso(lunes),fin:this.iso(domingo)};
   }
-
-  seleccionarDia(fecha: string): void {
-    this.diaSeleccionado = fecha;
+  private fechaCorta(s:string):string {return s.slice(8,10)+'/'+s.slice(5,7);}
+  formatoFecha(s:string):string {return s ? this.fechaCorta(s)+'/'+s.slice(0,4) : '—';}
+  colorTurno(t:TurnoOperativo):string{return COLORES[t];}
+  cambiarPeriodo(p:Periodo):void {if(this.periodo===p)return;this.periodo=p;void this.cargar();}
+  mover(delta:number):void {
+    const d=this.date(this.referencia);
+    if(this.periodo==='SEMANA')d.setUTCDate(d.getUTCDate()+delta*7);
+    if(this.periodo==='MES'){
+      const dia=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+delta);
+      const max=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0,12)).getUTCDate();
+      d.setUTCDate(Math.min(dia,max));
+    }
+    if(this.periodo==='ANIO')d.setUTCFullYear(d.getUTCFullYear()+delta);
+    this.referencia=this.iso(d);
+    void this.cargar();
+  }
+  seleccionarDia(fecha:string):void {
+    this.diaSeleccionado=fecha;
+    this.tooltip=null;
     this.cdr.markForCheck();
   }
-
-  async cargar(): Promise<void> {
-    if (!this.inicio || !this.fin || this.inicio > this.fin) {
-      this.error = 'Selecciona un rango de fechas válido.';
-      this.cdr.markForCheck();
-      return;
-    }
-    const actual = ++this.solicitud;
-    this.error = '';
-    this.cargando = true;
+  mostrarTooltip(p:Punto):void {this.tooltip=p;this.cdr.markForCheck();}
+  maximoDiaTurno(t:TurnoOperativo):number|null {
+    const r=this.resumen?.turnos.find(d=>d.fecha===this.diaSeleccionado&&d.turno===t);
+    return r?.colaMaxima ?? null;
+  }
+  async cargar():Promise<void> {
+    const id=++this.solicitud;
+    const rango=this.rango();
+    this.cargando=true;this.error='';this.tooltip=null;
     this.cdr.markForCheck();
     try {
-      const r = await firstValueFrom(this.api.dashboard({
-        inicio: this.inicio, fin: this.fin,
-        plazaId: this.esSupervisor ? this.plazaId : this.auth.usuario()?.plazaId
+      const r=await firstValueFrom(this.api.dashboard({
+        inicio:rango.inicio,fin:rango.fin,
+        plazaId:this.esSupervisor?this.plazaId:this.auth.usuario()?.plazaId
       }));
-      if (actual !== this.solicitud) return;
-      this.resumen = r;
-      this.construirGrafica();
-      const fechas = new Set(r.dias.map(d => d.fecha));
-      if (!fechas.has(this.diaSeleccionado)) {
-        this.diaSeleccionado = this.puntos[this.puntos.length - 1]?.fecha ??
-          r.dias[r.dias.length - 1]?.fecha ?? '';
+      if(id!==this.solicitud)return;
+      this.resumen=r;
+      this.construir();
+      const fechas=new Set(r.dias.map(d=>d.fecha));
+      if(!fechas.has(this.diaSeleccionado)) {
+        const puntos=this.series.flatMap(s=>s.puntos).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+        this.diaSeleccionado=puntos[puntos.length-1]?.fecha ??
+          r.dias[r.dias.length-1]?.fecha ?? '';
       }
-    } catch (e: unknown) {
-      if (actual !== this.solicitud) return;
-      const err = e as {error?:{message?:string;detail?:string};message?:string};
-      this.error = err?.error?.message || err?.error?.detail || err?.message || 'No se pudieron cargar las estadísticas.';
-      this.resumen = null;
-      this.puntos = [];
-      this.areaCola = '';
-      this.lineaCola = '';
-      this.diaSeleccionado = '';
-    } finally {
-      if (actual === this.solicitud) {
-        this.cargando = false;
-        this.cdr.markForCheck();
-      }
+    }catch(e:unknown){
+      if(id!==this.solicitud)return;
+      const err=e as {error?:{message?:string;detail?:string};message?:string};
+      this.error=err?.error?.message||err?.error?.detail||err?.message||'No se pudo cargar el dashboard.';
+      this.resumen=null;this.series=[];this.etiquetasEje=[];this.ejes=[];this.diaSeleccionado='';
+    }finally {
+      if(id===this.solicitud){this.cargando=false;this.cdr.markForCheck();}
     }
   }
 
-  private construirGrafica(): void {
-    const dias = (this.resumen?.dias ?? []).filter(d => d.colaMaxima !== null);
-    if (!dias.length) {
-      this.puntos = [];
-      this.etiquetasEje = [];
-      this.ejes = [];
-      this.lineaCola = '';
-      this.areaCola = '';
-      return;
+  private construir():void {
+    const r=this.resumen;
+    if(!r){this.series=[];return;}
+    const {inicio,fin}=this.rango();
+    const etiquetas:string[]=[];
+    const d=this.date(inicio),ultimo=this.date(fin);
+    if(this.periodo==='ANIO'){
+      for(let m=1;m<=12;m++)etiquetas.push(inicio.slice(0,4)+'-'+String(m).padStart(2,'0'));
+    }else{
+      while(d<=ultimo){etiquetas.push(this.iso(d));d.setUTCDate(d.getUTCDate()+1);}
     }
+    const index=new Map(etiquetas.map((s,i)=>[s,i]));
+    const clave=(fecha:string)=>this.periodo==='ANIO'?fecha.slice(0,7):fecha;
+    const registros=new Map<string,ControlOperativoTurnoDashboard>();
+    const conteos=new Map<string,{registros:number;mediciones:number}>();
+    for(const item of r.turnos){
+      if(item.colaMaxima===null)continue;
+      const k=clave(item.fecha)+'|'+item.turno;
+      const previo=registros.get(k);
+      const cnt=conteos.get(k)??{registros:0,mediciones:0};
+      cnt.registros+=item.registros;cnt.mediciones+=item.mediciones;conteos.set(k,cnt);
+      if(!previo || (item.colaMaxima??0)>(previo.colaMaxima??0) ||
+          (item.colaMaxima===previo.colaMaxima && item.fecha>previo.fecha))registros.set(k,item);
+    }
+    const maximo=Math.max(100,...[...registros.values()].map(t=>t.colaMaxima??0));
+    const paso=Math.max(25,Math.ceil(maximo/4/25)*25),tope=paso*4;
+    this.ejes=Array.from({length:5},(_,i)=>({valor:i*paso,y:260-(i*paso/tope)*210}));
+    this.etiquetasEje=etiquetas.map((s,i)=>({
+      x:etiquetas.length===1?420:68+i/(etiquetas.length-1)*706,
+      texto:this.periodo==='ANIO'
+        ? new Intl.DateTimeFormat('es-PE',{month:'short',timeZone:'UTC'}).format(this.date(s+'-01'))
+        :this.fechaCorta(s)
+    })).filter((_,i)=>i===0||i===etiquetas.length-1||i%Math.max(1,Math.ceil(etiquetas.length/7))===0);
 
-    const maximo = Math.max(100, ...dias.map(d => d.colaMaxima ?? 0));
-    const paso = Math.max(25, Math.ceil(maximo / 4 / 25) * 25);
-    const tope = paso * 4;
-    const baseY = 260;
-    const alto = 210;
-    this.ejes = Array.from({length: 5}, (_, i) => ({
-      valor: i * paso, y: baseY - (i * paso / tope) * alto
-    }));
-
-    this.puntos = dias.map((d, i) => {
-      const x = dias.length === 1 ? 420 : 68 + (i / (dias.length - 1)) * 706;
-      return {
-        fecha: d.fecha,
-        metros: d.colaMaxima ?? 0,
-        x,
-        y: baseY - ((d.colaMaxima ?? 0) / tope) * alto,
-        etiqueta: d.fecha.slice(8,10) + '/' + d.fecha.slice(5,7)
-      };
+    this.series=TURNOS.map(turno=>{
+      const puntos:Punto[]=[];
+      for(const [k,item] of registros){
+        if(!k.endsWith('|'+turno))continue;
+        const pos=index.get(clave(item.fecha));
+        if(pos===undefined)continue;
+        const count=conteos.get(k);
+        puntos.push({
+          turno,fecha:item.fecha,clave:clave(item.fecha),
+          etiqueta:this.periodo==='ANIO'?clave(item.fecha):this.formatoFecha(item.fecha),
+          cola:item.colaMaxima??0,registros:count?.registros??item.registros,
+          mediciones:count?.mediciones??item.mediciones,plaza:item.plazaCodigo,
+          responsable:item.responsableNombre,hora:item.hora,situacion:item.situacion,
+          ingreso:item.ingreso,incidente:item.incidente,
+          x:etiquetas.length===1?420:68+pos/(etiquetas.length-1)*706,
+          y:260-(item.colaMaxima??0)/tope*210
+        });
+      }
+      puntos.sort((a,b)=>a.x-b.x);
+      return {turno,color:COLORES[turno],puntos,
+        linea:puntos.map((p,i)=>(i?'L ':'M ')+p.x.toFixed(2)+' '+p.y.toFixed(2)).join(' ')};
     });
-    this.lineaCola = this.puntos.map((p, i) =>
-      (i === 0 ? 'M' : 'L') + ' ' + p.x.toFixed(2) + ' ' + p.y.toFixed(2)
-    ).join(' ');
-    const primero = this.puntos[0];
-    const ultimo = this.puntos[this.puntos.length - 1];
-    this.areaCola = this.lineaCola + ' L ' + ultimo.x.toFixed(2) + ' ' + baseY +
-      ' L ' + primero.x.toFixed(2) + ' ' + baseY + ' Z';
-
-    const saltar = Math.max(1, Math.ceil(this.puntos.length / 7));
-    this.etiquetasEje = this.puntos.filter((_, i) =>
-      i % saltar === 0 || i === this.puntos.length - 1
-    );
   }
+
+  async abrirDetalle():Promise<void> {
+    if(!this.diaSeleccionado)return;
+    const id=++this.solicitudDetalle;
+    this.modalAbierto=true;this.detalleCargando=true;this.detalleError='';
+    this.detalleCompleto=null;this.cdr.markForCheck();
+    try {
+      const d=await firstValueFrom(this.api.detalleDia(
+        this.diaSeleccionado,this.esSupervisor?this.plazaId:this.auth.usuario()?.plazaId
+      ));
+      if(id===this.solicitudDetalle && this.modalAbierto)this.detalleCompleto=d;
+    }catch(e:unknown){
+      if(id!==this.solicitudDetalle||!this.modalAbierto)return;
+      const err=e as {error?:{message?:string;detail?:string};message?:string};
+      this.detalleError=err?.error?.message||err?.message||'No se pudieron obtener los detalles.';
+    }finally {
+      if(id===this.solicitudDetalle){this.detalleCargando=false;this.cdr.markForCheck();}
+    }
+  }
+  fotosReporte(id:number):ControlOperativoEvidencia[]{
+    return this.detalleCompleto?.evidencias.filter(f=>f.reporteId===id)??[];
+  }
+  etiquetaFoto(categoria:string):string {
+    const etiquetas:Record<string,string>={
+      PLAZA:'Situación de la plaza',INGRESO:'Ingreso',INCIDENTE:'Incidente',COLA:'Tamaño de cola'
+    };
+    return etiquetas[categoria]??categoria;
+  }
+  cerrarModal():void {
+    this.solicitudDetalle++;
+    this.modalAbierto=false;this.detalleCompleto=null;this.detalleError='';
+    this.cdr.markForCheck();
+  }
+  @HostListener('document:keydown.escape')
+  onEscape():void {if(this.modalAbierto)this.cerrarModal();}
 }

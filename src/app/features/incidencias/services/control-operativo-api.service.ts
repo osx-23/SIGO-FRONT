@@ -9,6 +9,7 @@ export type EstadoControlOperativo = 'REGISTRADO' | 'EN_OBSERVACION' | 'ATENDIDO
 export interface ControlOperativoInput {
   plazaId: number;
   turnoId: number;
+  responsableId: number;
   viaId: number | null;
   tipo: TipoControlOperativo;
   fecha: string;
@@ -27,9 +28,18 @@ export interface ControlOperativoReporte extends ControlOperativoInput {
   viaNumero: number | null;
   registradoPorId: number;
   registradoPor: string;
+  responsableNombre: string;
   creadoEn: string;
   actualizadoEn: string;
 }
+export interface ControlOperativoResponsable {
+  id: number;
+  codigo: number;
+  nombreCompleto: string;
+  rol: 'CONTROLADOR' | 'SUPERVISOR';
+  plazaCodigo: string | null;
+}
+
 export interface ControlOperativoVia {
   id: number;
   numero: number;
@@ -58,6 +68,10 @@ export class ControlOperativoApiService {
     if (filtros.inicio) params = params.set('inicio', filtros.inicio);
     if (filtros.fin) params = params.set('fin', filtros.fin);
     return this.http.get<ControlOperativoReporte[]>(this.base, { params });
+  }
+
+  responsables(): Observable<ControlOperativoResponsable[]> {
+    return this.http.get<ControlOperativoResponsable[]>(this.base + '/responsables');
   }
 
   crear(payload: ControlOperativoInput): Observable<ControlOperativoReporte> {

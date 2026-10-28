@@ -121,6 +121,10 @@ export class ControlOperativoApiService {
   actualizar(id: number, payload: ControlOperativoInput): Observable<ControlOperativoReporte> {
     return this.http.put<ControlOperativoReporte>(this.base + '/' + id, payload);
   }
+  obtener(id: number): Observable<ControlOperativoReporte> {
+    return this.http.get<ControlOperativoReporte>(this.base + '/' + id);
+  }
+
   evidencias(id: number): Observable<ControlOperativoEvidencia[]> {
     return this.http.get<ControlOperativoEvidencia[]>(this.base + '/' + id + '/evidencias');
   }

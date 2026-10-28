@@ -112,13 +112,30 @@
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p class="text-sm font-semibold text-slate-700">Evidencia</p>
-              <p class="text-xs text-slate-400">Opcional · máximo 5 fotografías.</p>
+              <p class="text-xs text-slate-500">Opcional · máximo 5 fotografías. Selecciona el recuadro para pegar una imagen.</p>
             </div>
             <label class="cursor-pointer rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700">
               Agregar foto
               <input type="file" class="hidden" accept="image/jpeg,image/png,image/webp" (change)="seleccionarEvidencia($event)">
             </label>
           </div>
+
+          <button #zonaEvidencia type="button"
+            class="mt-4 flex min-h-36 w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-5 text-center transition-colors"
+            [ngClass]="evidenciaSeleccionada
+              ? 'border-blue-600 bg-blue-50 ring-4 ring-blue-100'
+              : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50/50'"
+            [attr.aria-pressed]="evidenciaSeleccionada"
+            (click)="activarZonaEvidencia(zonaEvidencia)"
+            (blur)="evidenciaSeleccionada = false"
+            (paste)="pegarEvidencia($event)"
+            (dragover)="permitirArrastreEvidencia($event)"
+            (drop)="soltarEvidencia($event)"
+            aria-label="Seleccionar zona de evidencias para pegar una fotografía">
+            <span class="grid h-10 w-10 place-items-center rounded-xl bg-blue-100 text-2xl font-semibold text-blue-600" aria-hidden="true">+</span>
+            <strong class="text-sm text-blue-800">{{ evidenciaSeleccionada ? 'Zona seleccionada · lista para pegar' : 'Haz clic para seleccionar la zona' }}</strong>
+            <span class="text-xs text-slate-600">{{ evidenciaSeleccionada ? 'Presiona ⌘ + V en Mac o Ctrl + V en Windows' : 'Después pega con ⌘/Ctrl + V o arrastra una imagen aquí' }}</span>
+          </button>
 
           @if (fotos.length) {
             <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">

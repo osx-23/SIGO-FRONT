@@ -78,7 +78,7 @@ interface EjeCola {
             <svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16H5zM9 5v6M13 5v4M17 5v6M9 16v3M13 14v5M17 16v3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
           </span>
           <span class="dash-kpi-label">Promedio de máximos</span>
-          <strong>{{resumen?.promedioMaximos ?? 0 | number:'1.0-0'}}<span> m</span></strong>
+          <strong>{{(resumen?.promedioMaximos ?? 0) | number:'1.0-0'}}<span> m</span></strong>
           <small>Promedio de máximos diarios con datos</small>
         </article>
       </div>

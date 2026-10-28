@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -315,26 +315,108 @@ interface FotoControlOperativo {
                 <td>{{r.plazaCodigo}} <span *ngIf="r.viaNumero">/ {{r.viaNumero}}</span></td>
                 <td>{{r.responsableNombre || r.registradoPor}}</td>
                 <td>{{r.situacion||'—'}}</td><td>{{r.colaMetros==null?'—':r.colaMetros+' m'}}</td>
-                <td><button type="button" class="co-link" (click)="editar(r)">Editar</button>
-                  <button type="button" class="co-link" (click)="verEvidencias(r)">Fotos</button></td>
+                <td>
+                  <div class="co-table-actions">
+                    <button type="button" class="co-action-button co-action-edit" (click)="editar(r)"
+                      [attr.aria-label]="'Editar reporte '+r.id">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m16 4 4 4M4 20l4.5-.8L20 7.7a2.1 2.1 0 0 0-3-3L5.5 16.2 4 20Z"/>
+                      </svg>
+                      Editar
+                    </button>
+                    <button type="button" class="co-action-button co-action-view" (click)="verRegistro(r)"
+                      [attr.aria-label]="'Ver reporte '+r.id+' y evidencias'">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M2.5 12c2.4-4.3 5.5-6.5 9.5-6.5s7.1 2.2 9.5 6.5c-2.4 4.3-5.5 6.5-9.5 6.5S4.9 16.3 2.5 12Z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                      Ver
+                    </button>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
-        </div>
-        <div class="co-evidence" *ngIf="reporteEvidencias">
-          <h3>Evidencias del reporte #{{reporteEvidencias.id}}</h3>
-          <p *ngIf="!evidencias.length">No hay fotografías asociadas.</p>
-          <div class="co-photos">
-            <a *ngFor="let e of evidencias" [href]="e.urlArchivo" target="_blank" rel="noopener noreferrer">
-              <img [src]="e.urlArchivo" alt="Evidencia de control operativo">
-              <small>{{e.categoria}}</small>
-            </a>
-          </div>
         </div>
       </section>
 
       <app-control-operativo-dashboard *ngIf="vista==='dashboard'" [plazas]="plazas"></app-control-operativo-dashboard>
     </main>
+
+    <div *ngIf="modalAbierto" class="co-modal-overlay" (click)="cerrarModal()">
+      <section class="co-modal" role="dialog" aria-modal="true" aria-labelledby="co-modal-titulo"
+        (click)="$event.stopPropagation()">
+        <header class="co-modal-head">
+          <div>
+            <p class="co-eyebrow">SIGO · CONTROL OPERATIVO</p>
+            <h2 id="co-modal-titulo">Detalle del reporte #{{registroModal?.id || modalRegistroId}}</h2>
+            <p>Información registrada y fotografías de evidencia.</p>
+          </div>
+          <button type="button" class="co-modal-close" (click)="cerrarModal()" aria-label="Cerrar detalle">×</button>
+        </header>
+        <div class="co-modal-body">
+          <p *ngIf="modalCargando" class="co-modal-loading" role="status">Cargando reporte y evidencias…</p>
+          <p *ngIf="modalError" class="co-error" role="alert">{{modalError}}</p>
+          <ng-container *ngIf="registroModal as r">
+            <div class="co-modal-summary">
+              <div>
+                <span>Fecha y hora</span>
+                <strong>{{r.fecha}} · {{r.hora}}</strong>
+              </div>
+              <div>
+                <span>Plaza y vía</span>
+                <strong>{{r.plazaCodigo}} · {{r.viaNumero ? 'Vía '+r.viaNumero : 'Plaza general'}}</strong>
+              </div>
+              <div>
+                <span>Turno</span>
+                <strong>Turno {{r.turnoCodigo}}</strong>
+              </div>
+              <div class="co-modal-cola">
+                <span>Tamaño de cola</span>
+                <strong>{{r.colaMetros === null ? 'No registrado' : r.colaMetros+' metros'}}</strong>
+              </div>
+            </div>
+
+            <h3 class="co-modal-subtitle">Detalles del control</h3>
+            <div class="co-modal-fields">
+              <div><span>Responsable</span><strong>{{r.responsableNombre || r.registradoPor || '—'}}</strong></div>
+              <div><span>Registrado por</span><strong>{{r.registradoPor || '—'}}</strong></div>
+              <div><span>Situación de la plaza</span><strong>{{r.situacion || 'No especificada'}}</strong></div>
+              <div><span>Ingreso</span><strong>{{r.ingreso || 'No especificado'}}</strong></div>
+              <div><span>Incidente</span><strong>{{r.incidente || 'No especificado'}}</strong></div>
+            </div>
+            <section class="co-modal-obs">
+              <h3>Observaciones</h3>
+              <p>{{r.descripcion || 'Sin observaciones adicionales.'}}</p>
+            </section>
+
+            <section class="co-modal-evidence">
+              <div class="co-modal-evidence-head">
+                <h3>Fotografías de evidencia</h3>
+                <span>{{evidenciasModal.length}} {{evidenciasModal.length===1 ? 'imagen' : 'imágenes'}}</span>
+              </div>
+              <div class="co-modal-gallery" *ngIf="evidenciasModal.length; else sinEvidencias">
+                <a *ngFor="let foto of evidenciasModal" class="co-modal-photo"
+                  [href]="foto.urlArchivo" target="_blank" rel="noopener noreferrer"
+                  [attr.aria-label]="'Abrir fotografía de '+nombreCategoria(foto.categoria)">
+                  <img [src]="foto.urlArchivo" loading="lazy"
+                    [alt]="'Evidencia de '+nombreCategoria(foto.categoria)+' del reporte '+r.id">
+                  <span>{{nombreCategoria(foto.categoria)}}</span>
+                </a>
+              </div>
+              <ng-template #sinEvidencias>
+                <p class="co-modal-empty">Este reporte no tiene fotografías adjuntas.</p>
+              </ng-template>
+            </section>
+          </ng-container>
+        </div>
+        <footer class="co-modal-footer">
+          <button type="button" (click)="cerrarModal()">Cerrar</button>
+        </footer>
+      </section>
+    </div>
   `,
   styles: [`
     :host { display:block; --co-navy:#0b2342; --co-blue:#2563eb; --co-muted:#64748b; --co-line:#dfe5ee; --co-panel:#fff; }
@@ -400,11 +482,52 @@ interface FotoControlOperativo {
     .co table{border-collapse:collapse;width:100%;font-size:13px;min-width:740px}
     .co th,.co td{text-align:left;border-bottom:1px solid #e2e8f0;padding:13px 8px}
     .co th{color:#475569;background:#f8fafc}
-    .co-link{background:transparent!important;color:#1d4ed8!important;padding:4px 7px!important}
-    .co-photos{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
-    .co-photos>a{display:flex;flex-direction:column;align-items:start;gap:5px}
-    .co-photos img{width:150px;height:105px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0}
-    .co-evidence{border-top:1px solid #e2e8f0;margin-top:20px;padding-top:10px}
+    .co-table-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+    .co .co-action-button{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;border-radius:9px;border:1px solid #d4e2f5;background:#fff;color:#1d4ed8;font-weight:750;font-size:12px}
+    .co .co-action-button:hover{background:#eff6ff;border-color:#93c5fd}
+    .co .co-action-edit{background:#eff6ff}
+    .co .co-action-view{background:#2563eb;color:#fff;border-color:#2563eb}
+    .co .co-action-view:hover{background:#1d4ed8;color:#fff}
+    .co-action-button svg{height:15px;width:15px}
+    .co-modal-overlay{position:fixed;inset:0;z-index:1300;background:rgba(15,23,42,.70);display:flex;align-items:center;justify-content:center;padding:18px}
+    .co-modal{width:min(960px,100%);max-height:92dvh;overflow:hidden;display:flex;flex-direction:column;background:#fff;border-radius:20px;box-shadow:0 22px 65px rgba(15,23,42,.25);color:#0b2342}
+    .co-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:21px 24px;border-bottom:1px solid #e2e8f0}
+    .co-modal-head h2{margin:6px 0;color:#0b2342;font-size:21px;letter-spacing:-.025em}
+    .co-modal-head p:last-child{font-size:12px;color:#64748b;margin:5px 0 0}
+    .co-modal-close{width:38px;height:38px;flex:0 0 38px;border:0;border-radius:10px;background:#eaf0f8;color:#475569;font-size:25px;cursor:pointer}
+    .co-modal-body{overflow-y:auto;padding:22px 24px;flex:1;background:#f8fafc}
+    .co-modal-loading{font-size:13px;color:#475569}
+    .co-modal-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .co-modal-summary>div{display:flex;flex-direction:column;gap:9px;padding:15px;background:#fff;border:1px solid #e1e8f2;border-radius:12px;min-width:0}
+    .co-modal-summary span,.co-modal-fields span{color:#64748b;font-size:11px;font-weight:650}
+    .co-modal-summary strong,.co-modal-fields strong{color:#17243b;font-size:13px;overflow-wrap:anywhere}
+    .co-modal-summary .co-modal-cola{background:#ecfdf5;border-color:#c5eee0}
+    .co-modal-summary .co-modal-cola strong{color:#0f8274;font-size:18px}
+    .co-modal-subtitle,.co-modal-obs h3,.co-modal-evidence h3{font-size:15px;color:#0b2342;margin:20px 0 13px;font-weight:800}
+    .co-modal-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .co-modal-fields>div{display:flex;flex-direction:column;gap:7px;background:#fff;border:1px solid #e1e8f2;border-radius:10px;padding:13px;min-width:0}
+    .co-modal-obs{background:#fff;border:1px solid #e1e8f2;border-radius:11px;padding:15px;margin-top:20px}
+    .co-modal-obs h3{margin:0 0 9px}
+    .co-modal-obs p{font-size:13px;color:#334155;line-height:1.6;white-space:pre-wrap;margin:0}
+    .co-modal-evidence{margin-top:19px}
+    .co-modal-evidence-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .co-modal-evidence-head h3{margin:0 0 12px}
+    .co-modal-evidence-head span{font-size:11px;color:#64748b}
+    .co-modal-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:13px}
+    .co-modal-photo{display:flex;flex-direction:column;gap:8px;padding:8px;background:#fff;border:1px solid #e1e8f2;border-radius:11px;text-decoration:none;color:#1d4ed8;font-size:12px;font-weight:700}
+    .co-modal-photo:hover{border-color:#2563eb}
+    .co-modal-photo img{width:100%;height:138px;object-fit:cover;border-radius:7px}
+    .co-modal-empty{padding:20px;color:#64748b;font-size:13px;border:1px dashed #cbd5e1;border-radius:10px;text-align:center}
+    .co-modal-footer{padding:14px 24px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;background:#fff}
+    .co-modal-footer button{background:#2563eb;color:#fff;border:0;border-radius:10px;padding:10px 22px;font-size:13px;font-weight:750;cursor:pointer}
+    @media(max-width:690px){
+      .co-modal-overlay{padding:7px}
+      .co-modal{max-height:96dvh;border-radius:14px}
+      .co-modal-head,.co-modal-body,.co-modal-footer{padding:15px}
+      .co-modal-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .co-modal-fields{grid-template-columns:1fr}
+      .co-modal-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
     @media(max-width:850px){.co-general-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:680px){
       .co{padding:12px 10px 50px}
@@ -437,8 +560,13 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   responsables: ControlOperativoResponsable[] = [];
   vias: ViaIncidencia[] = [];
   reportes: ControlOperativoReporte[] = [];
-  evidencias: ControlOperativoEvidencia[] = [];
-  reporteEvidencias: ControlOperativoReporte | null = null;
+  modalAbierto = false;
+  modalCargando = false;
+  modalError = '';
+  modalRegistroId: number | null = null;
+  registroModal: ControlOperativoReporte | null = null;
+  evidenciasModal: ControlOperativoEvidencia[] = [];
+  private solicitudModal = 0;
   cargando = false;
   cargandoTurnos = true;
   cargandoResponsables = true;
@@ -711,11 +839,54 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     await this.cambioPlaza();this.form.viaId=registro.viaId;
     this.cdr.markForCheck();
   }
-  async verEvidencias(registro:ControlOperativoReporte):Promise<void> {
-    this.reporteEvidencias=registro;this.evidencias=[];this.error='';
-    try{this.evidencias=await firstValueFrom(this.api.evidencias(registro.id));}
-    catch(e){this.error=this.errorHttp(e);}
-    finally{this.cdr.markForCheck();}
+  async verRegistro(registro:ControlOperativoReporte):Promise<void> {
+    const solicitud = ++this.solicitudModal;
+    this.modalAbierto = true;
+    this.modalCargando = true;
+    this.modalError = '';
+    this.modalRegistroId = registro.id;
+    this.registroModal = null;
+    this.evidenciasModal = [];
+    this.cdr.markForCheck();
+    try {
+      const [detalle,fotos] = await Promise.all([
+        firstValueFrom(this.api.obtener(registro.id)),
+        firstValueFrom(this.api.evidencias(registro.id))
+      ]);
+      // No mostrar resultados antiguos si se cerró o abrió otro reporte.
+      if (solicitud !== this.solicitudModal || !this.modalAbierto) return;
+      this.registroModal = detalle;
+      this.evidenciasModal = fotos;
+    } catch(e:unknown) {
+      if (solicitud !== this.solicitudModal || !this.modalAbierto) return;
+      this.modalError = this.errorHttp(e);
+    } finally {
+      if (solicitud === this.solicitudModal) {
+        this.modalCargando = false;
+        this.cdr.markForCheck();
+      }
+    }
+  }
+  nombreCategoria(categoria:string):string {
+    const titulos:Record<string,string> = {
+      PLAZA:'Situación de la plaza',INGRESO:'Ingreso',
+      INCIDENTE:'Incidente',COLA:'Tamaño de cola'
+    };
+    return titulos[categoria] ?? categoria;
+  }
+  cerrarModal():void {
+    ++this.solicitudModal;
+    this.modalAbierto = false;
+    this.registroModal = null;
+    this.evidenciasModal = [];
+    this.modalRegistroId = null;
+    this.modalError = '';
+    this.modalCargando = false;
+    this.cdr.markForCheck();
+  }
+  @HostListener('document:keydown.escape')
+  cerrarConEscape():void {
+    if (this.modalAbierto) this.cerrarModal();
   }
   private errorHttp(e:unknown):string {
     const err=e as {error?:{message?:string;detail?:string};message?:string};

@@ -93,12 +93,12 @@ interface FotoControlOperativo {
             <div>
               <p class="co-section-kicker">DATOS GENERALES</p>
               <h2>{{editandoId ? 'Editar control operativo #' + editandoId : 'Nuevo control operativo'}}</h2>
-              <p>La plaza y el responsable se precargan desde la sesión. El turno se sugiere según la hora, pero puedes modificarlo.</p>
+              <p>La plaza y el responsable se precargan desde tu sesión. Puedes elegir otra plaza para brindar apoyo; las vías se actualizarán según la selección.</p>
             </div>
           </div>
           <div class="co-grid co-general-grid">
             <label>Plaza
-              <select name="plaza" [(ngModel)]="form.plazaId" (ngModelChange)="cambioPlaza()" [disabled]="!esSupervisor" required>
+              <select name="plaza" [(ngModel)]="form.plazaId" (ngModelChange)="cambioPlaza()" required>
                 <option [ngValue]="0">Selecciona una plaza</option>
                 <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
               </select>
@@ -296,9 +296,9 @@ interface FotoControlOperativo {
         <div class="co-filters">
           <label>Desde <input type="date" [(ngModel)]="filtros.inicio"></label>
           <label>Hasta <input type="date" [(ngModel)]="filtros.fin"></label>
-           <label *ngIf="esSupervisor">Plaza
+           <label>Plaza
             <select [(ngModel)]="filtros.plazaId">
-              <option [ngValue]="null">Todas</option>
+              <option [ngValue]="null">Todas las plazas</option>
               <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
             </select>
           </label>
@@ -612,11 +612,9 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
         nombreCompleto: usuario.nombre
       }];
     }
-    if (!this.esSupervisor && usuario?.plazaId) {
-      this.filtros.plazaId = usuario.plazaId;
-    } else {
-      void this.cargarPlazasIniciales();
-    }
+    // Consultas de historial por cualquier plaza para supervisor y controlador.
+    // El formulario de registro sigue usando por defecto la plaza de sesión.
+    void this.cargarPlazasIniciales();
 
     // Cada catálogo se carga de forma independiente, sin bloquear la interfaz.
     void this.cargarTurnosIniciales();
@@ -730,7 +728,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     try {
       const datos = await firstValueFrom(this.api.listar({
         inicio: this.filtros.inicio, fin: this.filtros.fin,
-        plazaId: this.esSupervisor ? this.filtros.plazaId : this.auth.usuario()?.plazaId
+        plazaId: this.filtros.plazaId
       }));
       // No sobrescribir un filtro nuevo con la respuesta de una petición anterior.
       if (solicitud !== this.historialSolicitud) return;

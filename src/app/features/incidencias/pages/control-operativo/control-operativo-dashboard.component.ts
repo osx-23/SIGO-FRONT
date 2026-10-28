@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, HostListener, Input, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '../../../../core/auth/auth.service';
 import { Plaza } from '../../../asistencia/models/asistencia.models';
 import {
   ControlOperativoApiService, ControlOperativoDashboard,
@@ -49,7 +48,7 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
         </div>
         <div class="filtros">
           <label>Plaza
-            <select [(ngModel)]="plazaId" (ngModelChange)="cargar()" [disabled]="!esSupervisor">
+            <select [(ngModel)]="plazaId" (ngModelChange)="cargar()">
               <option [ngValue]="null">Todas las plazas</option>
               <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
             </select>
@@ -339,7 +338,6 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
 export class ControlOperativoDashboardComponent implements OnInit {
   @Input() plazas: Plaza[] = [];
   private readonly api = inject(ControlOperativoApiService);
-  private readonly auth = inject(AuthService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   readonly periodos: {valor: Periodo; texto:string}[] = [
@@ -370,7 +368,6 @@ export class ControlOperativoDashboardComponent implements OnInit {
   private solicitudDetalle = 0;
   private solicitudRegistro = 0;
 
-  get esSupervisor(): boolean {return this.auth.tieneRol('SUPERVISOR');}
   get hayPuntos():boolean {return this.series.some(s=>s.puntos.length>0);}
   get tituloPeriodo():string {
     const {inicio,fin}=this.rango();
@@ -385,7 +382,7 @@ export class ControlOperativoDashboardComponent implements OnInit {
   }
 
   ngOnInit():void {
-    if(!this.esSupervisor) this.plazaId=this.auth.usuario()?.plazaId ?? null;
+    // Historial y dashboard permiten consultar todas las plazas a ambos roles.
     void this.cargar();
   }
   private fechaLima():string {
@@ -463,7 +460,7 @@ export class ControlOperativoDashboardComponent implements OnInit {
     try {
       const r=await firstValueFrom(this.api.dashboard({
         inicio:rango.inicio,fin:rango.fin,
-        plazaId:this.esSupervisor?this.plazaId:this.auth.usuario()?.plazaId
+        plazaId:this.plazaId
       }));
       if(id!==this.solicitud)return;
       this.resumen=r;

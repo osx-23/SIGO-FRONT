@@ -184,7 +184,6 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
             <div><small>Plaza</small><strong>{{reporteSeleccionado?.plazaCodigo || p.plaza}}</strong></div>
             <div><small>Turno</small><strong>Turno {{reporteSeleccionado?.turnoCodigo || p.turno}}</strong></div>
             <div><small>Hora</small><strong>{{reporteSeleccionado?.hora || p.hora}}</strong></div>
-            <div><small>Responsable</small><strong>{{reporteSeleccionado?.responsableNombre || (seleccionandoRegistro ? 'Cargando…' : 'No indicado')}}</strong></div>
             <div><small>Situación de la plaza</small><strong>{{reporteSeleccionado?.situacion || p.situacion || 'Sin información'}}</strong></div>
             <div><small>Ingreso</small><strong>{{reporteSeleccionado?.ingreso || p.ingreso || 'Sin información'}}</strong></div>
             <div><small>Incidente</small><strong>{{reporteSeleccionado?.incidente || p.incidente || 'Sin incidente indicado'}}</strong></div>

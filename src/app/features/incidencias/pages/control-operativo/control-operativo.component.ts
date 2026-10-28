@@ -479,36 +479,75 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       .sort((a,b)=>b.total-a.total);
   }
 
-  async ngOnInit(): Promise<void> {
-    this.cargando=true;
-    try {
-      const [plazas,turnos,responsables]=await Promise.all([
-        firstValueFrom(this.catalogos.getPlazas()),
-        firstValueFrom(this.catalogos.getTurnos()),
-        firstValueFrom(this.api.responsables())
-      ]);
-      this.plazas=plazas.filter(p=>p.activo);
-      this.plazaGestion=this.plazas[0]?.id ?? 0;
-      this.turnos=turnos;
-      this.responsables=responsables;
-      const usuario=this.auth.usuario();
-      this.form.plazaId=usuario?.plazaId ?? 0;
-      this.form.responsableId=usuario?.trabajadorId ?? usuario?.id ?? 0;
-      if(!this.esSupervisor && usuario?.plazaId) {
-        this.filtros.plazaId=usuario.plazaId;
-      }
-      this.sincronizarTurno(this.form.hora);
-      await this.cambioPlaza();
-      await this.cargarHistorial();
-    } catch (e) { this.error=this.errorHttp(e); }
-    finally { this.cargando=false; }
+  ngOnInit(): void {
+    // Mostrar el formulario inmediatamente: evitar esperar tres catálogos,
+    // las vías y hasta 500 filas del historial antes de permitir registrar.
+    const usuario = this.auth.usuario();
+    this.form.plazaId = usuario?.plazaId ?? 0;
+    this.form.responsableId = usuario?.trabajadorId ?? usuario?.id ?? 0;
+    this.plazaGestion = this.form.plazaId;
+
+    if (!this.esSupervisor && usuario?.plazaId) {
+      // El controlador ya tiene una plaza validada en la sesión SIGO.
+      this.plazas = [{
+        id: usuario.plazaId,
+        codigo: usuario.plaza || 'Plaza asignada',
+        descripcion: null,
+        activo: true
+      }];
+      this.filtros.plazaId = usuario.plazaId;
+    } else {
+      void this.cargarPlazasIniciales();
+    }
+
+    // Cada catálogo se carga de forma independiente, sin bloquear la interfaz.
+    void this.cargarTurnosIniciales();
+    void this.cargarResponsablesIniciales();
+    if (this.form.plazaId) void this.cambioPlaza();
+    // El historial y dashboard se consultan únicamente cuando se abren.
   }
+
+  private async cargarPlazasIniciales(): Promise<void> {
+    try {
+      const plazas = await firstValueFrom(this.catalogos.getPlazas());
+      this.plazas = (plazas || []).filter(p => p.activo);
+      if (!this.plazaGestion) this.plazaGestion = this.form.plazaId || this.plazas[0]?.id || 0;
+    } catch (e) {
+      this.error = 'No se pudo cargar el catálogo de plazas. ' + this.errorHttp(e);
+    }
+  }
+
+  private async cargarTurnosIniciales(): Promise<void> {
+    try {
+      this.turnos = await firstValueFrom(this.catalogos.getTurnos());
+      // Aplicar el turno sugerido una sola vez. El usuario puede editarlo luego.
+      if (!this.form.turnoId) this.sincronizarTurno(this.form.hora);
+    } catch (e) {
+      this.error = 'No se pudo cargar el catálogo de turnos. ' + this.errorHttp(e);
+    } finally {
+      this.cargandoTurnos = false;
+    }
+  }
+
+  private async cargarResponsablesIniciales(): Promise<void> {
+    try {
+      this.responsables = await firstValueFrom(this.api.responsables());
+    } catch (e) {
+      this.error = 'No se pudo cargar la lista de responsables. ' + this.errorHttp(e);
+    } finally {
+      this.cargandoResponsables = false;
+    }
+  }
+
   ngOnDestroy(): void { this.fotos.forEach(f=>URL.revokeObjectURL(f.url)); }
 
   cambiarVista(vista:'nuevo'|'historial'|'dashboard'|'vias'):void {
     this.vista=vista;this.error='';this.mensaje='';
-    if (vista==='vias') void this.cargarViasGestion();
-    else if (vista!=='nuevo') void this.cargarHistorial();
+    if (vista==='vias') {
+      void this.cargarViasGestion();
+    } else if ((vista==='historial'||vista==='dashboard') && !this.historialCargado && !this.cargando) {
+      void this.cargarHistorial();
+    }
   }
   private fechaHoy():string {
     const partes = new Intl.DateTimeFormat('en-US',{
@@ -551,15 +590,24 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       if(this.form.plazaId===plazaId)this.vias=vias.filter(v=>v.activa!==false);
     } catch(e) { this.error=this.errorHttp(e); }
   }
-  async cargarHistorial():Promise<void> {
-    this.cargando=true;this.error='';
-    try{
-      this.reportes=await firstValueFrom(this.api.listar({
-        inicio:this.filtros.inicio,fin:this.filtros.fin,
-        plazaId:this.esSupervisor?this.filtros.plazaId:this.auth.usuario()?.plazaId
+  async cargarHistorial(): Promise<void> {
+    const solicitud = ++this.historialSolicitud;
+    this.cargando = true;
+    this.error = '';
+    try {
+      const datos = await firstValueFrom(this.api.listar({
+        inicio: this.filtros.inicio, fin: this.filtros.fin,
+        plazaId: this.esSupervisor ? this.filtros.plazaId : this.auth.usuario()?.plazaId
       }));
-    }catch(e){this.error=this.errorHttp(e);}
-    finally{this.cargando=false;}
+      // No sobrescribir un filtro nuevo con la respuesta de una petición anterior.
+      if (solicitud !== this.historialSolicitud) return;
+      this.reportes = datos;
+      this.historialCargado = true;
+    } catch (e) {
+      if (solicitud === this.historialSolicitud) this.error = this.errorHttp(e);
+    } finally {
+      if (solicitud === this.historialSolicitud) this.cargando = false;
+    }
   }
   fotoCategoria(categoria: CategoriaEvidencia): FotoControlOperativo | undefined {
     return this.fotos.find(f => f.categoria === categoria);

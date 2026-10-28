@@ -35,6 +35,20 @@ export interface ControlOperativoResponsable {
   nombreCompleto: string;
 }
 
+export interface ControlOperativoDiaDashboard {
+  fecha: string;
+  colaMaxima: number | null;
+  incidencias: number;
+  mediciones: number;
+}
+
+export interface ControlOperativoDashboard {
+  incidenciasRegistradas: number;
+  colaMaxima: number;
+  promedioMaximos: number;
+  dias: ControlOperativoDiaDashboard[];
+}
+
 export interface ControlOperativoEvidencia {
   id: number;
   reporteId: number;
@@ -56,6 +70,15 @@ export class ControlOperativoApiService {
     if (filtros.inicio) params = params.set('inicio', filtros.inicio);
     if (filtros.fin) params = params.set('fin', filtros.fin);
     return this.http.get<ControlOperativoReporte[]>(this.base, { params });
+  }
+
+  dashboard(filtros: { inicio: string; fin: string; plazaId?: number | null })
+      : Observable<ControlOperativoDashboard> {
+    let params = new HttpParams()
+      .set('inicio', filtros.inicio)
+      .set('fin', filtros.fin);
+    if (filtros.plazaId != null) params = params.set('plazaId', filtros.plazaId);
+    return this.http.get<ControlOperativoDashboard>(this.base + '/dashboard', { params });
   }
 
   responsables(): Observable<ControlOperativoResponsable[]> {

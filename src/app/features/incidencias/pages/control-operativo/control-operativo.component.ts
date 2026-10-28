@@ -849,14 +849,23 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     this.evidenciasModal = [];
     this.cdr.markForCheck();
     try {
-      const [detalle,fotos] = await Promise.all([
+      const [detalle,fotos] = await Promise.allSettled([
         firstValueFrom(this.api.obtener(registro.id)),
         firstValueFrom(this.api.evidencias(registro.id))
       ]);
       // No mostrar resultados antiguos si se cerró o abrió otro reporte.
       if (solicitud !== this.solicitudModal || !this.modalAbierto) return;
-      this.registroModal = detalle;
-      this.evidenciasModal = fotos;
+      if (detalle.status === 'fulfilled') {
+        this.registroModal = detalle.value;
+      } else {
+        this.modalError = 'No se pudieron cargar los datos del reporte. ' + this.errorHttp(detalle.reason);
+      }
+      if (fotos.status === 'fulfilled') {
+        this.evidenciasModal = fotos.value;
+      } else {
+        this.modalError += (this.modalError ? ' ' : '') +
+          'No se pudieron cargar las fotografías. ' + this.errorHttp(fotos.reason);
+      }
     } catch(e:unknown) {
       if (solicitud !== this.solicitudModal || !this.modalAbierto) return;
       this.modalError = this.errorHttp(e);

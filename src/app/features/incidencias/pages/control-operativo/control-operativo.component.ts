@@ -308,10 +308,11 @@ interface FotoControlOperativo {
         <p *ngIf="!cargando && !reportes.length">No se encontraron reportes en el período.</p>
         <div class="co-table-wrap" *ngIf="reportes.length">
           <table>
-            <thead><tr><th>Fecha / hora</th><th>Plaza / vía</th><th>Responsable</th><th>Situación</th><th>Cola</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Hora</th><th>Plaza / vía</th><th>Responsable</th><th>Situación</th><th>Cola</th><th>Acciones</th></tr></thead>
             <tbody>
               <tr *ngFor="let r of reportes">
-                <td>{{r.fecha}} {{r.hora}}</td>
+                <td class="co-fecha">{{r.fecha}}</td>
+                <td class="co-hora">{{r.hora}}</td>
                 <td>{{r.plazaCodigo}} <span *ngIf="r.viaNumero">/ {{r.viaNumero}}</span></td>
                 <td>{{r.responsableNombre || r.registradoPor}}</td>
                 <td>{{r.situacion||'—'}}</td><td>{{r.colaMetros==null?'—':r.colaMetros+' m'}}</td>
@@ -482,6 +483,7 @@ interface FotoControlOperativo {
     .co table{border-collapse:collapse;width:100%;font-size:13px;min-width:740px}
     .co th,.co td{text-align:left;border-bottom:1px solid #e2e8f0;padding:13px 8px}
     .co th{color:#475569;background:#f8fafc}
+    .co .co-fecha,.co .co-hora{white-space:nowrap;font-variant-numeric:tabular-nums}
     .co-table-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
     .co .co-action-button{display:inline-flex;align-items:center;gap:6px;padding:8px 11px;border-radius:9px;border:1px solid #d4e2f5;background:#fff;color:#1d4ed8;font-weight:750;font-size:12px}
     .co .co-action-button:hover{background:#eff6ff;border-color:#93c5fd}

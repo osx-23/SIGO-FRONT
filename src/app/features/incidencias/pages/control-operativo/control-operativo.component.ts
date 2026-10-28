@@ -19,50 +19,58 @@ import {
   template: `
     <main class="co">
       <header class="co-header">
+        <span class="co-heading-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3.5 3.5 20h17L12 3.5Z"></path><path d="M12 9v5m0 3h.01"></path>
+          </svg>
+        </span>
         <div>
-          <p class="co-eyebrow">SIGO / Incidencias</p>
-          <h1>Control Operativo de Plazas</h1>
-          <p>Registra las condiciones del tránsito, los ingresos, incidentes y tamaño de cola sin modificar las incidencias existentes.</p>
+          <p class="co-eyebrow">SIGO · INCIDENCIAS</p>
+          <h1>Control operativo de plazas</h1>
+          <p>Registra la condición de la plaza, presencia de motorizados, incidentes y tamaño de cola con evidencias fotográficas.</p>
         </div>
       </header>
 
-      <div class="co-tabs" role="tablist" aria-label="Control operativo">
+      <nav class="co-tabs" aria-label="Secciones del control operativo">
         <button type="button" [class.selected]="vista==='nuevo'" (click)="cambiarVista('nuevo')">Nuevo reporte</button>
         <button type="button" [class.selected]="vista==='historial'" (click)="cambiarVista('historial')">Historial</button>
         <button type="button" [class.selected]="vista==='dashboard'" (click)="cambiarVista('dashboard')">Dashboard</button>
         <button *ngIf="esSupervisor" type="button" [class.selected]="vista==='vias'" (click)="cambiarVista('vias')">Vías por plaza</button>
-      </div>
+      </nav>
       <p class="co-error" role="alert" *ngIf="error">{{error}}</p>
       <p class="co-success" role="status" *ngIf="mensaje">{{mensaje}}</p>
 
-      <section class="co-panel" *ngIf="vista==='nuevo'">
-        <div class="co-panel-head">
-          <div><h2>{{editandoId ? 'Editar reporte operativo' : 'Nuevo registro operativo'}}</h2>
-          <p>Datos para el seguimiento de la plaza y de la vía seleccionada.</p></div>
-        </div>
-        <form (ngSubmit)="guardar()" #coForm="ngForm">
-          <div class="co-grid">
-            <label>Tipo de registro
-              <select name="tipo" [(ngModel)]="form.tipo" required>
-                <option value="REPORTE">Reporte operativo</option>
-                <option value="MEDICION">Medición de cola</option>
-              </select>
-            </label>
+      <form *ngIf="vista==='nuevo'" (ngSubmit)="guardar()" #coForm="ngForm" class="co-form">
+        <section class="co-panel co-general">
+          <div class="co-panel-head">
+            <div>
+              <p class="co-section-kicker">DATOS GENERALES</p>
+              <h2>{{editandoId ? 'Editar control operativo #' + editandoId : 'Nuevo control operativo'}}</h2>
+              <p>Selecciona la plaza, el turno y la fecha del registro.</p>
+            </div>
+          </div>
+          <div class="co-grid co-general-grid">
             <label>Plaza
               <select name="plaza" [(ngModel)]="form.plazaId" (ngModelChange)="cambioPlaza()" [disabled]="!esSupervisor" required>
-                <option [ngValue]="0">Seleccionar plaza</option>
+                <option [ngValue]="0">Selecciona una plaza</option>
                 <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
               </select>
             </label>
             <label>Turno
               <select name="turno" [(ngModel)]="form.turnoId" required>
-                <option [ngValue]="0">Seleccionar turno</option>
-                <option *ngFor="let t of turnos" [ngValue]="t.id">{{t.codigo}} - {{t.nombre}}</option>
+                <option [ngValue]="0">Selecciona un turno</option>
+                <option *ngFor="let t of turnos" [ngValue]="t.id">Turno {{t.codigo}}{{t.nombre ? ' · ' + t.nombre : ''}}</option>
               </select>
             </label>
-            <label>Vía (opcional)
+            <label>Tipo
+              <select name="tipo" [(ngModel)]="form.tipo" required>
+                <option value="REPORTE">Reporte operativo</option>
+                <option value="MEDICION">Medición de cola</option>
+              </select>
+            </label>
+            <label>Vía
               <select name="via" [(ngModel)]="form.viaId">
-                <option [ngValue]="null">Sin vía específica</option>
+                <option [ngValue]="null">No aplica / Plaza general</option>
                 <option *ngFor="let v of vias" [ngValue]="v.id">Vía {{v.numero}}</option>
               </select>
             </label>
@@ -72,27 +80,151 @@ import {
             <label>Hora
               <input type="time" name="hora" [(ngModel)]="form.hora" required>
             </label>
-            <label>Situación de la plaza
-              <select name="situacion" [(ngModel)]="form.situacion">
-                <option value="">Sin especificar</option>
-                <option *ngFor="let s of situaciones" [value]="s">{{s}}</option>
-              </select>
-            </label>
-            <label>Ingreso
-              <select name="ingreso" [(ngModel)]="form.ingreso">
-                <option value="">Sin especificar</option>
-                <option *ngFor="let i of ingresos" [value]="i">{{i}}</option>
-              </select>
-            </label>
-            <label>Incidente operativo
-              <select name="incidente" [(ngModel)]="form.incidente">
-                <option value="">Sin incidente registrado</option>
-                <option *ngFor="let i of incidentes" [value]="i">{{i}}</option>
-              </select>
-            </label>
-            <label>Tamaño de cola (metros) {{form.tipo==='MEDICION'?'*':''}}
-              <input type="number" name="cola" [(ngModel)]="form.colaMetros" min="0" max="50000"
-                [required]="form.tipo==='MEDICION'" placeholder="Ej. 400">
+          </div>
+        </section>
+
+        <section class="co-panel co-details">
+          <div class="co-panel-head">
+            <div>
+              <p class="co-section-kicker">DETALLE DEL CONTROL</p>
+              <h2>Situación operativa de la plaza</h2>
+              <p>Completa los cuatro apartados. Cada fotografía corresponde al apartado donde la adjuntas.</p>
+            </div>
+          </div>
+
+          <div class="co-evidence-grid">
+            <article class="co-evidence-card" (paste)="pegarImagenCategoria($event,'PLAZA')">
+              <div class="co-card-title">
+                <span class="co-card-icon" aria-hidden="true">01</span>
+                <div><h3>Situación de la plaza</h3><p>Estado de la circulación</p></div>
+              </div>
+              <label>Condición observada
+                <select name="situacion" [(ngModel)]="form.situacion">
+                  <option value="">Selecciona una condición</option>
+                  <option *ngFor="let s of situaciones" [value]="s">{{s}}</option>
+                </select>
+              </label>
+              <p class="co-photo-caption"><strong>PLAZA:</strong> {{form.situacion || 'Sin información'}}</p>
+              <button type="button" class="co-photo-drop" (click)="fotoPlazaInput.click()"
+                (dragover)="permitirArrastre($event)" (drop)="soltarImagenCategoria($event,'PLAZA')"
+                aria-label="Añadir o reemplazar fotografía de la plaza">
+                <ng-container *ngIf="fotoCategoria('PLAZA') as foto; else sinFotoPlaza">
+                  <img [src]="foto.url" alt="Evidencia fotográfica de la situación de la plaza">
+                  <span class="co-photo-overlay">Cambiar fotografía</span>
+                </ng-container>
+                <ng-template #sinFotoPlaza>
+                  <span class="co-upload-symbol" aria-hidden="true">+</span>
+                  <strong>Agregar fotografía</strong>
+                  <small>Haz clic, arrastra o pega una imagen</small>
+                </ng-template>
+              </button>
+              <input #fotoPlazaInput hidden type="file" accept="image/jpeg,image/png,image/webp"
+                (change)="seleccionarImagenCategoria($event,'PLAZA')">
+              <button *ngIf="fotoCategoria('PLAZA')" type="button" class="co-remove" (click)="quitarFotoCategoria('PLAZA')">Quitar fotografía</button>
+            </article>
+
+            <article class="co-evidence-card" (paste)="pegarImagenCategoria($event,'INGRESO')">
+              <div class="co-card-title">
+                <span class="co-card-icon" aria-hidden="true">02</span>
+                <div><h3>Ingreso</h3><p>Presencia de motorizado</p></div>
+              </div>
+              <label>Motorizado
+                <select name="ingreso" [(ngModel)]="form.ingreso">
+                  <option value="">Selecciona una opción</option>
+                  <option *ngFor="let i of ingresos" [value]="i">{{i}}</option>
+                </select>
+              </label>
+              <p class="co-photo-caption"><strong>INGRESO:</strong> {{form.ingreso || 'Sin información'}}</p>
+              <button type="button" class="co-photo-drop" (click)="fotoIngresoInput.click()"
+                (dragover)="permitirArrastre($event)" (drop)="soltarImagenCategoria($event,'INGRESO')"
+                aria-label="Añadir o reemplazar fotografía del ingreso">
+                <ng-container *ngIf="fotoCategoria('INGRESO') as foto; else sinFotoIngreso">
+                  <img [src]="foto.url" alt="Evidencia fotográfica del ingreso">
+                  <span class="co-photo-overlay">Cambiar fotografía</span>
+                </ng-container>
+                <ng-template #sinFotoIngreso>
+                  <span class="co-upload-symbol" aria-hidden="true">+</span>
+                  <strong>Agregar fotografía</strong>
+                  <small>Haz clic, arrastra o pega una imagen</small>
+                </ng-template>
+              </button>
+              <input #fotoIngresoInput hidden type="file" accept="image/jpeg,image/png,image/webp"
+                (change)="seleccionarImagenCategoria($event,'INGRESO')">
+              <button *ngIf="fotoCategoria('INGRESO')" type="button" class="co-remove" (click)="quitarFotoCategoria('INGRESO')">Quitar fotografía</button>
+            </article>
+
+            <article class="co-evidence-card" (paste)="pegarImagenCategoria($event,'INCIDENTE')">
+              <div class="co-card-title">
+                <span class="co-card-icon" aria-hidden="true">03</span>
+                <div><h3>Incidente</h3><p>Novedades operativas</p></div>
+              </div>
+              <label>Incidente registrado
+                <select name="incidente" [(ngModel)]="form.incidente">
+                  <option value="">Selecciona un incidente</option>
+                  <option *ngFor="let i of incidentes" [value]="i">{{i}}</option>
+                </select>
+              </label>
+              <p class="co-photo-caption"><strong>INCIDENTE:</strong> {{form.incidente || 'Sin incidente especificado'}}</p>
+              <button type="button" class="co-photo-drop" (click)="fotoIncidenteInput.click()"
+                (dragover)="permitirArrastre($event)" (drop)="soltarImagenCategoria($event,'INCIDENTE')"
+                aria-label="Añadir o reemplazar fotografía del incidente">
+                <ng-container *ngIf="fotoCategoria('INCIDENTE') as foto; else sinFotoIncidente">
+                  <img [src]="foto.url" alt="Evidencia fotográfica del incidente">
+                  <span class="co-photo-overlay">Cambiar fotografía</span>
+                </ng-container>
+                <ng-template #sinFotoIncidente>
+                  <span class="co-upload-symbol" aria-hidden="true">+</span>
+                  <strong>Agregar fotografía</strong>
+                  <small>Haz clic, arrastra o pega una imagen</small>
+                </ng-template>
+              </button>
+              <input #fotoIncidenteInput hidden type="file" accept="image/jpeg,image/png,image/webp"
+                (change)="seleccionarImagenCategoria($event,'INCIDENTE')">
+              <button *ngIf="fotoCategoria('INCIDENTE')" type="button" class="co-remove" (click)="quitarFotoCategoria('INCIDENTE')">Quitar fotografía</button>
+            </article>
+
+            <article class="co-evidence-card" (paste)="pegarImagenCategoria($event,'COLA')">
+              <div class="co-card-title">
+                <span class="co-card-icon" aria-hidden="true">04</span>
+                <div><h3>Tamaño de cola</h3><p>Longitud estimada en metros</p></div>
+              </div>
+              <label>Metros de cola {{form.tipo==='MEDICION'?'(obligatorio)':''}}
+                <div class="co-meter-input">
+                  <input type="number" name="cola" [(ngModel)]="form.colaMetros" min="0" max="50000"
+                    [required]="form.tipo==='MEDICION'" placeholder="Ej. 400">
+                  <span>metros</span>
+                </div>
+              </label>
+              <p class="co-photo-caption"><strong>TAMAÑO DE COLA:</strong> {{form.colaMetros === null ? 'Sin medición' : form.colaMetros + ' metros'}}</p>
+              <button type="button" class="co-photo-drop" (click)="fotoColaInput.click()"
+                (dragover)="permitirArrastre($event)" (drop)="soltarImagenCategoria($event,'COLA')"
+                aria-label="Añadir o reemplazar fotografía de la cola">
+                <ng-container *ngIf="fotoCategoria('COLA') as foto; else sinFotoCola">
+                  <img [src]="foto.url" alt="Evidencia fotográfica del tamaño de cola">
+                  <span class="co-photo-overlay">Cambiar fotografía</span>
+                </ng-container>
+                <ng-template #sinFotoCola>
+                  <span class="co-upload-symbol" aria-hidden="true">+</span>
+                  <strong>Agregar fotografía</strong>
+                  <small>Haz clic, arrastra o pega una imagen</small>
+                </ng-template>
+              </button>
+              <input #fotoColaInput hidden type="file" accept="image/jpeg,image/png,image/webp"
+                (change)="seleccionarImagenCategoria($event,'COLA')">
+              <button *ngIf="fotoCategoria('COLA')" type="button" class="co-remove" (click)="quitarFotoCategoria('COLA')">Quitar fotografía</button>
+            </article>
+          </div>
+          <p class="co-helper">Puedes subir una imagen por apartado (JPG, PNG o WEBP; máximo 10 MB). Las fotografías son opcionales.</p>
+        </section>
+
+        <section class="co-panel co-bottom">
+          <div class="co-panel-head">
+            <div><h2>Observaciones y seguimiento</h2><p>Agrega información adicional cuando sea necesario.</p></div>
+          </div>
+          <div class="co-bottom-fields">
+            <label>Descripción / observaciones
+              <textarea name="descripcion" [(ngModel)]="form.descripcion" maxlength="10000" rows="4"
+                placeholder="Detalle adicional de la situación registrada"></textarea>
             </label>
             <label>Estado
               <select name="estado" [(ngModel)]="form.estado">
@@ -102,37 +234,14 @@ import {
               </select>
             </label>
           </div>
-          <label class="co-full">Descripción / observaciones
-            <textarea name="descripcion" [(ngModel)]="form.descripcion" maxlength="10000" rows="3"
-              placeholder="Información adicional del evento"></textarea>
-          </label>
-          <div class="co-upload" tabindex="0" (paste)="pegarImagen($event)">
-            <strong>Evidencias fotográficas</strong>
-            <p>Puedes pegar una imagen aquí (Ctrl/Cmd + V) o seleccionar hasta 5 archivos JPG, PNG o WEBP de máximo 10 MB.</p>
-            <input type="file" multiple accept="image/jpeg,image/png,image/webp"
-              (change)="seleccionarImagenes($event)" aria-label="Adjuntar imágenes">
-            <div class="co-photos" *ngIf="fotos.length">
-              <div *ngFor="let foto of fotos; let i=index">
-                <img [src]="foto.url" alt="Vista previa de evidencia">
-                <select [(ngModel)]="foto.categoria" [name]="'categoriaEvidencia'+i" aria-label="Categoría de evidencia">
-                  <option value="PLAZA">Plaza</option>
-                  <option value="INGRESO">Ingreso</option>
-                  <option value="INCIDENTE">Incidente</option>
-                  <option value="COLA">Cola</option>
-                </select>
-                <button type="button" (click)="quitarFoto(i)">Quitar</button>
-              </div>
-            </div>
-            <small *ngIf="editandoId">Las fotos añadidas se guardarán al actualizar. Las existentes se consultan en el historial.</small>
-          </div>
           <div class="co-actions">
             <button type="button" class="co-secondary" (click)="limpiar()">Limpiar</button>
             <button type="submit" [disabled]="guardando || !coForm.form.valid || !form.plazaId || !form.turnoId">
-              {{guardando ? 'Guardando…' : editandoId ? 'Guardar cambios' : 'Registrar control'}}
+              {{guardando ? 'Guardando…' : editandoId ? 'Guardar cambios' : 'Registrar control operativo'}}
             </button>
           </div>
-        </form>
-      </section>
+        </section>
+      </form>
 
       <section class="co-panel" *ngIf="vista==='historial'">
         <div class="co-panel-head">
@@ -231,48 +340,89 @@ import {
     </main>
   `,
   styles: [`
-    .co{max-width:1320px;margin:0 auto;padding:24px 16px 72px;color:var(--text-primary,#172334)}
-    .co-header{margin-bottom:20px}.co-eyebrow{font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-size:12px}
-    h1{font-size:clamp(24px,3vw,34px);margin:4px 0 8px;font-weight:800}
-    h2{font-size:20px;margin:0 0 6px}h3{font-size:17px}
-    .co-header p,.co-panel-head p{color:#64748b;margin:0;line-height:1.5}
-    .co-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
-    button{cursor:pointer;border:0;border-radius:10px;padding:10px 16px;background:#0f766e;color:white;font-weight:650}
-    button:disabled{opacity:.55;cursor:not-allowed}
-    .co-tabs button,.co-secondary{background:#e8eef5;color:#334155}
-    .co-tabs button.selected{background:#0f766e;color:white}
-    .co-panel{background:white;border:1px solid #e2e8f0;box-shadow:0 6px 20px #0f172a0a;border-radius:16px;padding:22px;margin-top:16px}
-    .co-panel-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+    :host { display:block; --co-navy:#0b2342; --co-blue:#2563eb; --co-muted:#64748b; --co-line:#dfe5ee; --co-panel:#fff; }
+    .co{max-width:1200px;margin:0 auto;padding:20px 16px 64px;color:#0f172a}
+    .co-header{background:#fff;border:1px solid #e2e8f0;border-radius:24px;padding:26px 28px;margin-bottom:18px;display:flex;align-items:flex-start;gap:16px;box-shadow:0 4px 16px rgba(11,35,66,.04)}
+    .co-heading-icon{width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border-radius:15px;background:#eff6ff;color:var(--co-blue)}
+    .co-heading-icon svg{width:26px;height:26px}
+    .co-eyebrow,.co-section-kicker{margin:0;color:var(--co-blue);font-weight:800;text-transform:uppercase;letter-spacing:.13em;font-size:11px}
+    .co h1{font-size:clamp(22px,2.5vw,30px);font-weight:750;letter-spacing:-.025em;color:var(--co-navy);margin:5px 0 6px}
+    .co h2{font-size:19px;letter-spacing:-.015em;color:var(--co-navy);margin:4px 0 5px}
+    .co h3{font-size:15px;line-height:1.3;color:var(--co-navy);margin:0}
+    .co-header p:not(.co-eyebrow),.co-panel-head p:not(.co-section-kicker){color:var(--co-muted);font-size:13px;line-height:1.6;margin:0}
+    .co-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+    .co button{cursor:pointer;border:0;border-radius:11px;padding:11px 17px;background:var(--co-blue);color:#fff;font-weight:700;font:inherit;font-size:13px}
+    .co button:disabled{opacity:.5;cursor:not-allowed}
+    .co button:focus-visible,.co input:focus-visible,.co select:focus-visible,.co textarea:focus-visible{outline:2px solid var(--co-blue);outline-offset:2px}
+    .co-tabs button{background:#eaf0f8;color:#38516e}
+    .co-tabs button.selected{background:var(--co-navy);color:#fff;box-shadow:0 3px 12px rgba(11,35,66,.14)}
+    .co-panel{background:var(--co-panel);border:1px solid #e2e8f0;box-shadow:0 4px 14px rgba(15,23,42,.035);border-radius:20px;padding:24px;margin-top:16px}
+    .co-panel-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:19px;flex-wrap:wrap}
     .co-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-    label{display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:700;color:#475569}
-    input,select,textarea{box-sizing:border-box;width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:11px;background:white;color:#0f172a;font:inherit;font-weight:400}
-    input:focus,select:focus,textarea:focus{outline:2px solid #5eead4;outline-offset:1px}
-    .co-full{margin-top:18px}.co-upload{border:2px dashed #cbd5e1;border-radius:12px;background:#f8fafc;padding:16px;margin-top:18px}
-    .co-upload:focus{outline:2px solid #0f766e}.co-upload p{color:#64748b;font-size:13px}
-    .co-upload input{background:transparent;border:0;padding:4px}.co-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
-    .co-error,.co-success{padding:12px;border-radius:10px;margin:12px 0;font-weight:600}
-    .co-error{background:#fee2e2;color:#991b1b}.co-success{background:#dcfce7;color:#166534}
-    .co-filters{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:14px 0}.co-filters label{min-width:155px}
-    .co-table-wrap{overflow-x:auto}.co table{border-collapse:collapse;width:100%;font-size:13px;min-width:750px}
-    th,td{text-align:left;border-bottom:1px solid #e2e8f0;padding:13px 8px}th{color:#64748b;background:#f8fafc}
-    .co-link{background:transparent;color:#0f766e;padding:4px 7px}
+    .co-general-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .co label{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:700;color:#334155;min-width:0}
+    .co input,.co select,.co textarea{box-sizing:border-box;min-width:0;width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:11px 12px;background:white;color:#0f172a;font:inherit;font-size:13px;font-weight:400}
+    .co textarea{resize:vertical}
+    .co select:disabled{background:#f1f5f9;color:#64748b}
+    .co-evidence-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .co-evidence-card{border:1px solid #dbe4f0;border-radius:16px;background:#fff;overflow:hidden;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 8px rgba(15,23,42,.025)}
+    .co-card-title{display:flex;align-items:center;gap:11px}
+    .co-card-title p{margin:3px 0 0;color:var(--co-muted);font-size:12px}
+    .co-card-icon{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:10px;background:#eff6ff;color:var(--co-blue);font-size:12px;font-weight:800}
+    .co-photo-caption{font-size:12px;color:#334155;font-weight:600;margin:3px 0 -2px;min-height:18px;overflow-wrap:anywhere}
+    .co-photo-caption strong{color:#1d4ed8;font-weight:800}
+    .co-photo-drop{position:relative;display:flex!important;flex-direction:column;justify-content:center;align-items:center;width:100%;aspect-ratio:16 / 9;min-height:165px;overflow:hidden;border:2px dashed #bbcee8!important;border-radius:12px!important;background:linear-gradient(135deg,#f8fbff,#eff6ff)!important;color:#2563eb!important;gap:7px;isolation:isolate}
+    .co-photo-drop:hover{background:#eaf3ff!important;border-color:#2563eb!important}
+    .co-photo-drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+    .co-upload-symbol{font-size:26px;line-height:1;width:40px;height:40px;background:#dbeafe;color:#1d4ed8;border-radius:50%;display:grid;place-items:center}
+    .co-photo-drop strong{font-size:14px;color:var(--co-navy)}
+    .co-photo-drop small{font-size:12px;color:#64748b;text-align:center}
+    .co-photo-overlay{position:absolute;bottom:0;left:0;right:0;padding:10px;text-align:center;background:rgba(11,35,66,.83);color:#fff;font-weight:700;z-index:1}
+    .co-remove{align-self:flex-end;background:transparent!important;color:#b91c1c!important;padding:4px 7px!important}
+    .co-meter-input{display:flex;align-items:stretch;border-radius:10px;overflow:hidden}
+    .co-meter-input input{border-radius:10px 0 0 10px;flex:1;min-width:0}
+    .co-meter-input span{padding:11px 13px;background:#eff6ff;color:#1d4ed8;border:1px solid #cbd5e1;border-left:0;font-weight:700;border-radius:0 10px 10px 0;white-space:nowrap}
+    .co-helper{font-size:12px;color:#64748b;margin:12px 0 0}
+    .co-bottom-fields{display:grid;grid-template-columns:2fr 1fr;align-items:start;gap:16px}
+    .co-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+    .co-secondary{background:#eaf0f8!important;color:#334155!important}
+    .co-error,.co-success{padding:12px 16px;border-radius:10px;margin:12px 0;font-size:13px;font-weight:650}
+    .co-error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+    .co-success{background:#ecfdf5;color:#166534;border:1px solid #a7f3d0}
+    .co-filters{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:14px 0}
+    .co-filters label{min-width:155px}
+    .co-table-wrap{overflow-x:auto}
+    .co table{border-collapse:collapse;width:100%;font-size:13px;min-width:740px}
+    .co th,.co td{text-align:left;border-bottom:1px solid #e2e8f0;padding:13px 8px}
+    .co th{color:#475569;background:#f8fafc}
+    .co-link{background:transparent!important;color:#1d4ed8!important;padding:4px 7px!important}
     .co-photos{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
-    .co-photos>div,.co-photos>a{display:flex;flex-direction:column;align-items:start;gap:5px}
-    .co-photos img{width:120px;height:100px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0}
-    .co-photos button{background:#e2e8f0;color:#334155;padding:5px 10px;font-size:12px}
+    .co-photos>a{display:flex;flex-direction:column;align-items:start;gap:5px}
+    .co-photos img{width:150px;height:105px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0}
     .co-evidence{border-top:1px solid #e2e8f0;margin-top:20px;padding-top:10px}
     .co-vias{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
     .co-vias article{border:1px solid #e2e8f0;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
     .co-vias button{padding:7px 10px;font-size:12px}
     .co-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
     .co-kpis article{display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
-    .co-kpis small{color:#64748b}.co-kpis strong{font-size:25px;color:#0f766e}
-    .co-bar{margin:15px 0}.co-bar>span{font-size:13px;font-weight:600}
+    .co-kpis small{color:#64748b}
+    .co-kpis strong{font-size:25px;color:#1d4ed8}
+    .co-bar{margin:15px 0}
+    .co-bar>span{font-size:13px;font-weight:600}
     .co-bar>div{margin-top:5px;height:10px;border-radius:99px;background:#e2e8f0;overflow:hidden}
-    .co-bar>div span{display:block;height:100%;background:#0f766e}
-    @media(max-width:680px){.co{padding:16px 8px 60px}.co-panel{padding:14px}.co-grid{grid-template-columns:1fr}.co-actions{flex-direction:column}.co-actions button{width:100%}}
-  `]
-})
+    .co-bar>div span{display:block;height:100%;background:var(--co-blue)}
+    @media(max-width:850px){.co-general-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:680px){
+      .co{padding:12px 10px 50px}
+      .co-header{padding:20px 16px;border-radius:18px;gap:12px}
+      .co-heading-icon{width:42px;height:42px;flex-basis:42px}
+      .co-panel{padding:16px;border-radius:16px}
+      .co-general-grid,.co-evidence-grid,.co-bottom-fields{grid-template-columns:minmax(0,1fr)}
+      .co-actions{flex-direction:column}
+      .co-actions button{width:100%}
+      .co-photo-drop{min-height:180px}
+    }
+  `]})
 export class ControlOperativoComponent implements OnInit, OnDestroy {
   private readonly api = inject(ControlOperativoApiService);
   private readonly catalogos = inject(AsistenciaApiService);

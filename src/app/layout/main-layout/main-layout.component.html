@@ -461,6 +461,22 @@
 
               </a>
 
+              @if (auth.tieneRol('SUPERVISOR','CONTROLADOR')) {
+                <a
+                  routerLink="/incidencias/control-operativo"
+                  routerLinkActive="active"
+                  (click)="close()"
+                  data-tooltip="Control operativo de plazas"
+                >
+                  <span class="nav-icon">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M3 20h18v-2H3v2ZM5 16h4V9H5v7Zm5 0h4V4h-4v12Zm5 0h4v-5h-4v5Z"/>
+                    </svg>
+                  </span>
+                  <span class="nav-label">Control operativo de plazas</span>
+                </a>
+              }
+
             </div>
 
           }

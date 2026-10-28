@@ -1,0 +1,140 @@
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
+
+export type TipoControlOperativo = 'REPORTE' | 'MEDICION';
+
+export interface ControlOperativoInput {
+  plazaId: number;
+  turnoId: number;
+  responsableId: number;
+  viaId: number | null;
+  tipo: TipoControlOperativo;
+  fecha: string;
+  hora: string;
+  situacion: string;
+  ingreso: string;
+  incidente: string;
+  colaMetros: number | null;
+  descripcion: string;
+}
+export interface ControlOperativoReporte extends ControlOperativoInput {
+  id: number;
+  plazaCodigo: string;
+  turnoCodigo: string;
+  viaNumero: number | null;
+  registradoPorId: number;
+  registradoPor: string;
+  responsableNombre: string;
+  creadoEn: string;
+  actualizadoEn: string;
+}
+export interface ControlOperativoResponsable {
+  id: number;
+  nombreCompleto: string;
+}
+
+export interface ControlOperativoDiaDashboard {
+  fecha: string;
+  colaMaxima: number | null;
+  incidencias: number;
+  mediciones: number;
+}
+
+export type TurnoOperativo = 'A' | 'B' | 'C';
+
+export interface ControlOperativoTurnoDashboard {
+  fecha: string;
+  turno: TurnoOperativo;
+  colaMaxima: number | null;
+  registros: number;
+  mediciones: number;
+  reporteId: number;
+  hora: string;
+  plazaCodigo: string;
+  responsableNombre: string;
+  situacion: string;
+  ingreso: string;
+  incidente: string;
+}
+
+export interface ControlOperativoDashboard {
+  incidenciasRegistradas: number;
+  colaMaxima: number;
+  promedioMaximos: number;
+  dias: ControlOperativoDiaDashboard[];
+  turnos: ControlOperativoTurnoDashboard[];
+}
+
+export interface ControlOperativoDetalleDia {
+  fecha: string;
+  reportes: ControlOperativoReporte[];
+  evidencias: ControlOperativoEvidencia[];
+}
+
+export interface ControlOperativoEvidencia {
+  id: number;
+  reporteId: number;
+  categoria: string;
+  urlArchivo: string;
+  creadoEn: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class ControlOperativoApiService {
+  private readonly http = inject(HttpClient);
+  private readonly base = environment.apiUrl + '/incidencias/control-operativo';
+
+  listar(filtros: { plazaId?: number | null; tipo?: string; inicio?: string; fin?: string } = {})
+      : Observable<ControlOperativoReporte[]> {
+    let params = new HttpParams();
+    if (filtros.plazaId) params = params.set('plazaId', filtros.plazaId);
+    if (filtros.tipo) params = params.set('tipo', filtros.tipo);
+    if (filtros.inicio) params = params.set('inicio', filtros.inicio);
+    if (filtros.fin) params = params.set('fin', filtros.fin);
+    return this.http.get<ControlOperativoReporte[]>(this.base, { params });
+  }
+
+  dashboard(filtros: { inicio: string; fin: string; plazaId?: number | null })
+      : Observable<ControlOperativoDashboard> {
+    let params = new HttpParams()
+      .set('inicio', filtros.inicio)
+      .set('fin', filtros.fin);
+    if (filtros.plazaId != null) params = params.set('plazaId', filtros.plazaId);
+    return this.http.get<ControlOperativoDashboard>(this.base + '/dashboard', { params });
+  }
+
+  detalleDia(fecha: string, plazaId?: number | null): Observable<ControlOperativoDetalleDia> {
+    let params = new HttpParams().set('fecha', fecha);
+    if (plazaId != null) params = params.set('plazaId', plazaId);
+    return this.http.get<ControlOperativoDetalleDia>(this.base + '/dashboard/dia', {params});
+  }
+
+  responsables(): Observable<ControlOperativoResponsable[]> {
+    return this.http.get<ControlOperativoResponsable[]>(this.base + '/responsables');
+  }
+
+  crear(payload: ControlOperativoInput): Observable<ControlOperativoReporte> {
+    return this.http.post<ControlOperativoReporte>(this.base, payload);
+  }
+  actualizar(id: number, payload: ControlOperativoInput): Observable<ControlOperativoReporte> {
+    return this.http.put<ControlOperativoReporte>(this.base + '/' + id, payload);
+  }
+  obtener(id: number): Observable<ControlOperativoReporte> {
+    return this.http.get<ControlOperativoReporte>(this.base + '/' + id);
+  }
+
+  evidencias(id: number): Observable<ControlOperativoEvidencia[]> {
+    return this.http.get<ControlOperativoEvidencia[]>(this.base + '/' + id + '/evidencias');
+  }
+  subirEvidencia(id: number, file: File, categoria: string): Observable<ControlOperativoEvidencia> {
+    const data = new FormData();
+    data.append('file', file);
+    data.append('categoria', categoria);
+    return this.http.post<ControlOperativoEvidencia>(this.base + '/' + id + '/evidencias', data);
+  }
+  eliminarEvidencia(id: number, evidenciaId: number): Observable<void> {
+    return this.http.delete<void>(this.base + '/' + id + '/evidencias/' + evidenciaId);
+  }
+}

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import jsPDF from 'jspdf';
 import { forkJoin } from 'rxjs';
@@ -234,6 +234,13 @@ export class IncidenciaHistorialComponent implements OnInit {
     }
 
     this.detalle.set(null);
+  }
+
+  /** Cierra solo la consulta de detalle; no interrumpe la edición ni el recorte de fotos. */
+  @HostListener('document:keydown.escape')
+  cerrarDetalleConEscape(): void {
+    if (this.editando() || this.cropperVisible() || !this.detalle()) return;
+    this.cerrarDetalle();
   }
 
   abrirEditar(

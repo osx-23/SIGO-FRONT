@@ -229,6 +229,27 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
     this.paginaActual = 1;
   }
 
+  /** Restablece la consulta inicial sin cambiar registros ni datos guardados. */
+  hayFiltrosPersonalizados(): boolean {
+    const hoy = this.obtenerFechaHoy();
+    return this.inicio !== hoy ||
+      this.fin !== hoy ||
+      this.plazaId !== null ||
+      this.turnoFiltro !== '';
+  }
+
+  restablecerFiltros(): void {
+    if (this.loading()) return;
+
+    const hoy = this.obtenerFechaHoy();
+    this.inicio = hoy;
+    this.fin = hoy;
+    this.plazaId = null;
+    this.turnoFiltro = '';
+    this.paginaActual = 1;
+    this.cargar();
+  }
+
   registrosFiltrados(): AsistenciaResponse[] {
 
     const turno =

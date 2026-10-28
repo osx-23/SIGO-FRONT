@@ -64,11 +64,11 @@
     </section>
   }
 
-  @if (error()) { <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error() }}</div> }
+  @if (error()) { <div role="alert" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error() }}</div> }
 
   <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
     @if (cargando()) {
-      <div class="p-8 text-center text-sm text-slate-500">Cargando historial...</div>
+      <div role="status" aria-live="polite" class="flex items-center justify-center gap-3 p-8 text-center text-sm text-slate-600"><span aria-hidden="true" class="h-5 w-5 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600"></span>Cargando historial de relevos...</div>
     } @else if (!relevos.length) {
       <div class="p-10 text-center"><p class="font-semibold text-slate-900">No hay relevos para mostrar</p><p class="mt-1 text-sm text-slate-500">@if (esOperador) { No hay relevos disponibles dentro de la ventana operativa permitida. } @else { Prueba con otro rango de fechas. }</p></div>
     } @else {
@@ -104,12 +104,12 @@
 
   @if (detalleSeleccionado()) {
     <div class="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" (click)="cerrarDetalle()">
-      <section class="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <section class="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="titulo-detalle-relevo" aria-describedby="descripcion-detalle-relevo" (click)="$event.stopPropagation()">
         <header class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6">
-          <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Detalle del relevo</p><h2 class="mt-1 text-xl font-semibold text-slate-950">{{ detalleSeleccionado()!.plazaCodigo }} · Turno {{ detalleSeleccionado()!.turnoCodigo }}</h2><p class="mt-1 text-sm text-slate-500">{{ detalleSeleccionado()!.fecha }} · {{ horaCorta(detalleSeleccionado()!.hora) }} · {{ detalleSeleccionado()!.operadorNombre }}</p><p class="mt-2 text-xs text-blue-700">
+          <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Detalle del relevo</p><h2 id="titulo-detalle-relevo" class="mt-1 text-xl font-semibold text-slate-950">{{ detalleSeleccionado()!.plazaCodigo }} · Turno {{ detalleSeleccionado()!.turnoCodigo }}</h2><p id="descripcion-detalle-relevo" class="mt-1 text-sm text-slate-500">{{ detalleSeleccionado()!.fecha }} · {{ horaCorta(detalleSeleccionado()!.hora) }} · {{ detalleSeleccionado()!.operadorNombre }}</p><p class="mt-2 text-xs text-blue-700">
             Inicio: {{ horaInicioRelevo(detalleSeleccionado()!.id) }} · Finalización: {{ horaFinRelevo(detalleSeleccionado()!.id) }}
           </p></div>
-          <button type="button" class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-2xl text-slate-500" (click)="cerrarDetalle()">×</button>
+          <button type="button" class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-2xl text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600" aria-label="Cerrar detalle del relevo" title="Cerrar detalle (Esc)" (click)="cerrarDetalle()">×</button>
         </header>
 
         <div class="space-y-6 p-5 sm:p-6">
@@ -125,7 +125,8 @@
 
         <footer class="flex flex-col-reverse gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
           @if (!esOperador) { <a [routerLink]="['/relevos/editar', detalleSeleccionado()!.id]" (click)="cerrarDetalle()" class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-center text-sm font-semibold text-blue-700">Editar</a> }
-          <button type="button" (click)="generarPdf(detalleSeleccionado()!)" [disabled]="generandoPdfId() !== null" class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">Generar PDF</button>
+          <button type="button" (click)="cerrarDetalle()" class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">Cerrar detalle</button>
+          <button type="button" (click)="generarPdf(detalleSeleccionado()!)" [disabled]="generandoPdfId() !== null" [attr.aria-busy]="generandoPdfId() === detalleSeleccionado()!.id" class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-wait disabled:opacity-50">{{ generandoPdfId() === detalleSeleccionado()!.id ? 'Generando PDF...' : 'Generar PDF' }}</button>
         </footer>
       </section>
     </div>

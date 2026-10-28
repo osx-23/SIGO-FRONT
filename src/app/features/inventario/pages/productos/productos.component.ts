@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { InventarioSectionTabsComponent } from '../../components/inventario-section-tabs.component';
@@ -28,6 +28,8 @@ export class ProductosComponent implements OnInit {
   editandoId: number | null = null;
   modalAbierto = false;
   confirmarGuardado = false;
+  productoCambioEstado: ProductoAdmin | null = null;
+  cambiandoEstado = false;
   busqueda = '';
   filtroEstado: 'TODOS' | 'ACTIVOS' | 'INACTIVOS' = 'TODOS';
 
@@ -226,19 +228,52 @@ export class ProductosComponent implements OnInit {
     }
   }
 
-  async cambiarEstado(producto: ProductoAdmin): Promise<void> {
-    const nuevoEstado = !producto.activo;
-    if (!confirm(`${nuevoEstado ? 'Activar' : 'Desactivar'} el producto ${producto.nombre}?`)) return;
+  // La acción de la tarjeta abre primero una confirmación consistente con SIGO.
+  cambiarEstado(producto: ProductoAdmin): void {
+    if (this.cambiandoEstado || this.guardando) return;
+    this.error = '';
+    this.mensaje = '';
+    this.productoCambioEstado = producto;
+  }
+
+  cancelarCambioEstado(): void {
+    if (this.cambiandoEstado) return;
+    this.productoCambioEstado = null;
+    this.error = '';
+  }
+
+  async confirmarCambioEstadoProducto(): Promise<void> {
+    const producto = this.productoCambioEstado;
+    if (!producto || this.cambiandoEstado) return;
+
+    const activar = !producto.activo;
+    this.cambiandoEstado = true;
     this.error = '';
     this.mensaje = '';
     try {
-      const actualizado = await firstValueFrom(this.api.cambiarEstadoProducto(producto.id, nuevoEstado));
+      const actualizado = await firstValueFrom(this.api.cambiarEstadoProducto(producto.id, activar));
       this.productos = this.productos.map(p => p.id === actualizado.id ? actualizado : p);
-      this.mensaje = `Producto ${nuevoEstado ? 'activado' : 'desactivado'} correctamente.`;
+      this.mensaje = `Producto ${activar ? 'activado' : 'desactivado'} correctamente.`;
+      this.productoCambioEstado = null;
     } catch (e: any) {
+      // Mantener la confirmación abierta para que se vea el error y se pueda reintentar.
       this.error = this.extraerError(e);
     } finally {
+      this.cambiandoEstado = false;
       this.cdr.detectChanges();
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  cerrarDialogosConEscape(): void {
+    // No permitir interrumpir operaciones en curso.
+    if (this.cambiandoEstado || this.guardando) return;
+    if (this.productoCambioEstado) {
+      this.cancelarCambioEstado();
+    } else if (this.confirmarGuardado) {
+      this.cancelarConfirmacion();
+    } else if (this.modalAbierto) {
+      this.cerrarModal();
     }
   }
 

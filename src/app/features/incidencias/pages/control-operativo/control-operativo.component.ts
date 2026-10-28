@@ -308,12 +308,13 @@ interface FotoControlOperativo {
         <p *ngIf="!cargando && !reportes.length">No se encontraron reportes en el período.</p>
         <div class="co-table-wrap" *ngIf="reportes.length">
           <table>
-            <thead><tr><th>Fecha</th><th>Hora</th><th>Plaza / vía</th><th>Responsable</th><th>Situación</th><th>Cola</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Hora</th><th>Plaza</th><th>Vía</th><th>Responsable</th><th>Situación</th><th>Cola</th><th>Acciones</th></tr></thead>
             <tbody>
               <tr *ngFor="let r of reportes">
                 <td class="co-fecha">{{r.fecha}}</td>
                 <td class="co-hora">{{r.hora}}</td>
-                <td>{{r.plazaCodigo}} <span *ngIf="r.viaNumero">/ {{r.viaNumero}}</span></td>
+                <td>{{r.plazaCodigo}}</td>
+                <td>{{r.viaNumero == null ? "—" : r.viaNumero}}</td>
                 <td>{{r.responsableNombre || r.registradoPor}}</td>
                 <td>{{r.situacion||'—'}}</td><td>{{r.colaMetros==null?'—':r.colaMetros+' m'}}</td>
                 <td>
@@ -480,7 +481,7 @@ interface FotoControlOperativo {
     .co-filters{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:14px 0}
     .co-filters label{min-width:155px}
     .co-table-wrap{overflow-x:auto}
-    .co table{border-collapse:collapse;width:100%;font-size:13px;min-width:740px}
+    .co table{border-collapse:collapse;width:100%;font-size:13px;min-width:830px}
     .co th,.co td{text-align:left;border-bottom:1px solid #e2e8f0;padding:13px 8px}
     .co th{color:#475569;background:#f8fafc}
     .co .co-fecha,.co .co-hora{white-space:nowrap;font-variant-numeric:tabular-nums}

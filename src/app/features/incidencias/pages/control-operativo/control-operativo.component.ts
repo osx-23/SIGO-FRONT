@@ -443,12 +443,12 @@ interface FotoControlOperativo {
       .co-heading-icon{width:42px;height:42px;flex-basis:42px}
       .co-panel{padding:16px;border-radius:16px}
       .co-tabs{padding:8px}
-      .co-tabs-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-      .co-tabs .co-subtab{min-height:104px;flex-direction:column;justify-content:center;gap:6px;padding:11px 5px;text-align:center}
-      .co-tab-icon{flex-basis:34px;width:34px;height:34px;border-radius:9px}
-      .co-tab-icon svg{width:19px;height:19px}
-      .co-tab-title{font-size:12px}
-      .co-tab-description{font-size:10px}
+      .co-tabs-grid{grid-template-columns:minmax(0,1fr);gap:8px}
+      .co-tabs .co-subtab{min-height:76px;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;text-align:left}
+      .co-tab-icon{flex-basis:40px;width:40px;height:40px;border-radius:9px}
+      .co-tab-icon svg{width:20px;height:20px}
+      .co-tab-title{font-size:13px}
+      .co-tab-description{font-size:11px}
       .co-general-grid,.co-evidence-grid,.co-bottom-fields{grid-template-columns:minmax(0,1fr)}
       .co-actions{flex-direction:column}
       .co-actions button{width:100%}

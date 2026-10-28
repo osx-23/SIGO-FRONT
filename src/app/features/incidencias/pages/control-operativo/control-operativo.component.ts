@@ -53,7 +53,7 @@ interface FotoControlOperativo {
             <div>
               <p class="co-section-kicker">DATOS GENERALES</p>
               <h2>{{editandoId ? 'Editar control operativo #' + editandoId : 'Nuevo control operativo'}}</h2>
-              <p>La plaza y el responsable se cargan desde la sesión; el turno se calcula automáticamente según la hora de Lima.</p>
+              <p>La plaza y el responsable se precargan desde la sesión. El turno se sugiere según la hora, pero puedes modificarlo.</p>
             </div>
           </div>
           <div class="co-grid co-general-grid">
@@ -63,14 +63,17 @@ interface FotoControlOperativo {
                 <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
               </select>
             </label>
-            <label>Turno (automático)
-              <input type="text" [value]="turnoSeleccionadoTexto" readonly aria-label="Turno asignado automáticamente">
+            <label>Turno
+              <select name="turno" [(ngModel)]="form.turnoId" required>
+                <option [ngValue]="0">Selecciona un turno</option>
+                <option *ngFor="let turno of turnos" [ngValue]="turno.id">Turno {{turno.codigo.trim()}}</option>
+              </select>
             </label>
             <label>Responsable
               <select name="responsable" [(ngModel)]="form.responsableId" required>
                 <option [ngValue]="0">Selecciona un responsable</option>
                 <option *ngFor="let responsable of responsables" [ngValue]="responsable.id">
-                  {{responsable.nombreCompleto}} · {{responsable.codigo}} ({{responsable.rol}})
+                  {{responsable.nombreCompleto}}
                 </option>
               </select>
             </label>
@@ -84,9 +87,12 @@ interface FotoControlOperativo {
               <input type="date" name="fecha" [(ngModel)]="form.fecha" required>
             </label>
             <label>Hora
-              <input type="time" name="hora" [(ngModel)]="form.hora" (ngModelChange)="sincronizarTurno($event)" required>
+              <input type="time" name="hora" [(ngModel)]="form.hora" required>
             </label>
           </div>
+          <p class="co-helper" *ngIf="cargandoTurnos || cargandoResponsables">
+            {{cargandoTurnos ? 'Cargando turnos… ' : ''}}{{cargandoResponsables ? 'Cargando responsables…' : ''}}
+          </p>
         </section>
 
         <section class="co-panel co-details">
@@ -441,6 +447,10 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   evidencias: ControlOperativoEvidencia[] = [];
   reporteEvidencias: ControlOperativoReporte | null = null;
   cargando = false;
+  cargandoTurnos = true;
+  cargandoResponsables = true;
+  private historialCargado = false;
+  private historialSolicitud = 0;
   guardando = false;
   error = '';
   mensaje = '';
@@ -456,14 +466,6 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
 
   get esSupervisor(): boolean { return this.auth.tieneRol('SUPERVISOR'); }
   get totalConCola(): number { return this.reportes.filter(r=>r.colaMetros!=null).length; }
-  get turnoSeleccionadoTexto(): string {
-    const turno = this.turnos.find(t => t.id === this.form.turnoId);
-    const codigo = turno?.codigo?.trim();
-    const horario = codigo === 'A' ? '06:00 a 14:00' :
-      codigo === 'B' ? '14:00 a 22:00' :
-      codigo === 'C' ? '22:00 a 06:00' : '';
-    return codigo ? 'Turno ' + codigo + ' · ' + horario : 'Turno no disponible';
-  }
   get maxCola(): number { return Math.max(0,...this.reportes.map(r=>r.colaMetros??0)); }
   get promedioCola(): number {
     const conCola=this.reportes.filter(r=>r.colaMetros!=null);

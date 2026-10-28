@@ -8,7 +8,7 @@ import { Plaza, Turno } from '../../../asistencia/models/asistencia.models';
 import { IncidenciaApiService } from '../../services/incidencia-api.service';
 import { ViaIncidencia } from '../../models/incidencia.models';
 import {
-  ControlOperativoApiService, ControlOperativoEvidencia, ControlOperativoInput,
+  ControlOperativoApiService, ControlOperativoEvidencia, ControlOperativoVia, ControlOperativoInput,
   ControlOperativoReporte, TipoControlOperativo
 } from '../../services/control-operativo-api.service';
 
@@ -30,6 +30,7 @@ import {
         <button type="button" [class.selected]="vista==='nuevo'" (click)="cambiarVista('nuevo')">Nuevo reporte</button>
         <button type="button" [class.selected]="vista==='historial'" (click)="cambiarVista('historial')">Historial</button>
         <button type="button" [class.selected]="vista==='dashboard'" (click)="cambiarVista('dashboard')">Dashboard</button>
+        <button *ngIf="esSupervisor" type="button" [class.selected]="vista==='vias'" (click)="cambiarVista('vias')">Vías por plaza</button>
       </div>
       <p class="co-error" role="alert" *ngIf="error">{{error}}</p>
       <p class="co-success" role="status" *ngIf="mensaje">{{mensaje}}</p>
@@ -180,6 +181,30 @@ import {
         </div>
       </section>
 
+      <section class="co-panel" *ngIf="vista==='vias' && esSupervisor">
+        <div class="co-panel-head">
+          <div><h2>Vías por plaza</h2><p>Utiliza el catálogo de SIGO que también consultan otros módulos. Desactivar una vía la ocultará en sus nuevos registros.</p></div>
+        </div>
+        <div class="co-filters">
+          <label>Plaza
+            <select [(ngModel)]="plazaGestion" (ngModelChange)="cargarViasGestion()">
+              <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
+            </select>
+          </label>
+          <label>Desde <input type="number" min="1" max="999999" [(ngModel)]="desdeVia"></label>
+          <label>Hasta <input type="number" min="1" max="999999" [(ngModel)]="hastaVia"></label>
+          <button type="button" (click)="asignarVias()" [disabled]="guardando">Asignar / reactivar vías</button>
+        </div>
+        <div *ngIf="viasGestion.length" class="co-vias">
+          <article *ngFor="let v of viasGestion">
+            <span><strong>Vía {{v.numero}}</strong> — {{v.activa?'Activa':'Inactiva'}}</span>
+            <button type="button" *ngIf="v.activa" class="co-secondary" [disabled]="guardando"
+              (click)="desactivarVia(v.numero)">Desactivar</button>
+          </article>
+        </div>
+        <p *ngIf="!viasGestion.length">No hay vías configuradas para esta plaza.</p>
+      </section>
+
       <section class="co-panel" *ngIf="vista==='dashboard'">
         <div class="co-panel-head"><div><h2>Dashboard operativo</h2><p>Indicadores del conjunto de reportes filtrados en el historial.</p></div>
           <button type="button" class="co-secondary" (click)="cargarHistorial()">Actualizar datos</button></div>
@@ -230,7 +255,7 @@ import {
     .co-photos img{width:120px;height:100px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0}
     .co-photos button{background:#e2e8f0;color:#334155;padding:5px 10px;font-size:12px}
     .co-evidence{border-top:1px solid #e2e8f0;margin-top:20px;padding-top:10px}
-    .co-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+    .co-vias{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}\n    .co-vias article{border:1px solid #e2e8f0;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}\n    .co-vias button{padding:7px 10px;font-size:12px}\n    .co-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
     .co-kpis article{display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
     .co-kpis small{color:#64748b}.co-kpis strong{font-size:25px;color:#0f766e}
     .co-bar{margin:15px 0}.co-bar>span{font-size:13px;font-weight:600}
@@ -244,10 +269,10 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   private readonly catalogos = inject(AsistenciaApiService);
   private readonly incidenciaApi = inject(IncidenciaApiService);
   readonly auth = inject(AuthService);
-  vista: 'nuevo' | 'historial' | 'dashboard' = 'nuevo';
+  vista: 'nuevo' | 'historial' | 'dashboard' | 'vias' = 'nuevo';
   plazas: Plaza[] = [];
   turnos: Turno[] = [];
-  vias: ViaIncidencia[] = [];
+  vias: ViaIncidencia[] = [];\n  viasGestion: ControlOperativoVia[] = [];\n  plazaGestion = 0;\n  desdeVia = 101;\n  hastaVia = 105;
   reportes: ControlOperativoReporte[] = [];
   evidencias: ControlOperativoEvidencia[] = [];
   reporteEvidencias: ControlOperativoReporte | null = null;
@@ -287,7 +312,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       const [plazas,turnos]=await Promise.all([
         firstValueFrom(this.catalogos.getPlazas()),firstValueFrom(this.catalogos.getTurnos())
       ]);
-      this.plazas=plazas.filter(p=>p.activo);
+      this.plazas=plazas.filter(p=>p.activo);\n      this.plazaGestion=this.plazas[0]?.id ?? 0;
       this.turnos=turnos;
       const usuario=this.auth.usuario();
       if(!this.esSupervisor && usuario?.plazaId) {
@@ -301,9 +326,10 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   }
   ngOnDestroy(): void { this.fotos.forEach(f=>URL.revokeObjectURL(f.url)); }
 
-  cambiarVista(vista:'nuevo'|'historial'|'dashboard'):void {
+  cambiarVista(vista:'nuevo'|'historial'|'dashboard'|'vias'):void {
     this.vista=vista;this.error='';this.mensaje='';
-    if (vista!=='nuevo') void this.cargarHistorial();
+    if (vista==='vias') void this.cargarViasGestion();
+    else if (vista!=='nuevo') void this.cargarHistorial();
   }
   private fechaHoy():string {
     const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
@@ -411,6 +437,36 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     try{this.evidencias=await firstValueFrom(this.api.evidencias(registro.id));}
     catch(e){this.error=this.errorHttp(e);}
   }
+  async cargarViasGestion():Promise<void> {
+    if(!this.esSupervisor || !this.plazaGestion)return;
+    this.error='';
+    try{this.viasGestion=await firstValueFrom(this.api.vias(this.plazaGestion));}
+    catch(e){this.error=this.errorHttp(e);}
+  }
+  async asignarVias():Promise<void> {
+    const desde=Number(this.desdeVia),hasta=Number(this.hastaVia);
+    if(!this.esSupervisor || !this.plazaGestion)return;
+    if(!Number.isInteger(desde)||!Number.isInteger(hasta)||desde<1||hasta<desde||hasta>999999||hasta-desde>99){
+      this.error='Ingresa un rango válido de máximo 100 vías.';return;
+    }
+    this.guardando=true;this.error='';this.mensaje='';
+    try{
+      this.viasGestion=await firstValueFrom(this.api.asignarVias(this.plazaGestion,desde,hasta));
+      this.mensaje='Vías asignadas o reactivadas correctamente.';
+    }catch(e){this.error=this.errorHttp(e);}
+    finally{this.guardando=false;}
+  }
+  async desactivarVia(numero:number):Promise<void> {
+    if(!this.esSupervisor || !this.plazaGestion)return;
+    this.guardando=true;this.error='';this.mensaje='';
+    try{
+      await firstValueFrom(this.api.desactivarVia(this.plazaGestion,numero));
+      await this.cargarViasGestion();
+      this.mensaje='Vía '+numero+' desactivada.';
+    }catch(e){this.error=this.errorHttp(e);}
+    finally{this.guardando=false;}
+  }
+
   private errorHttp(e:unknown):string {
     const err=e as {error?:{message?:string;detail?:string};message?:string};
     return err?.error?.message || err?.error?.detail || err?.message || 'No se pudo completar la operación.';

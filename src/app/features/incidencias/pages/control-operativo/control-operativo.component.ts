@@ -7,6 +7,7 @@ import { AsistenciaApiService } from '../../../asistencia/services/asistencia-ap
 import { Plaza, Turno } from '../../../asistencia/models/asistencia.models';
 import { IncidenciaApiService } from '../../services/incidencia-api.service';
 import { ViaIncidencia } from '../../models/incidencia.models';
+import { ControlOperativoDashboardComponent } from './control-operativo-dashboard.component';
 import {
   ControlOperativoApiService, ControlOperativoEvidencia, ControlOperativoInput,
   ControlOperativoReporte, ControlOperativoResponsable, TipoControlOperativo
@@ -22,7 +23,7 @@ interface FotoControlOperativo {
 @Component({
   selector: 'app-control-operativo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ControlOperativoDashboardComponent],
   template: `
     <main class="co">
       <header class="co-header">
@@ -332,23 +333,7 @@ interface FotoControlOperativo {
         </div>
       </section>
 
-      <section class="co-panel" *ngIf="vista==='dashboard'">
-        <div class="co-panel-head"><div><h2>Dashboard operativo</h2><p>Indicadores del conjunto de reportes filtrados en el historial.</p></div>
-          <button type="button" class="co-secondary" (click)="cargarHistorial()">Actualizar datos</button></div>
-        <div class="co-kpis">
-          <article><small>Registros</small><strong>{{reportes.length}}</strong></article>
-          <article><small>Reportes operativos</small><strong>{{reportes.length}}</strong></article>
-          <article><small>Registros con cola</small><strong>{{totalConCola}}</strong></article>
-          <article><small>Máxima cola</small><strong>{{maxCola}} m</strong></article>
-          <article><small>Promedio de cola</small><strong>{{promedioCola | number:'1.0-1'}} m</strong></article>
-        </div>
-        <h3>Registros por plaza</h3>
-        <div *ngFor="let item of resumenPlazas" class="co-bar">
-          <span>{{item.plaza}} ({{item.total}})</span>
-          <div><span [style.width.%]="item.porcentaje"></span></div>
-        </div>
-        <p *ngIf="!reportes.length">Aún no hay datos para graficar.</p>
-      </section>
+      <app-control-operativo-dashboard *ngIf="vista==='dashboard'" [plazas]="plazas"></app-control-operativo-dashboard>
     </main>
   `,
   styles: [`
@@ -420,14 +405,6 @@ interface FotoControlOperativo {
     .co-photos>a{display:flex;flex-direction:column;align-items:start;gap:5px}
     .co-photos img{width:150px;height:105px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0}
     .co-evidence{border-top:1px solid #e2e8f0;margin-top:20px;padding-top:10px}
-    .co-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
-    .co-kpis article{display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
-    .co-kpis small{color:#64748b}
-    .co-kpis strong{font-size:25px;color:#1d4ed8}
-    .co-bar{margin:15px 0}
-    .co-bar>span{font-size:13px;font-weight:600}
-    .co-bar>div{margin-top:5px;height:10px;border-radius:99px;background:#e2e8f0;overflow:hidden}
-    .co-bar>div span{display:block;height:100%;background:var(--co-blue)}
     @media(max-width:850px){.co-general-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:680px){
       .co{padding:12px 10px 50px}
@@ -482,20 +459,6 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   readonly incidentes = ['PNP en el semáforo','Falla en el sistema','Sin incidente'];
 
   get esSupervisor(): boolean { return this.auth.tieneRol('SUPERVISOR'); }
-  get totalConCola(): number { return this.reportes.filter(r=>r.colaMetros!=null).length; }
-  get maxCola(): number { return Math.max(0,...this.reportes.map(r=>r.colaMetros??0)); }
-  get promedioCola(): number {
-    const conCola=this.reportes.filter(r=>r.colaMetros!=null);
-    return conCola.length ? conCola.reduce((s,r)=>s+(r.colaMetros??0),0)/conCola.length : 0;
-  }
-  get resumenPlazas(): {plaza:string;total:number;porcentaje:number}[] {
-    const conteos=new Map<string,number>();
-    this.reportes.forEach(r=>conteos.set(r.plazaCodigo,(conteos.get(r.plazaCodigo)||0)+1));
-    const max=Math.max(1,...conteos.values());
-    return [...conteos.entries()].map(([plaza,total])=>({plaza,total,porcentaje:100*total/max}))
-      .sort((a,b)=>b.total-a.total);
-  }
-
   ngOnInit(): void {
     // Mostrar el formulario inmediatamente: evitar esperar tres catálogos,
     // las vías y hasta 500 filas del historial antes de permitir registrar.
@@ -575,9 +538,10 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
 
   cambiarVista(vista:'nuevo'|'historial'|'dashboard'):void {
     this.vista=vista;this.error='';this.mensaje='';
-    if ((vista==='historial'||vista==='dashboard') && !this.historialCargado && !this.cargando) {
+    if (vista==='historial' && !this.historialCargado && !this.cargando) {
       void this.cargarHistorial();
     }
+    // El componente de Dashboard administra sus propios filtros y carga.
   }
   private fechaHoy():string {
     const partes = new Intl.DateTimeFormat('en-US',{

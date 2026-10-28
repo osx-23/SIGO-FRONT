@@ -157,21 +157,27 @@ interface FotoControlOperativo {
                 </select>
               </label>
               <p class="co-photo-caption"><strong>PLAZA:</strong> {{form.situacion || 'Sin información'}}</p>
-              <button type="button" class="co-photo-drop" (click)="fotoPlazaInput.click()"
+              <button #zonaPlaza type="button" class="co-photo-drop"
+                [class.co-photo-selected]="categoriaEvidenciaActiva==='PLAZA'"
+                [attr.aria-pressed]="categoriaEvidenciaActiva==='PLAZA'"
+                (click)="activarZonaEvidencia('PLAZA',zonaPlaza)"
+                (blur)="desactivarZonaEvidencia('PLAZA')"
                 (dragover)="permitirArrastre($event)" (drop)="soltarImagenCategoria($event,'PLAZA')"
-                aria-label="Añadir o reemplazar fotografía de la plaza">
+                aria-label="Seleccionar zona de fotografía de la plaza para pegar desde el portapapeles">
+                <span *ngIf="categoriaEvidenciaActiva==='PLAZA'" class="co-paste-ready">Seleccionado · ⌘/Ctrl + V</span>
                 <ng-container *ngIf="fotoCategoria('PLAZA') as foto; else sinFotoPlaza">
                   <img [src]="foto.url" alt="Evidencia fotográfica de la situación de la plaza">
-                  <span class="co-photo-overlay">Cambiar fotografía</span>
+                  <span class="co-photo-overlay">Selecciona para pegar otra fotografía</span>
                 </ng-container>
                 <ng-template #sinFotoPlaza>
                   <span class="co-upload-symbol" aria-hidden="true">+</span>
-                  <strong>Agregar fotografía</strong>
-                  <small>Haz clic, arrastra o pega una imagen</small>
+                  <strong>Seleccionar para pegar</strong>
+                  <small>Haz clic y luego presiona ⌘/Ctrl + V; también puedes arrastrar una imagen</small>
                 </ng-template>
               </button>
               <input #fotoPlazaInput hidden type="file" accept="image/jpeg,image/png,image/webp"
                 (change)="seleccionarImagenCategoria($event,'PLAZA')">
+              <button type="button" class="co-upload-file" (click)="fotoPlazaInput.click()">Subir imagen desde archivo</button>
               <button *ngIf="fotoCategoria('PLAZA')" type="button" class="co-remove" (click)="quitarFotoCategoria('PLAZA')">Quitar fotografía</button>
             </article>
 
@@ -187,21 +193,27 @@ interface FotoControlOperativo {
                 </select>
               </label>
               <p class="co-photo-caption"><strong>INGRESO:</strong> {{form.ingreso || 'Sin información'}}</p>
-              <button type="button" class="co-photo-drop" (click)="fotoIngresoInput.click()"
+              <button #zonaIngreso type="button" class="co-photo-drop"
+                [class.co-photo-selected]="categoriaEvidenciaActiva==='INGRESO'"
+                [attr.aria-pressed]="categoriaEvidenciaActiva==='INGRESO'"
+                (click)="activarZonaEvidencia('INGRESO',zonaIngreso)"
+                (blur)="desactivarZonaEvidencia('INGRESO')"
                 (dragover)="permitirArrastre($event)" (drop)="soltarImagenCategoria($event,'INGRESO')"
-                aria-label="Añadir o reemplazar fotografía del ingreso">
+                aria-label="Seleccionar zona de fotografía del ingreso para pegar desde el portapapeles">
+                <span *ngIf="categoriaEvidenciaActiva==='INGRESO'" class="co-paste-ready">Seleccionado · ⌘/Ctrl + V</span>
                 <ng-container *ngIf="fotoCategoria('INGRESO') as foto; else sinFotoIngreso">
                   <img [src]="foto.url" alt="Evidencia fotográfica del ingreso">
-                  <span class="co-photo-overlay">Cambiar fotografía</span>
+                  <span class="co-photo-overlay">Selecciona para pegar otra fotografía</span>
                 </ng-container>
                 <ng-template #sinFotoIngreso>
                   <span class="co-upload-symbol" aria-hidden="true">+</span>
-                  <strong>Agregar fotografía</strong>
-                  <small>Haz clic, arrastra o pega una imagen</small>
+                  <strong>Seleccionar para pegar</strong>
+                  <small>Haz clic y luego presiona ⌘/Ctrl + V; también puedes arrastrar una imagen</small>
                 </ng-template>
               </button>
               <input #fotoIngresoInput hidden type="file" accept="image/jpeg,image/png,image/webp"
                 (change)="seleccionarImagenCategoria($event,'INGRESO')">
+              <button type="button" class="co-upload-file" (click)="fotoIngresoInput.click()">Subir imagen desde archivo</button>
               <button *ngIf="fotoCategoria('INGRESO')" type="button" class="co-remove" (click)="quitarFotoCategoria('INGRESO')">Quitar fotografía</button>
             </article>
 
@@ -217,21 +229,27 @@ interface FotoControlOperativo {
                 </select>
               </label>
               <p class="co-photo-caption"><strong>INCIDENTE:</strong> {{form.incidente || 'Sin incidente especificado'}}</p>
-              <button type="button" class="co-photo-drop" (click)="fotoIncidenteInput.click()"
+              <button #zonaIncidente type="button" class="co-photo-drop"
+                [class.co-photo-selected]="categoriaEvidenciaActiva==='INCIDENTE'"
+                [attr.aria-pressed]="categoriaEvidenciaActiva==='INCIDENTE'"
+                (click)="activarZonaEvidencia('INCIDENTE',zonaIncidente)"
+                (blur)="desactivarZonaEvidencia('INCIDENTE')"
                 (dragover)="permitirArrastre($event)" (drop)="soltarImagenCategoria($event,'INCIDENTE')"
-                aria-label="Añadir o reemplazar fotografía del incidente">
+                aria-label="Seleccionar zona de fotografía del incidente para pegar desde el portapapeles">
+                <span *ngIf="categoriaEvidenciaActiva==='INCIDENTE'" class="co-paste-ready">Seleccionado · ⌘/Ctrl + V</span>
                 <ng-container *ngIf="fotoCategoria('INCIDENTE') as foto; else sinFotoIncidente">
                   <img [src]="foto.url" alt="Evidencia fotográfica del incidente">
-                  <span class="co-photo-overlay">Cambiar fotografía</span>
+                  <span class="co-photo-overlay">Selecciona para pegar otra fotografía</span>
                 </ng-container>
                 <ng-template #sinFotoIncidente>
                   <span class="co-upload-symbol" aria-hidden="true">+</span>
-                  <strong>Agregar fotografía</strong>
-                  <small>Haz clic, arrastra o pega una imagen</small>
+                  <strong>Seleccionar para pegar</strong>
+                  <small>Haz clic y luego presiona ⌘/Ctrl + V; también puedes arrastrar una imagen</small>
                 </ng-template>
               </button>
               <input #fotoIncidenteInput hidden type="file" accept="image/jpeg,image/png,image/webp"
                 (change)="seleccionarImagenCategoria($event,'INCIDENTE')">
+              <button type="button" class="co-upload-file" (click)="fotoIncidenteInput.click()">Subir imagen desde archivo</button>
               <button *ngIf="fotoCategoria('INCIDENTE')" type="button" class="co-remove" (click)="quitarFotoCategoria('INCIDENTE')">Quitar fotografía</button>
             </article>
 
@@ -248,25 +266,31 @@ interface FotoControlOperativo {
                 </div>
               </label>
               <p class="co-photo-caption"><strong>TAMAÑO DE COLA:</strong> {{form.colaMetros === null ? 'Sin medición' : form.colaMetros + ' metros'}}</p>
-              <button type="button" class="co-photo-drop" (click)="fotoColaInput.click()"
+              <button #zonaCola type="button" class="co-photo-drop"
+                [class.co-photo-selected]="categoriaEvidenciaActiva==='COLA'"
+                [attr.aria-pressed]="categoriaEvidenciaActiva==='COLA'"
+                (click)="activarZonaEvidencia('COLA',zonaCola)"
+                (blur)="desactivarZonaEvidencia('COLA')"
                 (dragover)="permitirArrastre($event)" (drop)="soltarImagenCategoria($event,'COLA')"
-                aria-label="Añadir o reemplazar fotografía de la cola">
+                aria-label="Seleccionar zona de fotografía de la cola para pegar desde el portapapeles">
+                <span *ngIf="categoriaEvidenciaActiva==='COLA'" class="co-paste-ready">Seleccionado · ⌘/Ctrl + V</span>
                 <ng-container *ngIf="fotoCategoria('COLA') as foto; else sinFotoCola">
                   <img [src]="foto.url" alt="Evidencia fotográfica del tamaño de cola">
-                  <span class="co-photo-overlay">Cambiar fotografía</span>
+                  <span class="co-photo-overlay">Selecciona para pegar otra fotografía</span>
                 </ng-container>
                 <ng-template #sinFotoCola>
                   <span class="co-upload-symbol" aria-hidden="true">+</span>
-                  <strong>Agregar fotografía</strong>
-                  <small>Haz clic, arrastra o pega una imagen</small>
+                  <strong>Seleccionar para pegar</strong>
+                  <small>Haz clic y luego presiona ⌘/Ctrl + V; también puedes arrastrar una imagen</small>
                 </ng-template>
               </button>
               <input #fotoColaInput hidden type="file" accept="image/jpeg,image/png,image/webp"
                 (change)="seleccionarImagenCategoria($event,'COLA')">
+              <button type="button" class="co-upload-file" (click)="fotoColaInput.click()">Subir imagen desde archivo</button>
               <button *ngIf="fotoCategoria('COLA')" type="button" class="co-remove" (click)="quitarFotoCategoria('COLA')">Quitar fotografía</button>
             </article>
           </div>
-          <p class="co-helper">Puedes subir una imagen por apartado (JPG, PNG o WEBP; máximo 10 MB). Las fotografías son opcionales.</p>
+          <p class="co-helper">Pulsa el recuadro de una categoría: se marcará en azul y podrás pegar con ⌘ + V (Mac) o Ctrl + V (Windows). También puedes arrastrar o subir JPG, PNG y WEBP de hasta 10 MB. Una fotografía opcional por apartado.</p>
         </section>
 
         <section class="co-panel co-bottom">
@@ -462,6 +486,9 @@ interface FotoControlOperativo {
     .co-photo-caption strong{color:#1d4ed8;font-weight:800}
     .co-photo-drop{position:relative;display:flex!important;flex-direction:column;justify-content:center;align-items:center;width:100%;aspect-ratio:16 / 9;min-height:165px;overflow:hidden;border:2px dashed #bbcee8!important;border-radius:12px!important;background:linear-gradient(135deg,#f8fbff,#eff6ff)!important;color:#2563eb!important;gap:7px;isolation:isolate}
     .co-photo-drop:hover{background:#eaf3ff!important;border-color:#2563eb!important}
+    .co-photo-drop.co-photo-selected{background:#dbeafe!important;border-color:#2563eb!important;border-style:solid!important;box-shadow:0 0 0 4px rgba(37,99,235,.17)}
+    .co-paste-ready{position:absolute;top:8px;right:8px;background:#1d4ed8;color:#fff;border-radius:8px;padding:6px 9px;font-size:11px;font-weight:800;z-index:2}
+    .co-upload-file{align-self:flex-start;padding:8px 12px!important;background:#eff6ff!important;color:#1d4ed8!important;border:1px solid #bfdbfe!important;font-size:12px!important}
     .co-photo-drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
     .co-upload-symbol{font-size:26px;line-height:1;width:40px;height:40px;background:#dbeafe;color:#1d4ed8;border-radius:50%;display:grid;place-items:center}
     .co-photo-drop strong{font-size:14px;color:var(--co-navy)}
@@ -581,6 +608,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   mensaje = '';
   editandoId: number | null = null;
   fotos: FotoControlOperativo[] = [];
+  categoriaEvidenciaActiva: CategoriaEvidencia | null = null;
   filtros: {inicio:string;fin:string;plazaId:number|null} =
     {inicio: this.restarDias(30), fin: this.fechaHoy(), plazaId:null};
   form: ControlOperativoInput = this.nuevoForm();
@@ -741,6 +769,15 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     }
   }
+  activarZonaEvidencia(categoria: CategoriaEvidencia, elemento: HTMLElement): void {
+    this.categoriaEvidenciaActiva = categoria;
+    elemento.focus();
+  }
+
+  desactivarZonaEvidencia(categoria: CategoriaEvidencia): void {
+    if (this.categoriaEvidenciaActiva === categoria) this.categoriaEvidenciaActiva = null;
+  }
+
   fotoCategoria(categoria: CategoriaEvidencia): FotoControlOperativo | undefined {
     return this.fotos.find(f => f.categoria === categoria);
   }
@@ -792,6 +829,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   }
 
   limpiar():void {
+    this.categoriaEvidenciaActiva = null;
     this.fotos.forEach(f=>URL.revokeObjectURL(f.url));this.fotos=[];
     const actual=this.auth.usuario();
     this.form=this.nuevoForm();

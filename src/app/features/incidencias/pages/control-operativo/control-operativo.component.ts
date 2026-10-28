@@ -722,7 +722,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
         ? 'Reporte #'+registro.id+' guardado, pero falló la subida de '+fallidas+' imagen(es). Puedes editarlas nuevamente.'
         : 'Reporte operativo #'+registro.id+' guardado correctamente.';
     } catch(e){this.error=this.errorHttp(e);}
-    finally{this.guardando=false;}
+    finally{this.guardando=false;this.cdr.markForCheck();}
   }
   async editar(registro:ControlOperativoReporte):Promise<void> {
     this.vista='nuevo';this.editandoId=registro.id;this.error='';this.mensaje='';
@@ -734,17 +734,20 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       descripcion:registro.descripcion,estado:registro.estado};
     // Conservar el turno registrado, incluso si se eligió manualmente.
     await this.cambioPlaza();this.form.viaId=registro.viaId;
+    this.cdr.markForCheck();
   }
   async verEvidencias(registro:ControlOperativoReporte):Promise<void> {
     this.reporteEvidencias=registro;this.evidencias=[];this.error='';
     try{this.evidencias=await firstValueFrom(this.api.evidencias(registro.id));}
     catch(e){this.error=this.errorHttp(e);}
+    finally{this.cdr.markForCheck();}
   }
   async cargarViasGestion():Promise<void> {
     if(!this.esSupervisor || !this.plazaGestion)return;
     this.error='';
     try{this.viasGestion=await firstValueFrom(this.api.vias(this.plazaGestion));}
     catch(e){this.error=this.errorHttp(e);}
+    finally{this.cdr.markForCheck();}
   }
   async asignarVias():Promise<void> {
     const desde=Number(this.desdeVia),hasta=Number(this.hastaVia);
@@ -757,7 +760,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       this.viasGestion=await firstValueFrom(this.api.asignarVias(this.plazaGestion,desde,hasta));
       this.mensaje='Vías asignadas o reactivadas correctamente.';
     }catch(e){this.error=this.errorHttp(e);}
-    finally{this.guardando=false;}
+    finally{this.guardando=false;this.cdr.markForCheck();}
   }
   async desactivarVia(numero:number):Promise<void> {
     if(!this.esSupervisor || !this.plazaGestion)return;
@@ -767,7 +770,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       await this.cargarViasGestion();
       this.mensaje='Vía '+numero+' desactivada.';
     }catch(e){this.error=this.errorHttp(e);}
-    finally{this.guardando=false;}
+    finally{this.guardando=false;this.cdr.markForCheck();}
   }
 
   private errorHttp(e:unknown):string {

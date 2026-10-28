@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -64,14 +64,14 @@ interface FotoControlOperativo {
               </select>
             </label>
             <label>Turno
-              <select name="turno" [(ngModel)]="form.turnoId" required>
-                <option [ngValue]="0">Selecciona un turno</option>
+              <select name="turno" [(ngModel)]="form.turnoId" [disabled]="cargandoTurnos" required>
+                <option [ngValue]="0">{{cargandoTurnos ? 'Cargando turnos…' : 'Selecciona un turno'}}</option>
                 <option *ngFor="let turno of turnos" [ngValue]="turno.id">Turno {{turno.codigo.trim()}}</option>
               </select>
             </label>
             <label>Responsable
-              <select name="responsable" [(ngModel)]="form.responsableId" required>
-                <option [ngValue]="0">Selecciona un responsable</option>
+              <select name="responsable" [(ngModel)]="form.responsableId" [disabled]="cargandoResponsables" required>
+                <option [ngValue]="0">{{cargandoResponsables ? 'Cargando responsables…' : 'Selecciona un responsable'}}</option>
                 <option *ngFor="let responsable of responsables" [ngValue]="responsable.id">
                   {{responsable.nombreCompleto}}
                 </option>
@@ -248,7 +248,7 @@ interface FotoControlOperativo {
           </div>
           <div class="co-actions">
             <button type="button" class="co-secondary" (click)="limpiar()">Limpiar</button>
-            <button type="submit" [disabled]="guardando || !coForm.form.valid || !form.plazaId || !form.turnoId">
+            <button type="submit" [disabled]="guardando || cargandoTurnos || cargandoResponsables || !coForm.form.valid || !form.plazaId || !form.turnoId || !form.responsableId">
               {{guardando ? 'Guardando…' : editandoId ? 'Guardar cambios' : 'Registrar control operativo'}}
             </button>
           </div>
@@ -434,6 +434,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   private readonly catalogos = inject(AsistenciaApiService);
   private readonly incidenciaApi = inject(IncidenciaApiService);
   readonly auth = inject(AuthService);
+  private readonly cdr = inject(ChangeDetectorRef);
   vista: 'nuevo' | 'historial' | 'dashboard' | 'vias' = 'nuevo';
   plazas: Plaza[] = [];
   turnos: Turno[] = [];
@@ -451,6 +452,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   cargandoResponsables = true;
   private historialCargado = false;
   private historialSolicitud = 0;
+  private viasSolicitud = 0;
   guardando = false;
   error = '';
   mensaje = '';
@@ -487,14 +489,22 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     this.form.responsableId = usuario?.trabajadorId ?? usuario?.id ?? 0;
     this.plazaGestion = this.form.plazaId;
 
-    if (!this.esSupervisor && usuario?.plazaId) {
-      // El controlador ya tiene una plaza validada en la sesión SIGO.
+    // Mostrar inmediatamente los valores de la sesión; luego completar catálogos.
+    if (usuario?.plazaId) {
       this.plazas = [{
         id: usuario.plazaId,
         codigo: usuario.plaza || 'Plaza asignada',
         descripcion: null,
         activo: true
       }];
+    }
+    if (this.form.responsableId && usuario?.nombre) {
+      this.responsables = [{
+        id: this.form.responsableId,
+        nombreCompleto: usuario.nombre
+      }];
+    }
+    if (!this.esSupervisor && usuario?.plazaId) {
       this.filtros.plazaId = usuario.plazaId;
     } else {
       void this.cargarPlazasIniciales();
@@ -510,32 +520,41 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   private async cargarPlazasIniciales(): Promise<void> {
     try {
       const plazas = await firstValueFrom(this.catalogos.getPlazas());
-      this.plazas = (plazas || []).filter(p => p.activo);
+      const activas = (plazas || []).filter(p => p.activo);
+      // Mantener la plaza de sesión visible aunque el catálogo llegue vacío.
+      if (activas.length) this.plazas = activas;
       if (!this.plazaGestion) this.plazaGestion = this.form.plazaId || this.plazas[0]?.id || 0;
     } catch (e) {
       this.error = 'No se pudo cargar el catálogo de plazas. ' + this.errorHttp(e);
+    } finally {
+      // Los cambios posteriores a await requieren notificar a Angular.
+      this.cdr.markForCheck();
     }
   }
 
   private async cargarTurnosIniciales(): Promise<void> {
     try {
       this.turnos = await firstValueFrom(this.catalogos.getTurnos());
-      // Aplicar el turno sugerido una sola vez. El usuario puede editarlo luego.
+      // Sugerir A/B/C solo en la primera carga, sin sobrescribir cambios manuales.
       if (!this.form.turnoId) this.sincronizarTurno(this.form.hora);
     } catch (e) {
       this.error = 'No se pudo cargar el catálogo de turnos. ' + this.errorHttp(e);
     } finally {
       this.cargandoTurnos = false;
+      this.cdr.markForCheck();
     }
   }
 
   private async cargarResponsablesIniciales(): Promise<void> {
     try {
-      this.responsables = await firstValueFrom(this.api.responsables());
+      const responsables = await firstValueFrom(this.api.responsables());
+      // Si la lista llega vacía, conservar como referencia el usuario autenticado.
+      if (responsables.length) this.responsables = responsables;
     } catch (e) {
       this.error = 'No se pudo cargar la lista de responsables. ' + this.errorHttp(e);
     } finally {
       this.cargandoResponsables = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -582,13 +601,21 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       situacion:'',ingreso:'',incidente:'',colaMetros:null,descripcion:'',estado:'REGISTRADO'};
   }
   async cambioPlaza():Promise<void> {
-    this.form.viaId=null;this.vias=[];
-    if(!this.form.plazaId)return;
-    const plazaId=this.form.plazaId;
+    const solicitud = ++this.viasSolicitud;
+    this.form.viaId = null;
+    this.vias = [];
+    if (!this.form.plazaId) return;
+    const plazaId = this.form.plazaId;
     try {
-      const vias=await firstValueFrom(this.incidenciaApi.getVias(plazaId));
-      if(this.form.plazaId===plazaId)this.vias=vias.filter(v=>v.activa!==false);
-    } catch(e) { this.error=this.errorHttp(e); }
+      const vias = await firstValueFrom(this.incidenciaApi.getVias(plazaId));
+      if (solicitud === this.viasSolicitud && this.form.plazaId === plazaId) {
+        this.vias = vias.filter(v => v.activa !== false);
+      }
+    } catch (e) {
+      if (solicitud === this.viasSolicitud) this.error = this.errorHttp(e);
+    } finally {
+      this.cdr.markForCheck();
+    }
   }
   async cargarHistorial(): Promise<void> {
     const solicitud = ++this.historialSolicitud;
@@ -607,6 +634,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       if (solicitud === this.historialSolicitud) this.error = this.errorHttp(e);
     } finally {
       if (solicitud === this.historialSolicitud) this.cargando = false;
+      this.cdr.markForCheck();
     }
   }
   fotoCategoria(categoria: CategoriaEvidencia): FotoControlOperativo | undefined {

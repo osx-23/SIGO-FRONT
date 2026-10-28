@@ -5,13 +5,14 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { Plaza } from '../../../asistencia/models/asistencia.models';
 import {
-  ControlOperativoApiService, ControlOperativoDashboard, ControlOperativoDetalleDia,
-  ControlOperativoDiaDashboard, ControlOperativoEvidencia, ControlOperativoReporte,
+  ControlOperativoApiService, ControlOperativoDashboard,
+  ControlOperativoEvidencia, ControlOperativoReporte,
   ControlOperativoTurnoDashboard, TurnoOperativo
 } from '../../services/control-operativo-api.service';
 
 type Periodo = 'SEMANA' | 'MES' | 'ANIO';
 interface Punto {
+  reporteId: number;
   turno: TurnoOperativo;
   fecha: string;
   clave: string;
@@ -20,7 +21,6 @@ interface Punto {
   registros: number;
   mediciones: number;
   plaza: string;
-  responsable: string;
   hora: string;
   situacion: string;
   ingreso: string;
@@ -105,38 +105,6 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
       </section>
 
       <div class="principal">
-        <aside class="panel detalle" aria-label="Detalle del día">
-          <div class="panel-head">
-            <div>
-              <h3>Detalle del día</h3>
-              <p>{{diaSeleccionado ? formatoFecha(diaSeleccionado) : 'Selecciona un punto'}}</p>
-            </div>
-            <span class="pildora">{{detalleDia?.incidencias ?? 0}} reportes</span>
-          </div>
-          <div class="cola-dia">
-            <span>Mayor cola registrada</span>
-            <strong>{{detalleDia?.colaMaxima ?? 0}}<small> m</small></strong>
-            <span class="flecha" aria-hidden="true">↗</span>
-          </div>
-          <p class="nota" *ngIf="detalleDia">{{detalleDia.mediciones}} {{detalleDia.mediciones === 1 ? 'medición' : 'mediciones'}} de cola registrada(s) el día seleccionado.</p>
-          <p class="nota" *ngIf="!detalleDia">Elige una medición del gráfico para ver el detalle.</p>
-          <div class="desglose" *ngIf="detalleDia">
-            <h4>Cola máxima por turno</h4>
-            <div class="turno-mini" *ngFor="let t of turnos">
-              <span class="punto-leyenda" [style.background]="colorTurno(t)"></span>
-              <span>Turno {{t}}</span>
-              <strong>{{maximoDiaTurno(t)}}{{maximoDiaTurno(t)===null?'':' m'}}</strong>
-            </div>
-          </div>
-          <button type="button" class="abrir-modal" (click)="abrirDetalle()" [disabled]="!diaSeleccionado">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/>
-            </svg>
-            Ver detalle y fotografías
-          </button>
-        </aside>
-
         <section class="panel grafica" aria-label="Gráfica de la cola por turno">
           <div class="panel-head grafica-head">
             <div>
@@ -167,13 +135,13 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
                     [attr.aria-label]="'Turno '+p.turno+', '+p.etiqueta+', '+p.cola+' metros'"
                     (mouseenter)="mostrarTooltip(p)" (mouseleave)="tooltip=null"
                     (focus)="mostrarTooltip(p)" (blur)="tooltip=null"
-                    (click)="seleccionarDia(p.fecha)"
-                    (keydown.enter)="seleccionarDia(p.fecha)"
-                    (keydown.space)="seleccionarDia(p.fecha);$event.preventDefault()">
+                    (click)="seleccionarPunto(p)"
+                    (keydown.enter)="seleccionarPunto(p)"
+                    (keydown.space)="seleccionarPunto(p);$event.preventDefault()">
                     <title>Turno {{p.turno}} · {{p.etiqueta}} · {{p.cola}} m · {{p.plaza}}</title>
                   </circle>
                   <circle [attr.cx]="p.x" [attr.cy]="p.y"
-                    [attr.r]="diaSeleccionado===p.fecha ? 7 : 5.2"
+                    [attr.r]="puntoSeleccionado?.reporteId===p.reporteId ? 7 : 5.2"
                     [attr.fill]="serie.color" stroke="#fff" stroke-width="2.4"
                     pointer-events="none"/>
                 </g>
@@ -187,10 +155,9 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
               <strong [style.color]="colorTurno(p.turno)">Turno {{p.turno}} · {{p.etiqueta}}</strong>
               <b>{{p.cola}} m</b>
               <span>Plaza: {{p.plaza || 'No indicada'}} · {{p.hora}}</span>
-              <span>Responsable: {{p.responsable || 'No indicado'}}</span>
               <span *ngIf="p.situacion">Situación: {{p.situacion}}</span>
               <span *ngIf="p.incidente">Incidente: {{p.incidente}}</span>
-              <small>{{p.registros}} reporte(s) · Haz clic para ver el día</small>
+              <small>Reporte #{{p.reporteId}} · Haz clic para ver este registro</small>
             </div>
           </div>
           <div class="pie-grafica">
@@ -198,6 +165,45 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
             <span>{{periodo === 'ANIO' ? 'Máximo de cada mes' : 'Máximo de cada día'}}</span>
           </div>
         </section>
+        <aside class="panel detalle" aria-label="Detalle del registro seleccionado">
+          <div class="panel-head">
+            <div>
+              <h3>Detalle del registro</h3>
+              <p>{{puntoSeleccionado ? formatoFecha(puntoSeleccionado.fecha) : 'Selecciona un punto de la gráfica'}}</p>
+            </div>
+            <span class="pildora" *ngIf="puntoSeleccionado">
+              #{{puntoSeleccionado.reporteId}} · Turno {{puntoSeleccionado.turno}}
+            </span>
+          </div>
+          <div class="cola-dia">
+            <span>Tamaño de cola registrado</span>
+            <strong>{{puntoSeleccionado?.cola ?? 0}}<small> m</small></strong>
+            <span class="flecha" aria-hidden="true">↗</span>
+          </div>
+          <div *ngIf="puntoSeleccionado as p" class="registro-datos">
+            <div><small>Plaza</small><strong>{{reporteSeleccionado?.plazaCodigo || p.plaza}}</strong></div>
+            <div><small>Turno</small><strong>Turno {{reporteSeleccionado?.turnoCodigo || p.turno}}</strong></div>
+            <div><small>Hora</small><strong>{{reporteSeleccionado?.hora || p.hora}}</strong></div>
+            <div><small>Responsable</small><strong>{{reporteSeleccionado?.responsableNombre || p.responsable || 'No indicado'}}</strong></div>
+            <div><small>Situación de la plaza</small><strong>{{reporteSeleccionado?.situacion || p.situacion || 'Sin información'}}</strong></div>
+            <div><small>Ingreso</small><strong>{{reporteSeleccionado?.ingreso || p.ingreso || 'Sin información'}}</strong></div>
+            <div><small>Incidente</small><strong>{{reporteSeleccionado?.incidente || p.incidente || 'Sin incidente indicado'}}</strong></div>
+            <div *ngIf="reporteSeleccionado?.viaNumero"><small>Vía</small><strong>{{reporteSeleccionado?.viaNumero}}</strong></div>
+          </div>
+          <p *ngIf="!puntoSeleccionado" class="nota">
+            Haz clic en un punto para ver los datos de ese registro en este panel.
+          </p>
+          <p *ngIf="seleccionandoRegistro" class="nota" role="status">Cargando información del registro…</p>
+          <p *ngIf="errorRegistro" class="error" role="alert">{{errorRegistro}}</p>
+          <button type="button" class="abrir-modal" (click)="abrirDetalle()"
+            [disabled]="!puntoSeleccionado || seleccionandoRegistro">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/>
+            </svg>
+            Ver registro completo y fotografías
+          </button>
+        </aside>
       </div>
     </section>
 
@@ -207,20 +213,17 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
         <header class="modal-cabecera">
           <div>
             <p class="eyebrow">SIGO · CONTROL OPERATIVO</p>
-            <h2 id="tituloDetalleCO">Detalle del {{formatoFecha(diaSeleccionado)}}</h2>
-            <p>Registros operativos y fotografías de evidencia.</p>
+            <h2 id="tituloDetalleCO">Detalle del reporte #{{puntoSeleccionado?.reporteId}}</h2>
+            <p>{{puntoSeleccionado ? formatoFecha(puntoSeleccionado.fecha) : ''}} · Datos y fotografías del registro seleccionado.</p>
           </div>
           <button type="button" class="cerrar" aria-label="Cerrar detalle" (click)="cerrarModal()">×</button>
         </header>
         <div class="modal-cuerpo">
-          <p *ngIf="detalleCargando" class="aviso" role="status">Cargando registros y evidencias…</p>
+          <p *ngIf="detalleCargando" class="aviso" role="status">Cargando registro y evidencias…</p>
           <p *ngIf="detalleError" class="error" role="alert">{{detalleError}}</p>
-          <p *ngIf="!detalleCargando && detalleCompleto && !detalleCompleto.reportes.length" class="aviso">
-            No hay registros para este día y plaza.
-          </p>
-          <article *ngFor="let r of detalleCompleto?.reportes" class="reporte">
+          <article *ngIf="reporteModal as r" class="reporte">
             <div class="reporte-titulo">
-              <div><strong>Reporte #{{r.id}}</strong><p>{{r.plazaCodigo}} · Turno {{r.turnoCodigo}} · {{r.hora}}</p></div>
+              <div><strong>Reporte #{{r.id}}</strong><p>{{r.plazaCodigo}} · Turno {{r.turnoCodigo}} · {{r.fecha}} {{r.hora}}</p></div>
               <span class="medida-reporte">{{r.colaMetros===null ? 'Sin medición' : r.colaMetros+' m'}}</span>
             </div>
             <div class="datos-reporte">
@@ -234,14 +237,14 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
             <p *ngIf="r.descripcion" class="observaciones"><b>Observaciones:</b> {{r.descripcion}}</p>
             <div class="evidencias">
               <h4>Fotografías de evidencia</h4>
-              <div class="evidencias-grid" *ngIf="fotosReporte(r.id).length; else sinFotos">
-                <a *ngFor="let foto of fotosReporte(r.id)" [href]="foto.urlArchivo"
+              <div class="evidencias-grid" *ngIf="fotosModal.length; else sinFotos">
+                <a *ngFor="let foto of fotosModal" [href]="foto.urlArchivo"
                   target="_blank" rel="noopener noreferrer" class="foto">
                   <img [src]="foto.urlArchivo" [alt]="'Evidencia '+foto.categoria+' del reporte '+r.id" loading="lazy">
                   <span>{{etiquetaFoto(foto.categoria)}}</span>
                 </a>
               </div>
-              <ng-template #sinFotos><p class="nota">Este reporte no tiene imágenes adjuntas.</p></ng-template>
+              <ng-template #sinFotos><p class="nota">Este registro no tiene imágenes adjuntas.</p></ng-template>
             </div>
           </article>
         </div>
@@ -279,7 +282,7 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
     .indicador small{color:#8191a9;font-size:11px}
     .indicador-icono{display:grid;place-items:center;position:absolute;right:18px;top:16px;width:38px;height:38px;border-radius:12px;font-size:22px}
     .indicador-icono.verde{background:#e5f7f2;color:#0d9488}.indicador-icono.azul{background:#edf2ff;color:#2563eb}.indicador-icono.naranja{background:#fff2e5;color:#d97706}
-    .principal{display:grid;grid-template-columns:minmax(270px,.8fr) minmax(0,1.6fr);gap:16px}
+    .principal{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(310px,.8fr);gap:16px}
     .panel{min-width:0;padding:20px;background:#fff;border:1px solid #e0e7f1;border-radius:16px}
     .panel-head{display:flex;justify-content:space-between;align-items:start;gap:12px}
     .panel-head h3{font-size:16px;font-weight:800;margin:0}
@@ -290,11 +293,10 @@ const TURNOS: TurnoOperativo[] = ['A','B','C'];
     .cola-dia strong{font-size:28px;color:#0b8978}.cola-dia strong small{font-size:14px}
     .flecha{position:absolute;right:20px;top:22px;font-size:25px;color:#14b8a6}
     .nota{color:#8191a7;font-size:12px;line-height:1.6;margin:12px 0}
-    .desglose{border-top:1px solid #e4eaf3;padding-top:13px;margin-top:15px}
-    .desglose h4{font-size:12px;font-weight:800;margin:0 0 12px}
-    .turno-mini{display:flex;align-items:center;gap:8px;margin:9px 0;font-size:12px;color:#64748b}
-    .turno-mini strong{margin-left:auto;color:#19283d}
-    .punto-leyenda{width:9px;height:9px;border-radius:50%;flex:none}
+    .registro-datos{display:grid;grid-template-columns:1fr;gap:11px;margin-top:16px}
+    .registro-datos>div{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #eef2f8;padding-bottom:8px}
+    .registro-datos small{font-size:11px;color:#8191a7;flex:0 0 43%}
+    .registro-datos strong{font-size:12px;text-align:right;font-weight:700;color:#19283d;overflow-wrap:anywhere}
     .abrir-modal{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:20px;width:100%;border:0;border-radius:11px;background:#2563eb;color:#fff;padding:13px;font-weight:800;font-size:12px;cursor:pointer}
     .abrir-modal svg{width:17px;height:17px}.abrir-modal:disabled{opacity:.45;cursor:default}
     .grafica-head{flex-wrap:wrap}
@@ -351,7 +353,10 @@ export class ControlOperativoDashboardComponent implements OnInit {
   resumen: ControlOperativoDashboard | null = null;
   error = '';
   cargando = false;
-  diaSeleccionado = '';
+  puntoSeleccionado: Punto | null = null;
+  reporteSeleccionado: ControlOperativoReporte | null = null;
+  seleccionandoRegistro = false;
+  errorRegistro = '';
   series: Serie[] = [];
   etiquetasEje: {x:number;texto:string}[] = [];
   ejes: Eje[] = [];
@@ -360,14 +365,13 @@ export class ControlOperativoDashboardComponent implements OnInit {
   modalAbierto = false;
   detalleCargando = false;
   detalleError = '';
-  detalleCompleto: ControlOperativoDetalleDia | null = null;
+  reporteModal: ControlOperativoReporte | null = null;
+  fotosModal: ControlOperativoEvidencia[] = [];
   private solicitud = 0;
   private solicitudDetalle = 0;
+  private solicitudRegistro = 0;
 
   get esSupervisor(): boolean {return this.auth.tieneRol('SUPERVISOR');}
-  get detalleDia():ControlOperativoDiaDashboard|null {
-    return this.resumen?.dias.find(d=>d.fecha===this.diaSeleccionado) ?? null;
-  }
   get hayPuntos():boolean {return this.series.some(s=>s.puntos.length>0);}
   get tituloPeriodo():string {
     const {inicio,fin}=this.rango();
@@ -421,20 +425,41 @@ export class ControlOperativoDashboardComponent implements OnInit {
     this.referencia=this.iso(d);
     void this.cargar();
   }
-  seleccionarDia(fecha:string):void {
-    this.diaSeleccionado=fecha;
+  async seleccionarPunto(p:Punto):Promise<void> {
+    const id=++this.solicitudRegistro;
+    this.puntoSeleccionado=p;
+    this.reporteSeleccionado=null;
+    this.seleccionandoRegistro=true;
+    this.errorRegistro='';
     this.tooltip=null;
     this.cdr.markForCheck();
+    try {
+      const reporte=await firstValueFrom(this.api.obtener(p.reporteId));
+      if(id!==this.solicitudRegistro)return;
+      this.reporteSeleccionado=reporte;
+    }catch(e:unknown) {
+      if(id!==this.solicitudRegistro)return;
+      const err=e as {error?:{message?:string;detail?:string};message?:string};
+      this.errorRegistro=err?.error?.message||err?.error?.detail||err?.message||
+        'No se pudo cargar el registro seleccionado.';
+    }finally {
+      if(id===this.solicitudRegistro){
+        this.seleccionandoRegistro=false;
+        this.cdr.markForCheck();
+      }
+    }
   }
   mostrarTooltip(p:Punto):void {this.tooltip=p;this.cdr.markForCheck();}
-  maximoDiaTurno(t:TurnoOperativo):number|null {
-    const r=this.resumen?.turnos.find(d=>d.fecha===this.diaSeleccionado&&d.turno===t);
-    return r?.colaMaxima ?? null;
-  }
   async cargar():Promise<void> {
     const id=++this.solicitud;
     const rango=this.rango();
     this.cargando=true;this.error='';this.tooltip=null;
+    // Cancelar la solicitud individual anterior si cambian filtros o período.
+    ++this.solicitudRegistro;
+    this.puntoSeleccionado=null;
+    this.reporteSeleccionado=null;
+    this.seleccionandoRegistro=false;
+    this.errorRegistro='';
     this.cdr.markForCheck();
     try {
       const r=await firstValueFrom(this.api.dashboard({
@@ -444,17 +469,17 @@ export class ControlOperativoDashboardComponent implements OnInit {
       if(id!==this.solicitud)return;
       this.resumen=r;
       this.construir();
-      const fechas=new Set(r.dias.map(d=>d.fecha));
-      if(!fechas.has(this.diaSeleccionado)) {
-        const puntos=this.series.flatMap(s=>s.puntos).sort((a,b)=>a.fecha.localeCompare(b.fecha));
-        this.diaSeleccionado=puntos[puntos.length-1]?.fecha ??
-          r.dias[r.dias.length-1]?.fecha ?? '';
-      }
+      const puntos=this.series.flatMap(s=>s.puntos)
+        .sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.turno.localeCompare(b.turno));
+      // Escoger un único registro real; nunca sumar datos de otros puntos.
+      const actual=puntos[puntos.length-1]??null;
+      if(actual) void this.seleccionarPunto(actual);
     }catch(e:unknown){
       if(id!==this.solicitud)return;
       const err=e as {error?:{message?:string;detail?:string};message?:string};
       this.error=err?.error?.message||err?.error?.detail||err?.message||'No se pudo cargar el dashboard.';
-      this.resumen=null;this.series=[];this.etiquetasEje=[];this.ejes=[];this.diaSeleccionado='';
+      this.resumen=null;this.series=[];this.etiquetasEje=[];this.ejes=[];
+      this.puntoSeleccionado=null;this.reporteSeleccionado=null;
     }finally {
       if(id===this.solicitud){this.cargando=false;this.cdr.markForCheck();}
     }
@@ -502,11 +527,11 @@ export class ControlOperativoDashboardComponent implements OnInit {
         if(pos===undefined)continue;
         const count=conteos.get(k);
         puntos.push({
-          turno,fecha:item.fecha,clave:clave(item.fecha),
+          reporteId:item.reporteId,turno,fecha:item.fecha,clave:clave(item.fecha),
           etiqueta:this.periodo==='ANIO'?clave(item.fecha):this.formatoFecha(item.fecha),
           cola:item.colaMaxima??0,registros:count?.registros??item.registros,
           mediciones:count?.mediciones??item.mediciones,plaza:item.plazaCodigo,
-          responsable:item.responsableNombre,hora:item.hora,situacion:item.situacion,
+          hora:item.hora,situacion:item.situacion,
           ingreso:item.ingreso,incidente:item.incidente,
           x:etiquetas.length===1?420:68+pos/(etiquetas.length-1)*706,
           y:260-(item.colaMaxima??0)/tope*210
@@ -519,25 +544,32 @@ export class ControlOperativoDashboardComponent implements OnInit {
   }
 
   async abrirDetalle():Promise<void> {
-    if(!this.diaSeleccionado)return;
+    const reporteId=this.puntoSeleccionado?.reporteId;
+    if(!reporteId)return;
     const id=++this.solicitudDetalle;
     this.modalAbierto=true;this.detalleCargando=true;this.detalleError='';
-    this.detalleCompleto=null;this.cdr.markForCheck();
+    this.reporteModal=null;this.fotosModal=[];
+    this.cdr.markForCheck();
     try {
-      const d=await firstValueFrom(this.api.detalleDia(
-        this.diaSeleccionado,this.esSupervisor?this.plazaId:this.auth.usuario()?.plazaId
-      ));
-      if(id===this.solicitudDetalle && this.modalAbierto)this.detalleCompleto=d;
+      const [reporte,fotos]=await Promise.all([
+        firstValueFrom(this.api.obtener(reporteId)),
+        firstValueFrom(this.api.evidencias(reporteId))
+      ]);
+      if(id===this.solicitudDetalle && this.modalAbierto){
+        this.reporteModal=reporte;
+        this.fotosModal=fotos;
+      }
     }catch(e:unknown){
       if(id!==this.solicitudDetalle||!this.modalAbierto)return;
       const err=e as {error?:{message?:string;detail?:string};message?:string};
-      this.detalleError=err?.error?.message||err?.message||'No se pudieron obtener los detalles.';
+      this.detalleError=err?.error?.message||err?.error?.detail||err?.message||
+        'No se pudieron cargar las evidencias del registro.';
     }finally {
-      if(id===this.solicitudDetalle){this.detalleCargando=false;this.cdr.markForCheck();}
+      if(id===this.solicitudDetalle){
+        this.detalleCargando=false;
+        this.cdr.markForCheck();
+      }
     }
-  }
-  fotosReporte(id:number):ControlOperativoEvidencia[]{
-    return this.detalleCompleto?.evidencias.filter(f=>f.reporteId===id)??[];
   }
   etiquetaFoto(categoria:string):string {
     const etiquetas:Record<string,string>={
@@ -547,7 +579,7 @@ export class ControlOperativoDashboardComponent implements OnInit {
   }
   cerrarModal():void {
     this.solicitudDetalle++;
-    this.modalAbierto=false;this.detalleCompleto=null;this.detalleError='';
+    this.modalAbierto=false;this.reporteModal=null;this.fotosModal=[];this.detalleError='';
     this.cdr.markForCheck();
   }
   @HostListener('document:keydown.escape')

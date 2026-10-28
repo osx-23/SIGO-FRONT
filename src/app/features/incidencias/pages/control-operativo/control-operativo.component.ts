@@ -12,6 +12,13 @@ import {
   ControlOperativoReporte, TipoControlOperativo
 } from '../../services/control-operativo-api.service';
 
+type CategoriaEvidencia = 'PLAZA' | 'INGRESO' | 'INCIDENTE' | 'COLA';
+interface FotoControlOperativo {
+  file: File;
+  url: string;
+  categoria: CategoriaEvidencia;
+}
+
 @Component({
   selector: 'app-control-operativo',
   standalone: true,
@@ -422,14 +429,8 @@ import {
       .co-actions button{width:100%}
       .co-photo-drop{min-height:180px}
     }
-  `]})
-type CategoriaEvidencia = 'PLAZA' | 'INGRESO' | 'INCIDENTE' | 'COLA';
-interface FotoControlOperativo {
-  file: File;
-  url: string;
-  categoria: CategoriaEvidencia;
-}
-
+  `]
+})
 export class ControlOperativoComponent implements OnInit, OnDestroy {
   private readonly api = inject(ControlOperativoApiService);
   private readonly catalogos = inject(AsistenciaApiService);

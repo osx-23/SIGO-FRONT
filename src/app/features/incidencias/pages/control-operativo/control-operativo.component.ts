@@ -672,7 +672,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   async guardar():Promise<void> {
     this.error='';this.mensaje='';
     if(!this.form.plazaId || !this.form.turnoId || !this.form.responsableId || !this.form.fecha || !this.form.hora) {
-      this.error='Completa plaza, responsable, fecha y hora; verifica el turno automático.';return;
+      this.error='Completa plaza, turno, responsable, fecha y hora.';return;
     }
     if(this.form.tipo==='MEDICION' && this.form.colaMetros==null){
       this.error='Indica el tamaño de cola para la medición.';return;
@@ -683,16 +683,16 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       const registro=this.editandoId
         ? await firstValueFrom(this.api.actualizar(this.editandoId,payload))
         : await firstValueFrom(this.api.crear(payload));
-      const fallidas:string[]=[];
-      for(const f of this.fotos){
-        try{await firstValueFrom(this.api.subirEvidencia(registro.id,f.file,f.categoria));}
-        catch{fallidas.push(f.file.name);}
-      }
+      // Hasta cuatro evidencias independientes: subirlas en paralelo.
+      const subidas = await Promise.allSettled(
+        this.fotos.map(f => firstValueFrom(this.api.subirEvidencia(registro.id,f.file,f.categoria)))
+      );
+      const fallidas = subidas.filter(r => r.status === 'rejected').length;
+      this.historialCargado = false; // Se actualizará cuando el usuario abra Historial.
       this.limpiar();
-      this.mensaje=fallidas.length
-        ? 'Reporte #'+registro.id+' guardado, pero no se pudieron subir '+fallidas.length+' imagen(es). Puedes volver a adjuntarlas.'
+      this.mensaje = fallidas
+        ? 'Reporte #'+registro.id+' guardado, pero falló la subida de '+fallidas+' imagen(es). Puedes editarlas nuevamente.'
         : 'Reporte operativo #'+registro.id+' guardado correctamente.';
-      await this.cargarHistorial();
     } catch(e){this.error=this.errorHttp(e);}
     finally{this.guardando=false;}
   }
@@ -704,7 +704,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       hora:registro.hora,situacion:registro.situacion,ingreso:registro.ingreso,
       incidente:registro.incidente,colaMetros:registro.colaMetros,
       descripcion:registro.descripcion,estado:registro.estado};
-    this.sincronizarTurno(registro.hora);
+    // Conservar el turno registrado, incluso si se eligió manualmente.
     await this.cambioPlaza();this.form.viaId=registro.viaId;
   }
   async verEvidencias(registro:ControlOperativoReporte):Promise<void> {

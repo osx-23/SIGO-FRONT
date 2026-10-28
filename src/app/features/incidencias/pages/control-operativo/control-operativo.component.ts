@@ -261,7 +261,10 @@ import {
     .co-photos img{width:120px;height:100px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0}
     .co-photos button{background:#e2e8f0;color:#334155;padding:5px 10px;font-size:12px}
     .co-evidence{border-top:1px solid #e2e8f0;margin-top:20px;padding-top:10px}
-    .co-vias{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}\n    .co-vias article{border:1px solid #e2e8f0;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}\n    .co-vias button{padding:7px 10px;font-size:12px}\n    .co-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+    .co-vias{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+    .co-vias article{border:1px solid #e2e8f0;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .co-vias button{padding:7px 10px;font-size:12px}
+    .co-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
     .co-kpis article{display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
     .co-kpis small{color:#64748b}.co-kpis strong{font-size:25px;color:#0f766e}
     .co-bar{margin:15px 0}.co-bar>span{font-size:13px;font-weight:600}
@@ -278,7 +281,11 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   vista: 'nuevo' | 'historial' | 'dashboard' | 'vias' = 'nuevo';
   plazas: Plaza[] = [];
   turnos: Turno[] = [];
-  vias: ViaIncidencia[] = [];\n  viasGestion: ControlOperativoVia[] = [];\n  plazaGestion = 0;\n  desdeVia = 101;\n  hastaVia = 105;
+  vias: ViaIncidencia[] = [];
+  viasGestion: ControlOperativoVia[] = [];
+  plazaGestion = 0;
+  desdeVia = 101;
+  hastaVia = 105;
   reportes: ControlOperativoReporte[] = [];
   evidencias: ControlOperativoEvidencia[] = [];
   reporteEvidencias: ControlOperativoReporte | null = null;
@@ -318,7 +325,8 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       const [plazas,turnos]=await Promise.all([
         firstValueFrom(this.catalogos.getPlazas()),firstValueFrom(this.catalogos.getTurnos())
       ]);
-      this.plazas=plazas.filter(p=>p.activo);\n      this.plazaGestion=this.plazas[0]?.id ?? 0;
+      this.plazas=plazas.filter(p=>p.activo);
+      this.plazaGestion=this.plazas[0]?.id ?? 0;
       this.turnos=turnos;
       const usuario=this.auth.usuario();
       if(!this.esSupervisor && usuario?.plazaId) {

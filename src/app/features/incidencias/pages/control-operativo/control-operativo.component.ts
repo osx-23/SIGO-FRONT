@@ -529,7 +529,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     return fecha.toISOString().slice(0,10);
   }
   sincronizarTurno(hora:string):void {
-    const match = /^([01]\\d|2[0-3]):[0-5]\\d$/.exec(hora);
+    const match = /^([01]\d|2[0-3]):[0-5]\d$/.exec(hora);
     if (!match) {this.form.turnoId=0;return;}
     const minutos = Number(hora.slice(0,2))*60 + Number(hora.slice(3,5));
     const codigo = minutos>=360 && minutos<840 ? 'A' :

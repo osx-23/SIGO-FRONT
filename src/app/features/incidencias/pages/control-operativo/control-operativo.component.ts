@@ -38,11 +38,50 @@ interface FotoControlOperativo {
         </div>
       </header>
 
-      <nav class="co-tabs" aria-label="Secciones del control operativo">
-        <button type="button" [class.selected]="vista==='nuevo'" (click)="cambiarVista('nuevo')">Nuevo reporte</button>
-        <button type="button" [class.selected]="vista==='historial'" (click)="cambiarVista('historial')">Historial</button>
-        <button type="button" [class.selected]="vista==='dashboard'" (click)="cambiarVista('dashboard')">Dashboard</button>
-        <button *ngIf="esSupervisor" type="button" [class.selected]="vista==='vias'" (click)="cambiarVista('vias')">Vías por plaza</button>
+      <nav class="co-tabs" aria-label="Secciones de control operativo">
+        <div class="co-tabs-grid">
+          <button type="button" class="co-subtab" [class.is-active]="vista==='nuevo'"
+            [attr.aria-pressed]="vista==='nuevo'" (click)="cambiarVista('nuevo')">
+            <span class="co-tab-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/>
+                <path d="M16 4h6M19 1v6M8 12h8M8 16h5"/>
+              </svg>
+            </span>
+            <span class="co-tab-copy">
+              <span class="co-tab-title">Nuevo reporte</span>
+              <span class="co-tab-description">Registra las condiciones operativas de la plaza</span>
+            </span>
+          </button>
+          <button type="button" class="co-subtab" [class.is-active]="vista==='historial'"
+            [attr.aria-pressed]="vista==='historial'" (click)="cambiarVista('historial')">
+            <span class="co-tab-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="4" width="14" height="17" rx="2"/>
+                <path d="M9 4.5V3h6v1.5M9 10h6M9 14h6M9 18h4"/>
+              </svg>
+            </span>
+            <span class="co-tab-copy">
+              <span class="co-tab-title">Historial</span>
+              <span class="co-tab-description">Consulta los reportes operativos registrados</span>
+            </span>
+          </button>
+          <button type="button" class="co-subtab" [class.is-active]="vista==='dashboard'"
+            [attr.aria-pressed]="vista==='dashboard'" (click)="cambiarVista('dashboard')">
+            <span class="co-tab-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18M7 16v-4M12 16V8M17 16V5"/>
+              </svg>
+            </span>
+            <span class="co-tab-copy">
+              <span class="co-tab-title">Dashboard</span>
+              <span class="co-tab-description">Visualiza indicadores y mediciones de cola</span>
+            </span>
+          </button>
+        </div>
       </nav>
       <p class="co-error" role="alert" *ngIf="error">{{error}}</p>
       <p class="co-success" role="status" *ngIf="mensaje">{{mensaje}}</p>
@@ -301,30 +340,6 @@ interface FotoControlOperativo {
         </div>
       </section>
 
-      <section class="co-panel" *ngIf="vista==='vias' && esSupervisor">
-        <div class="co-panel-head">
-          <div><h2>Vías por plaza</h2><p>Utiliza el catálogo de SIGO que también consultan otros módulos. Desactivar una vía la ocultará en sus nuevos registros.</p></div>
-        </div>
-        <div class="co-filters">
-          <label>Plaza
-            <select [(ngModel)]="plazaGestion" (ngModelChange)="cargarViasGestion()">
-              <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
-            </select>
-          </label>
-          <label>Desde <input type="number" min="1" max="999999" [(ngModel)]="desdeVia"></label>
-          <label>Hasta <input type="number" min="1" max="999999" [(ngModel)]="hastaVia"></label>
-          <button type="button" (click)="asignarVias()" [disabled]="guardando">Asignar / reactivar vías</button>
-        </div>
-        <div *ngIf="viasGestion.length" class="co-vias">
-          <article *ngFor="let v of viasGestion">
-            <span><strong>Vía {{v.numero}}</strong> — {{v.activa?'Activa':'Inactiva'}}</span>
-            <button type="button" *ngIf="v.activa" class="co-secondary" [disabled]="guardando"
-              (click)="desactivarVia(v.numero)">Desactivar</button>
-          </article>
-        </div>
-        <p *ngIf="!viasGestion.length">No hay vías configuradas para esta plaza.</p>
-      </section>
-
       <section class="co-panel" *ngIf="vista==='dashboard'">
         <div class="co-panel-head"><div><h2>Dashboard operativo</h2><p>Indicadores del conjunto de reportes filtrados en el historial.</p></div>
           <button type="button" class="co-secondary" (click)="cargarHistorial()">Actualizar datos</button></div>
@@ -355,12 +370,20 @@ interface FotoControlOperativo {
     .co h2{font-size:19px;letter-spacing:-.015em;color:var(--co-navy);margin:4px 0 5px}
     .co h3{font-size:15px;line-height:1.3;color:var(--co-navy);margin:0}
     .co-header p:not(.co-eyebrow),.co-panel-head p:not(.co-section-kicker){color:var(--co-muted);font-size:13px;line-height:1.6;margin:0}
-    .co-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+    .co-tabs{padding:8px 10px;margin:0 0 18px;border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 2px 9px rgba(15,23,42,.04)}
+    .co-tabs-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
     .co button{cursor:pointer;border:0;border-radius:11px;padding:11px 17px;background:var(--co-blue);color:#fff;font-weight:700;font:inherit;font-size:13px}
     .co button:disabled{opacity:.5;cursor:not-allowed}
     .co button:focus-visible,.co input:focus-visible,.co select:focus-visible,.co textarea:focus-visible{outline:2px solid var(--co-blue);outline-offset:2px}
-    .co-tabs button{background:#eaf0f8;color:#38516e}
-    .co-tabs button.selected{background:var(--co-navy);color:#fff;box-shadow:0 3px 12px rgba(11,35,66,.14)}
+    .co-tabs .co-subtab{display:flex;align-items:center;justify-content:flex-start;gap:12px;min-width:0;min-height:82px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;color:#475569;text-align:left;transition:background-color .15s,border-color .15s,color .15s,box-shadow .15s}
+    .co-tabs .co-subtab:hover:not(.is-active){border-color:#bfdbfe;background:#eff6ff;color:#1d4ed8}
+    .co-tabs .co-subtab.is-active{border-color:#2563eb;background:#2563eb;color:#fff;box-shadow:0 4px 12px rgba(37,99,235,.14)}
+    .co-tab-icon{display:flex;align-items:center;justify-content:center;flex:0 0 42px;width:42px;height:42px;border-radius:10px;background:#eff6ff;color:#2563eb}
+    .co-tab-icon svg{width:22px;height:22px}
+    .co-subtab.is-active .co-tab-icon{background:rgba(255,255,255,.17);color:#fff}
+    .co-tab-copy{display:block;min-width:0}
+    .co-tab-title{display:block;font-size:14px;line-height:1.35;font-weight:800}
+    .co-tab-description{display:block;margin-top:4px;font-size:11px;line-height:1.4;font-weight:500;opacity:.85}
     .co-panel{background:var(--co-panel);border:1px solid #e2e8f0;box-shadow:0 4px 14px rgba(15,23,42,.035);border-radius:20px;padding:24px;margin-top:16px}
     .co-panel-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:19px;flex-wrap:wrap}
     .co-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
@@ -405,9 +428,6 @@ interface FotoControlOperativo {
     .co-photos>a{display:flex;flex-direction:column;align-items:start;gap:5px}
     .co-photos img{width:150px;height:105px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0}
     .co-evidence{border-top:1px solid #e2e8f0;margin-top:20px;padding-top:10px}
-    .co-vias{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
-    .co-vias article{border:1px solid #e2e8f0;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-    .co-vias button{padding:7px 10px;font-size:12px}
     .co-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
     .co-kpis article{display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
     .co-kpis small{color:#64748b}
@@ -422,6 +442,13 @@ interface FotoControlOperativo {
       .co-header{padding:20px 16px;border-radius:18px;gap:12px}
       .co-heading-icon{width:42px;height:42px;flex-basis:42px}
       .co-panel{padding:16px;border-radius:16px}
+      .co-tabs{padding:8px}
+      .co-tabs-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+      .co-tabs .co-subtab{min-height:104px;flex-direction:column;justify-content:center;gap:6px;padding:11px 5px;text-align:center}
+      .co-tab-icon{flex-basis:34px;width:34px;height:34px;border-radius:9px}
+      .co-tab-icon svg{width:19px;height:19px}
+      .co-tab-title{font-size:12px}
+      .co-tab-description{font-size:10px}
       .co-general-grid,.co-evidence-grid,.co-bottom-fields{grid-template-columns:minmax(0,1fr)}
       .co-actions{flex-direction:column}
       .co-actions button{width:100%}

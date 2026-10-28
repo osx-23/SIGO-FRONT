@@ -13,6 +13,16 @@ export const INCIDENCIAS_ROUTES: Routes = [
         .then(m => m.IncidenciaNuevaComponent)
   },
   {
+    path: 'incidencias/control-operativo',
+    canActivate: [
+      moduleGuard('INCIDENCIAS'),
+      roleGuard('SUPERVISOR', 'CONTROLADOR')
+    ],
+    loadComponent: () =>
+      import('./pages/control-operativo/control-operativo.component')
+        .then(m => m.ControlOperativoComponent)
+  },
+  {
     path: 'incidencias/historial',
     canActivate: [
       moduleGuard('INCIDENCIAS'),

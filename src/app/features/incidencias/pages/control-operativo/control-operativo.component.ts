@@ -296,9 +296,9 @@ interface FotoControlOperativo {
         <div class="co-filters">
           <label>Desde <input type="date" [(ngModel)]="filtros.inicio"></label>
           <label>Hasta <input type="date" [(ngModel)]="filtros.fin"></label>
-           <label *ngIf="esSupervisor">Plaza
+           <label>Plaza
             <select [(ngModel)]="filtros.plazaId">
-              <option [ngValue]="null">Todas</option>
+              <option [ngValue]="null">Todas las plazas</option>
               <option *ngFor="let p of plazas" [ngValue]="p.id">{{p.codigo}}</option>
             </select>
           </label>
@@ -320,6 +320,8 @@ interface FotoControlOperativo {
                 <td>
                   <div class="co-table-actions">
                     <button type="button" class="co-action-button co-action-edit" (click)="editar(r)"
+                      [disabled]="!puedeEditarRegistro(r)"
+                      [title]="puedeEditarRegistro(r) ? 'Editar reporte' : 'Solo puedes editar registros de tu plaza asignada'"
                       [attr.aria-label]="'Editar reporte '+r.id">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -612,11 +614,9 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
         nombreCompleto: usuario.nombre
       }];
     }
-    if (!this.esSupervisor && usuario?.plazaId) {
-      this.filtros.plazaId = usuario.plazaId;
-    } else {
-      void this.cargarPlazasIniciales();
-    }
+    // Consultas de historial por cualquier plaza para supervisor y controlador.
+    // El formulario de registro sigue usando por defecto la plaza de sesión.
+    void this.cargarPlazasIniciales();
 
     // Cada catálogo se carga de forma independiente, sin bloquear la interfaz.
     void this.cargarTurnosIniciales();
@@ -730,7 +730,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     try {
       const datos = await firstValueFrom(this.api.listar({
         inicio: this.filtros.inicio, fin: this.filtros.fin,
-        plazaId: this.esSupervisor ? this.filtros.plazaId : this.auth.usuario()?.plazaId
+        plazaId: this.filtros.plazaId
       }));
       // No sobrescribir un filtro nuevo con la respuesta de una petición anterior.
       if (solicitud !== this.historialSolicitud) return;
@@ -830,7 +830,11 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
     } catch(e){this.error=this.errorHttp(e);}
     finally{this.guardando=false;this.cdr.markForCheck();}
   }
+  puedeEditarRegistro(registro:ControlOperativoReporte):boolean {
+    return this.esSupervisor || registro.plazaId === this.auth.usuario()?.plazaId;
+  }
   async editar(registro:ControlOperativoReporte):Promise<void> {
+    if (!this.puedeEditarRegistro(registro)) return;
     this.vista='nuevo';this.editandoId=registro.id;this.error='';this.mensaje='';
     this.form={plazaId:registro.plazaId,turnoId:registro.turnoId,
       viaId:null,responsableId:registro.responsableId || registro.registradoPorId,

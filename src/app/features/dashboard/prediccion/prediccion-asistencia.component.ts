@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { Plaza, Turno } from '../../asistencia/models/asistencia.models';
 import { PrediccionAsistenciaApiService } from './prediccion-asistencia-api.service';
-import { PrediccionAsistenciaResponse } from './prediccion-asistencia.models';
+import { PrediccionAsistenciaResponse, ProyeccionFinMesResponse } from './prediccion-asistencia.models';
 
 @Component({
   selector: 'app-prediccion-asistencia',
@@ -29,6 +29,27 @@ export class PrediccionAsistenciaComponent implements OnInit {
   readonly cargando = signal(false);
   readonly mensajeError = signal('');
   readonly resultado = signal<PrediccionAsistenciaResponse | null>(null);
+
+  readonly turnoProyeccionId = signal<number | null>(null);
+  readonly cargandoMes = signal(false);
+  readonly errorMes = signal('');
+  readonly proyeccion = signal<ProyeccionFinMesResponse | null>(null);
+
+  readonly diasProyectados = computed(() => {
+    const resumen = new Map<string, { fecha: string; programados: number; ausencias: number; cobertura: number }>();
+    for (const fila of this.proyeccion()?.detalle ?? []) {
+      if (fila.estado !== 'PROYECTADO' || fila.programados === null ||
+          fila.ausenciasEstimadas === null || fila.coberturaEstimada === null) continue;
+      const actual = resumen.get(fila.fecha) ?? {
+        fecha: fila.fecha, programados: 0, ausencias: 0, cobertura: 0
+      };
+      actual.programados += fila.programados;
+      actual.ausencias += fila.ausenciasEstimadas;
+      actual.cobertura += fila.coberturaEstimada;
+      resumen.set(fila.fecha, actual);
+    }
+    return [...resumen.values()].sort((a, b) => a.fecha.localeCompare(b.fecha));
+  });
 
   readonly hoy = this.fechaLocal(0);
   readonly coberturaPorcentaje = computed(() => {
@@ -62,6 +83,7 @@ export class PrediccionAsistenciaComponent implements OnInit {
     const value = (event.target as HTMLSelectElement).value;
     this.plazaId.set(value ? Number(value) : null);
     this.limpiarResultado();
+    this.limpiarProyeccion();
   }
 
   cambiarTurno(event: Event): void {
@@ -117,6 +139,49 @@ export class PrediccionAsistenciaComponent implements OnInit {
           this.cargando.set(false);
         }
       });
+  }
+
+  cambiarTurnoProyeccion(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.turnoProyeccionId.set(value ? Number(value) : null);
+    this.limpiarProyeccion();
+  }
+
+  proyectarHastaFinMes(): void {
+    const plazaId = this.plazaId();
+    if (plazaId === null || this.cargandoMes()) {
+      this.errorMes.set('Selecciona una plaza para consultar la programación restante del mes.');
+      return;
+    }
+    this.cargandoMes.set(true);
+    this.errorMes.set('');
+    this.proyeccion.set(null);
+
+    this.api.proyectarFinMes(plazaId, this.turnoProyeccionId())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: respuesta => {
+          this.proyeccion.set(respuesta);
+          this.cargandoMes.set(false);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.errorMes.set(
+            error.status === 503
+              ? 'SIGO-ML no está disponible. Revisa la conexión configurada en SIGO-BACK.'
+              : error.status === 404
+                ? 'SIGO-BACK aún no tiene el endpoint de proyección mensual. Actualiza el backend.'
+                : error.status === 401 || error.status === 403
+                  ? 'Esta consulta requiere acceso de Supervisor o Controlador.'
+                  : 'No se pudo generar la proyección. Intenta nuevamente.'
+          );
+          this.cargandoMes.set(false);
+        }
+      });
+  }
+
+  private limpiarProyeccion(): void {
+    this.proyeccion.set(null);
+    this.errorMes.set('');
   }
 
   private limpiarResultado(): void {

@@ -39,6 +39,7 @@ export class IncidenciaNuevaComponent implements OnInit, OnDestroy {
   tipos: TipoIncidencia[] = [];
   vias: ViaIncidencia[] = [];
   fotos: ArchivoPreview[] = [];
+  evidenciaSeleccionada = false;
 
   readonly form = this.fb.group({
     plazaId: this.fb.control<number | null>(null, Validators.required),
@@ -73,19 +74,46 @@ export class IncidenciaNuevaComponent implements OnInit, OnDestroy {
     this.fotos.forEach(f => URL.revokeObjectURL(f.url));
   }
 
+  activarZonaEvidencia(elemento: HTMLElement): void {
+    this.evidenciaSeleccionada = true;
+    elemento.focus();
+  }
+
+  pegarEvidencia(event: ClipboardEvent): void {
+    const item = Array.from(event.clipboardData?.items ?? [])
+      .find(item => item.kind === 'file' && item.type.startsWith('image/'));
+    const file = item?.getAsFile();
+    if (!file) return;
+    event.preventDefault();
+    this.procesarEvidencia(file);
+  }
+
+  permitirArrastreEvidencia(event: DragEvent): void {
+    event.preventDefault();
+  }
+
+  soltarEvidencia(event: DragEvent): void {
+    event.preventDefault();
+    const file = Array.from(event.dataTransfer?.files ?? [])
+      .find(item => item.type.startsWith('image/'));
+    if (file) this.procesarEvidencia(file);
+  }
+
   seleccionarEvidencia(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
-    this.error.set('');
+    if (file) this.procesarEvidencia(file);
+  }
 
-    if (!file) return;
+  private procesarEvidencia(file: File): void {
+    this.error.set('');
     if (this.fotos.length >= 5) return this.error.set('Puedes adjuntar como máximo 5 evidencias.');
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       return this.error.set('Solo se permiten imágenes JPG, PNG o WEBP.');
     }
-    if (file.size > 10 * 1024 * 1024) {
-      return this.error.set('Cada fotografía debe pesar como máximo 10 MB.');
+    if (file.size === 0 || file.size > 10 * 1024 * 1024) {
+      return this.error.set('Cada fotografía debe pesar como máximo 10 MB y no estar vacía.');
     }
 
     this.cropperFile.set(file);
@@ -188,6 +216,7 @@ export class IncidenciaNuevaComponent implements OnInit, OnDestroy {
   }
 
   private resetear(): void {
+    this.evidenciaSeleccionada = false;
     this.fotos.forEach(f => URL.revokeObjectURL(f.url));
     this.fotos = [];
     const usuario = this.auth.usuario();

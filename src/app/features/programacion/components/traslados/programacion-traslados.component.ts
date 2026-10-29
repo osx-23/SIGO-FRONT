@@ -45,15 +45,21 @@ export class ProgramacionTrasladosComponent {
 
   constructor() {
     effect(() => {
-      const plaza = this.plazaId();
-      const anio = this.anio();
-      const mes = this.mes();
-      if (!plaza) { this.traslados.set([]); return; }
-      this.cargando.set(true);
-      this.api.getTraslados(plaza, anio, mes).subscribe({
-        next: rows => { this.traslados.set(rows); this.cargando.set(false); },
-        error: () => { this.cargando.set(false); }
-      });
+      // Leer entradas para que el effect se ejecute al cambiar plaza o periodo.
+      this.plazaId();
+      this.anio();
+      this.mes();
+      this.cargarLista();
+    });
+  }
+
+  private cargarLista(): void {
+    const plaza = this.plazaId();
+    if (!plaza) { this.traslados.set([]); return; }
+    this.cargando.set(true);
+    this.api.getTraslados(plaza, this.anio(), this.mes()).subscribe({
+      next: rows => { this.traslados.set(rows); this.cargando.set(false); },
+      error: () => { this.cargando.set(false); }
     });
   }
 
@@ -93,6 +99,7 @@ export class ProgramacionTrasladosComponent {
       next: () => {
         this.guardando.set(false);
         this.modal.set(false);
+        this.cargarLista();
         this.modificado.emit();
       },
       error: err => {
@@ -106,7 +113,7 @@ export class ProgramacionTrasladosComponent {
     if (this.bloqueado()) { this.error.set('Guarda los turnos pendientes antes de cancelar.'); return; }
     if (!confirm('¿Cancelar este traslado futuro? Se devolverán los turnos a la plaza de origen y se quitarán casetas de destino.')) return;
     this.api.cancelarTraslado(id).subscribe({
-      next: () => this.modificado.emit(),
+      next: () => { this.cargarLista(); this.modificado.emit(); },
       error: err => this.error.set(err?.error?.message ?? 'No se pudo cancelar el traslado.')
     });
   }

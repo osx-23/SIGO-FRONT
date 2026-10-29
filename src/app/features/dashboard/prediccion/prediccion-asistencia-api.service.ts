@@ -3,11 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import {
-  PrediccionAsistenciaRequest,
-  PrediccionAsistenciaResponse,
-  ProyeccionFinMesResponse
-} from './prediccion-asistencia.models';
+import { ProyeccionFinMesResponse } from './prediccion-asistencia.models';
 
 @Injectable({ providedIn: 'root' })
 export class PrediccionAsistenciaApiService {
@@ -19,13 +15,6 @@ export class PrediccionAsistenciaApiService {
     return this.http.get<ProyeccionFinMesResponse>(
       `${environment.apiUrl}/dashboard/asistencia/proyeccion-fin-mes`,
       { params }
-    );
-  }
-
-  predecir(request: PrediccionAsistenciaRequest): Observable<PrediccionAsistenciaResponse> {
-    return this.http.post<PrediccionAsistenciaResponse>(
-      `${environment.apiUrl}/dashboard/asistencia/predecir`,
-      request
     );
   }
 }

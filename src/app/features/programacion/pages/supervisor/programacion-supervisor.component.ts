@@ -432,11 +432,12 @@ export class ProgramacionSupervisorComponent
 
     let resultado =
       this.agentes
-        .filter(
-          agente =>
-            !asignados.has(
-              agente.id
-            )
+        .filter(agente =>
+          !asignados.has(agente.id)
+          // El entrante se programa manualmente; no debe asignarse una secuencia
+          // permanente de otra plaza antes de que cambie su plaza administrativa.
+          && !this.trasladosMes.some(t =>
+            t.trabajadorId === agente.id && t.plazaDestinoId === this.plazaId)
         );
 
 

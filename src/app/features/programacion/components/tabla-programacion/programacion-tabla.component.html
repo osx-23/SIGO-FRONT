@@ -219,9 +219,12 @@
                   "
                 >
                   <div class="agent-name-line">
-                    <strong>
-                      {{ agente.nombreCompleto }}
-                    </strong>
+                    <strong>{{ agente.nombreCompleto }}</strong>
+                    @if (origenTraslado(agente.id); as origen) {
+                      <span class="ml-2 rounded-md bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800">
+                        Desde {{ origen }}
+                      </span>
+                    }
                   </div>
 
                   @if(estaProcesandoAgente(agente.id)){
@@ -290,6 +293,7 @@
                     "
                     [class]="'shift-select ' + claseEstado(valor)"
                     [disabled]="
+                      !puedeProgramar(agente.id, dia) ||
                       guardandoTurnos ||
                       guardandoOrden ||
                       generador.procesando ||
@@ -378,9 +382,12 @@
 
               <td class="sticky-name">
                 <div class="agent-cell">
-                  <strong>
-                    {{ controlador.nombreCompleto }}
-                  </strong>
+                  <strong>{{ controlador.nombreCompleto }}</strong>
+                  @if (origenTraslado(controlador.id); as origen) {
+                    <span class="ml-2 rounded-md bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800">
+                      Desde {{ origen }}
+                    </span>
+                  }
                 </div>
               </td>
 
@@ -400,6 +407,7 @@
                     "
                     [class]="'shift-select ' + claseEstado(valor)"
                     [disabled]="
+                      !puedeProgramar(controlador.id, dia) ||
                       guardandoTurnos ||
                       guardandoOrden ||
                       generador.procesando

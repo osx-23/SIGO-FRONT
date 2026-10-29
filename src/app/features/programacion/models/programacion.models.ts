@@ -232,3 +232,27 @@ export interface GeneradorCasetasPropuesta {
   conflictos: ConflictoCasetaPropuesta[];
   calidad?: CalidadGeneracionCasetas;
 }
+
+/** Los traslados son asignaciones efectivas por fecha; no cambian todavía trabajadores.plaza_id. */
+export interface TrasladoPlazaProgramado {
+  id: number;
+  trabajadorId: number;
+  codigo: number;
+  trabajador: string;
+  puesto: string;
+  plazaOrigenId: number;
+  plazaOrigenCodigo: string;
+  plazaDestinoId: number;
+  plazaDestinoCodigo: string;
+  fechaInicio: string;
+  fechaFin: string | null;
+  estado: 'PROGRAMADO' | 'CANCELADO';
+}
+export interface TrasladoCandidato {
+  id: number; codigo: number; nombre: string; puesto: string;
+  plazaId: number; plazaCodigo: string;
+}
+export interface CrearTrasladoPlazaRequest {
+  trabajadorId: number; plazaDestinoId: number;
+  fechaInicio: string; fechaFin: string | null;
+}

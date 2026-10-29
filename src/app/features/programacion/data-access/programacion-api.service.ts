@@ -30,7 +30,10 @@ import {
   ResumenTrabajador,
   SecuenciaAgente,
   TrabajadorResumen,
-  Ubicacion
+  Ubicacion,
+  TrasladoPlazaProgramado,
+  TrasladoCandidato,
+  CrearTrasladoPlazaRequest
 } from '../models/programacion.models';
 
 export interface CoberturaTurnosRequest {
@@ -215,6 +218,25 @@ export interface VistaPreviaTurnosTextoExcel {
 export class ProgramacionApiService {
   private readonly http = inject(HttpClient);
   private readonly api = environment.apiUrl;
+
+
+  getTraslados(plazaId: number, anio: number, mes: number): Observable<TrasladoPlazaProgramado[]> {
+    return this.http.get<TrasladoPlazaProgramado[]>(`${this.api}/programacion/traslados`, {
+      params: new HttpParams().set('plazaId', plazaId).set('anio', anio).set('mes', mes)
+    });
+  }
+
+  getCandidatosTraslado(): Observable<TrasladoCandidato[]> {
+    return this.http.get<TrasladoCandidato[]>(`${this.api}/programacion/traslados/candidatos`);
+  }
+
+  crearTraslado(request: CrearTrasladoPlazaRequest): Observable<TrasladoPlazaProgramado> {
+    return this.http.post<TrasladoPlazaProgramado>(`${this.api}/programacion/traslados`, request);
+  }
+
+  cancelarTraslado(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/programacion/traslados/${id}`);
+  }
 
   getPlazas(): Observable<Plaza[]> {
     return this.http.get<Plaza[]>(`${this.api}/plazas`);

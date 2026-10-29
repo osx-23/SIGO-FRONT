@@ -225,6 +225,11 @@
     }
   </section>
 
+  <app-programacion-traslados
+    [plazas]="plazas" [plazaId]="plazaId" [anio]="anio" [mes]="mes"
+    [bloqueado]="cambios.size > 0 || guardando || cargando || generador.procesando"
+    (modificado)="cargar()" />
+
   <section class="filters">
 
     <label>
@@ -396,6 +401,7 @@
       [gruposProgramacion]="gruposProgramacion"
       [grupos]="grupos"
       [controladores]="controladores"
+      [traslados]="trasladosMes"
       [matrix]="matrix"
       [agentesProcesando]="agentesProcesando"
       [guardandoOrden]="guardandoOrden"

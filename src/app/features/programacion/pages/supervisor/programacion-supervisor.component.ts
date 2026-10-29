@@ -24,7 +24,8 @@ import {
   GrupoProgramacion,
   Plaza,
   SecuenciaAgente,
-  TrabajadorResumen
+  TrabajadorResumen,
+  TrasladoPlazaProgramado
 } from '../../models/programacion.models';
 
 import {
@@ -66,6 +67,7 @@ import {
 import {
   ProgramacionTablaComponent
 } from '../../components/tabla-programacion/programacion-tabla.component';
+import { ProgramacionTrasladosComponent } from '../../components/traslados/programacion-traslados.component';
 
 import {
   ProgramacionCargaFacade
@@ -105,7 +107,8 @@ interface OmisionTurnoExcelAgrupada {
     ProgramacionGeneradorModalComponent,
     ProgramacionExcepcionModalComponent,
     ProgramacionResumenSecuenciasComponent,
-    ProgramacionTablaComponent
+    ProgramacionTablaComponent,
+    ProgramacionTrasladosComponent
   ],
 
   templateUrl:
@@ -181,6 +184,8 @@ export class ProgramacionSupervisorComponent
   agentes: TrabajadorResumen[] = [];
 
   controladores: TrabajadorResumen[] = [];
+
+  trasladosMes: TrasladoPlazaProgramado[] = [];
 
   grupos: GrupoLider[] = [];
 
@@ -1019,10 +1024,10 @@ export class ProgramacionSupervisorComponent
             ];
 
           this.controladores =
-            [
-              ...resultado.controladores
-            ];
+            [...resultado.controladores];
 
+          this.trasladosMes =
+            resultado.traslados.filter(t => t.estado === 'PROGRAMADO');
 
           this.secuencias =
             [
@@ -1238,11 +1243,18 @@ export class ProgramacionSupervisorComponent
           resultado
         ) => {
 
-          this.controladores =
-            [
-              ...resultado.controladores
-            ];
-
+          // Conservar los controladores entrantes cuando se cargan líderes.
+          const entrantes = this.trasladosMes
+            .filter(t => t.plazaDestinoId === this.plazaId
+              && t.puesto.startsWith('Controlador'))
+            .map(t => ({
+              id: t.trabajadorId, codigo: t.codigo, nombreCompleto: t.trabajador,
+              puesto: { id: 0, nombre: t.puesto },
+              plaza: { id: t.plazaOrigenId, codigo: t.plazaOrigenCodigo }
+            } as TrabajadorResumen));
+          this.controladores = [...new Map(
+            [...resultado.controladores, ...entrantes].map(t => [t.id, t])
+          ).values()];
 
           this.grupos =
             [
@@ -1709,6 +1721,11 @@ export class ProgramacionSupervisorComponent
    */
 
   abrirGenerador(): void {
+    if (this.trasladosMes.length > 0) {
+      this.error = 'Este mes contiene traslados de plaza. Programa esos turnos manualmente: el generador automático todavía no calcula cambios de plaza a mitad de mes.';
+      this.mostrarConfirmacionAccion(this.error, 'Traslados programados', 'error');
+      return;
+    }
     if (
       !this.plazaId ||
       this.generador.procesando
@@ -1733,6 +1750,11 @@ export class ProgramacionSupervisorComponent
 
 
   generarPropuesta(): void {
+    if (this.trasladosMes.length > 0) {
+      this.error = 'La generación automática no está habilitada en meses con traslados. Utiliza la programación manual.';
+      this.mostrarConfirmacionAccion(this.error, 'Traslados programados', 'error');
+      return;
+    }
     if (!this.plazaId || this.generador.procesando) {
       return;
     }
@@ -2610,15 +2632,20 @@ export class ProgramacionSupervisorComponent
 
 
   private reconstruirCacheSecuencias(): void {
-    this.agentesProgramadosLista =
-      this.secuenciaState.reconstruir(
-        this.agentes,
-        this.secuencias,
-        this.gruposProgramacion.map(
-          grupo => grupo.codigo
-        ),
-        this.busqueda
-      );
+    const ordenados = this.secuenciaState.reconstruir(
+      this.agentes, this.secuencias,
+      this.gruposProgramacion.map(grupo => grupo.codigo),
+      this.busqueda
+    );
+    // Mostrar trabajadores entrantes aunque todavía no tengan secuencia.
+    const consulta = this.busqueda.trim().toLowerCase();
+    const entrantes = this.agentes.filter(a =>
+      this.trasladosMes.some(t => t.trabajadorId === a.id
+        && t.plazaDestinoId === this.plazaId)
+      && !ordenados.some(o => o.id === a.id)
+      && (!consulta || `${a.codigo} ${a.nombreCompleto}`.toLowerCase().includes(consulta))
+    );
+    this.agentesProgramadosLista = [...ordenados, ...entrantes];
 
   }
 

@@ -12,7 +12,8 @@ import {
   EstadoProgramacion,
   GrupoLider,
   GrupoProgramacion,
-  TrabajadorResumen
+  TrabajadorResumen,
+  TrasladoPlazaProgramado
 } from '../../models/programacion.models';
 
 import {
@@ -94,6 +95,25 @@ export class ProgramacionTablaComponent {
 
   @Input({ required: true })
   matrix!: Map<string, EstadoProgramacion | null>;
+  @Input() traslados: TrasladoPlazaProgramado[] = [];
+
+  puedeProgramar(id: number, dia: number): boolean {
+    if (this.plazaId === null) return false;
+    const trabajador = [...this.agentes, ...this.controladores].find(t => t.id === id);
+    if (!trabajador) return false;
+    const fecha = `${this.anio}-${String(this.mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+    const traslado = this.traslados.find(t => t.trabajadorId === id
+      && t.estado === 'PROGRAMADO'
+      && fecha >= t.fechaInicio
+      && (!t.fechaFin || fecha <= t.fechaFin));
+    return (traslado ? traslado.plazaDestinoId : trabajador.plaza?.id) === this.plazaId;
+  }
+
+  origenTraslado(id: number): string | null {
+    const t = this.traslados.find(x => x.trabajadorId === id
+      && x.estado === 'PROGRAMADO' && x.plazaDestinoId === this.plazaId);
+    return t?.plazaOrigenCodigo ?? null;
+  }
 
   @Input({ required: true })
   agentesProcesando!: Set<number>;

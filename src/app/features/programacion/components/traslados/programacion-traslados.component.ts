@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ProgramacionApiService } from '../../data-access/programacion-api.service';
 import { Plaza, TrasladoCandidato, TrasladoPlazaProgramado } from '../../models/programacion.models';
@@ -21,10 +21,10 @@ export class ProgramacionTrasladosComponent {
 
   private readonly api = inject(ProgramacionApiService);
   readonly modal = signal(false);
-  readonly cargando = signal(false);
   readonly guardando = signal(false);
   readonly error = signal('');
-  readonly traslados = signal<TrasladoPlazaProgramado[]>([]);
+  // El componente padre ya carga los traslados junto con la matriz mensual.
+  readonly traslados = input<TrasladoPlazaProgramado[]>([]);
   readonly candidatos = signal<TrasladoCandidato[]>([]);
   readonly busqueda = signal('');
   readonly trabajadorId = signal<number | null>(null);
@@ -42,26 +42,6 @@ export class ProgramacionTrasladosComponent {
   });
   readonly trasladosVigentes = computed(() =>
     this.traslados().filter(t => t.estado === 'PROGRAMADO'));
-
-  constructor() {
-    effect(() => {
-      // Leer entradas para que el effect se ejecute al cambiar plaza o periodo.
-      this.plazaId();
-      this.anio();
-      this.mes();
-      this.cargarLista();
-    });
-  }
-
-  private cargarLista(): void {
-    const plaza = this.plazaId();
-    if (!plaza) { this.traslados.set([]); return; }
-    this.cargando.set(true);
-    this.api.getTraslados(plaza, this.anio(), this.mes()).subscribe({
-      next: rows => { this.traslados.set(rows); this.cargando.set(false); },
-      error: () => { this.cargando.set(false); }
-    });
-  }
 
   abrir(): void {
     if (this.bloqueado()) { this.error.set('Guarda los cambios de turnos antes de gestionar traslados.'); return; }
@@ -99,7 +79,6 @@ export class ProgramacionTrasladosComponent {
       next: () => {
         this.guardando.set(false);
         this.modal.set(false);
-        this.cargarLista();
         this.modificado.emit();
       },
       error: err => {
@@ -113,7 +92,7 @@ export class ProgramacionTrasladosComponent {
     if (this.bloqueado()) { this.error.set('Guarda los turnos pendientes antes de cancelar.'); return; }
     if (!confirm('¿Cancelar este traslado futuro? Se devolverán los turnos a la plaza de origen y se quitarán casetas de destino.')) return;
     this.api.cancelarTraslado(id).subscribe({
-      next: () => { this.cargarLista(); this.modificado.emit(); },
+      next: () => this.modificado.emit(),
       error: err => this.error.set(err?.error?.message ?? 'No se pudo cancelar el traslado.')
     });
   }

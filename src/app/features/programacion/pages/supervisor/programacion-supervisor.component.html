@@ -227,6 +227,7 @@
 
   <app-programacion-traslados
     [plazas]="plazas" [plazaId]="plazaId" [anio]="anio" [mes]="mes"
+    [traslados]="trasladosMes"
     [bloqueado]="cambios.size > 0 || guardando || cargando || generador.procesando"
     (modificado)="cargar()" />
 

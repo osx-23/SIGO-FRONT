@@ -615,7 +615,7 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
 
   readonly situaciones = ['Fluida','Tráfico en contra'];
   readonly ingresos = ['Con motorizado','Sin motorizado'];
-  readonly incidentes = ['PNP en el semáforo','Falla en el sistema','Sin incidente'];
+  readonly incidentes = ['PNP en el semáforo','Falla en el sistema','Sin incidente','Carga vehicular en la Carretera Central','Vehículo malogrado'];
 
   get esSupervisor(): boolean { return this.auth.tieneRol('SUPERVISOR'); }
   ngOnInit(): void {

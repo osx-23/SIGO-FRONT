@@ -24,10 +24,17 @@ export class HistorialComponent implements OnInit {
 
   items: InventarioResumen[] = [];
   detalle: InventarioDetalle | null = null;
+  edicion: InventarioDetalle | null = null;
+  cantidadesEdicion: Record<number, number | null> = {};
+  motivoEdicion = '';
+  errorEdicion = '';
+  mensaje = '';
   plazas: CatalogoItem[] = [];
 
   cargando = true;
   cargandoDetalle = false;
+  cargandoEdicion = false;
+  guardandoEdicion = false;
   exportandoExcelId: number | null = null;
   error = '';
   pagina = 0;
@@ -43,6 +50,13 @@ export class HistorialComponent implements OnInit {
   busqueda = '';
 
   get esSupervisor(): boolean { return this.auth.tieneRol('SUPERVISOR'); }
+  get esControlador(): boolean { return this.auth.tieneRol('CONTROLADOR'); }
+
+  puedeEditar(item: InventarioResumen | InventarioDetalle): boolean {
+    return item.estado === 'FINALIZADO'
+      && (this.esSupervisor
+        || (this.esControlador && this.usuario?.plazaId === item.plazaId));
+  }
   get usuario() { return this.auth.usuario(); }
 
   async ngOnInit(): Promise<void> {
@@ -131,6 +145,87 @@ export class HistorialComponent implements OnInit {
 
   cerrarDetalle(): void {
     if (!this.cargandoDetalle) this.detalle = null;
+  }
+
+  async editar(id: number): Promise<void> {
+    if (this.cargandoEdicion || this.guardandoEdicion) return;
+    this.cargandoEdicion = true;
+    this.error = '';
+    this.mensaje = '';
+    this.cdr.detectChanges();
+    try {
+      const detalle = await firstValueFrom(this.api.detalle(id));
+      if (!this.puedeEditar(detalle)) throw new Error('No tienes permiso para editar este inventario.');
+      this.detalle = null;
+      this.edicion = detalle;
+      this.cantidadesEdicion = Object.fromEntries(
+        detalle.productos.map(p => [p.productoId, Number(p.cantidad)])
+      );
+      this.motivoEdicion = '';
+      this.errorEdicion = '';
+    } catch (e: any) {
+      this.error = e?.error?.message || e?.error?.detail || this.extraerError(e);
+    } finally {
+      this.cargandoEdicion = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  cerrarEdicion(): void {
+    if (this.guardandoEdicion) return;
+    this.edicion = null;
+    this.cantidadesEdicion = {};
+    this.errorEdicion = '';
+    this.motivoEdicion = '';
+  }
+
+  async guardarEdicion(): Promise<void> {
+    if (!this.edicion || this.guardandoEdicion) return;
+    const inventario = this.edicion;
+    const productos = inventario.productos.map(p => ({
+      productoId: p.productoId,
+      cantidad: Number(this.cantidadesEdicion[p.productoId])
+    }));
+    if (productos.some(p =>
+      this.cantidadesEdicion[p.productoId] === null
+      || this.cantidadesEdicion[p.productoId] === undefined
+      || !Number.isFinite(p.cantidad)
+      || p.cantidad < 0
+      || Math.abs(p.cantidad * 100 - Math.round(p.cantidad * 100)) > 0.0000001
+    )) {
+      this.errorEdicion = 'Todas las cantidades deben ser números válidos, sin negativos y con máximo dos decimales.';
+      return;
+    }
+    if (!productos.some(p => p.cantidad !== Number(inventario.productos.find(a => a.productoId === p.productoId)?.cantidad))) {
+      this.errorEdicion = 'Modifica al menos una cantidad para guardar la corrección.';
+      return;
+    }
+    const motivo = this.motivoEdicion.trim();
+    if (motivo.length < 5 || motivo.length > 500) {
+      this.errorEdicion = 'Ingresa un motivo de 5 a 500 caracteres.';
+      return;
+    }
+
+    this.guardandoEdicion = true;
+    this.errorEdicion = '';
+    this.cdr.detectChanges();
+    try {
+      await firstValueFrom(this.api.corregirInventario(inventario.id, productos, motivo));
+      this.cerrarEdicionTrasGuardado();
+      await this.cargar(this.pagina);
+      this.mensaje = `Inventario #${inventario.id} corregido. El cambio quedó registrado en auditoría.`;
+    } catch (e: any) {
+      this.errorEdicion = e?.error?.message || e?.error?.detail || this.extraerError(e);
+    } finally {
+      this.guardandoEdicion = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  private cerrarEdicionTrasGuardado(): void {
+    this.edicion = null;
+    this.cantidadesEdicion = {};
+    this.motivoEdicion = '';
   }
 
   async exportarExcel(item?: InventarioResumen): Promise<void> {

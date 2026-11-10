@@ -12,12 +12,13 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly tokenKey = 'sigo_token';
-  private readonly userKey = 'sigo_usuario';
+  private accessToken: string | null = null;
+  readonly usuario = signal<UsuarioSesion | null>(null);
 
-  readonly usuario = signal<UsuarioSesion | null>(this.readUser());
-
-  constructor(private readonly http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {
+    localStorage.removeItem('sigo_token');
+    localStorage.removeItem('sigo_usuario');
+  }
 
   async login(codigo: number, password: string): Promise<LoginResponse> {
     const response = await firstValueFrom(
@@ -27,7 +28,9 @@ export class AuthService {
       )
     );
 
-    localStorage.setItem(this.tokenKey, response.token);
+    this.accessToken = response.token;
+    localStorage.removeItem('sigo_token');
+    localStorage.removeItem('sigo_usuario');
 
     const usuario = this.normalizarUsuario({
       ...response.usuario,
@@ -86,24 +89,24 @@ export class AuthService {
       )
     );
 
-    const actual = this.usuario();
-
-    if (actual) {
-      this.persistirUsuario({
-        ...actual,
-        requiereCambioPassword: false
-      });
+    const codigo = this.usuario()?.codigo;
+    this.accessToken = null;
+    if (codigo == null) {
+      this.usuario.set(null);
+      throw new Error('Inicia sesión nuevamente con tu nueva contraseña');
     }
+    await this.login(codigo, passwordNueva);
   }
 
   logout(): void {
-    localStorage.removeItem(this.tokenKey);
-    localStorage.removeItem(this.userKey);
+    this.accessToken = null;
+    localStorage.removeItem('sigo_token');
+    localStorage.removeItem('sigo_usuario');
     this.usuario.set(null);
   }
 
   token(): string | null {
-    return localStorage.getItem(this.tokenKey);
+    return this.accessToken;
   }
 
   estaLogueado(): boolean {
@@ -160,27 +163,7 @@ export class AuthService {
   }
 
   private persistirUsuario(usuario: UsuarioSesion): void {
-    localStorage.setItem(
-      this.userKey,
-      JSON.stringify(usuario)
-    );
     this.usuario.set(usuario);
-  }
-
-  private readUser(): UsuarioSesion | null {
-    try {
-      const raw = localStorage.getItem(this.userKey);
-
-      if (!raw) {
-        return null;
-      }
-
-      return this.normalizarUsuario(
-        JSON.parse(raw) as UsuarioSesion
-      );
-    } catch {
-      return null;
-    }
   }
 
   private normalizarUsuario(

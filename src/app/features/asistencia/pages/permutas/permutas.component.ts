@@ -91,6 +91,10 @@ export class PermutasComponent implements OnInit {
     });
   }
 
+  plazasConPermutas(): number {
+    return this.resumen()?.porPlaza.filter(p => p.total > 0).length ?? 0;
+  }
+
   barraPorcentaje(valor: number): number {
     const max = Math.max(1, ...(this.resumen()?.porPlaza.map(p => p.total) ?? [1]));
     return Math.round(valor * 100 / max);

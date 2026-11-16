@@ -28,15 +28,15 @@
       </div>
       <div class="rounded-2xl border border-slate-200 bg-white p-5">
         <p class="text-sm font-semibold text-slate-600">Plazas involucradas</p>
-        <p class="mt-2 text-4xl font-bold text-slate-950">{{ resumen()?.porPlaza?.length ?? '—' }}</p>
+        <p class="mt-2 text-4xl font-bold text-slate-950">{{ plazasConPermutas() }}</p>
         <p class="mt-1 text-xs text-slate-500">Con al menos una jornada intercambiada</p>
       </div>
       <div class="rounded-2xl border border-slate-200 bg-white p-5">
-        <p class="text-sm font-semibold text-slate-600">Agentes involucrados</p>
+        <p class="text-sm font-semibold text-slate-600">Agentes en el ranking</p>
         <p class="mt-2 text-4xl font-bold text-slate-950">
-          {{ (resumen()?.topAgentes?.length ?? 0) >= 10 ? '10+' : (resumen()?.topAgentes?.length ?? '—') }}
+          {{ resumen()?.topAgentes?.length ?? '—' }}
         </p>
-        <p class="mt-1 text-xs text-slate-500">Top 10 mostrado cuando corresponde</p>
+        <p class="mt-1 text-xs text-slate-500">Máximo 10 agentes en la clasificación</p>
       </div>
     </div>
     <div class="grid gap-4 lg:grid-cols-2">

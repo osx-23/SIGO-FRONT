@@ -2,19 +2,11 @@ export interface PermutaRequest {
   codigoSolicitante: number;
   fechaSolicitante: string;
   turnoSolicitanteId: number;
+  plazaSolicitanteId: number;
   codigoAceptante: number;
   fechaAceptante: string;
   turnoAceptanteId: number;
-}
-
-export interface AgenteProgramadoPermuta {
-  codigo: number;
-  nombre: string;
-  plazaId: number;
-  plaza: string;
-  turnoId: number;
-  turno: string;
-  fecha: string;
+  plazaAceptanteId: number;
 }
 
 export interface PermutaDetalle {

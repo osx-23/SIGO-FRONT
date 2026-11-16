@@ -8,18 +8,8 @@ export class PermutasApiService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiUrl + '/permutas';
 
-  agente(codigo: number, fecha: string) {
-    return this.http.get<AgenteProgramadoPermuta>(this.base + '/agentes/' + codigo, {
-      params: new HttpParams().set('fecha', fecha)
-    });
-  }
-
-  candidatos(plazaId: number, turnoId: number, fecha: string) {
-    const params = new HttpParams()
-      .set('plazaId', plazaId)
-      .set('turnoId', turnoId)
-      .set('fecha', fecha);
-    return this.http.get<AgenteProgramadoPermuta[]>(this.base + '/candidatos', { params });
+  agente(codigo: number) {
+    return this.http.get<{ codigo: number; nombre: string }>(this.base + '/agentes/' + codigo);
   }
 
   delTurno(plazaId: number, turnoId: number, fecha: string) {

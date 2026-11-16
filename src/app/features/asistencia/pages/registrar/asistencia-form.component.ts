@@ -22,7 +22,7 @@ import { environment } from '../../../../../environments/environment';
 
 import { AsistenciaApiService } from '../../services/asistencia-api.service';
 import { PermutasApiService } from '../../services/permutas-api.service';
-import { AgenteProgramadoPermuta, PermutaDetalle, PermutaRequest } from '../../models/permutas.models';
+import { PermutaDetalle, PermutaRequest } from '../../models/permutas.models';
 
 import {
   AsistenciaProgramacionService
@@ -125,10 +125,7 @@ export class AsistenciaFormComponent implements OnInit {
   readonly permutasPrevias = signal<PermutaDetalle[]>([]);
   readonly loadingPermutas = signal(false);
   private ultimaConsultaPermutas = '';
-  readonly candidatosPermuta = signal<Record<string, AgenteProgramadoPermuta[]>>({});
-  readonly candidatosConsultados = signal<Record<string, boolean>>({});
-  readonly buscandoCandidatos = signal<Record<string, boolean>>({});
-  private readonly candidatosQuery = new Map<string, string>();
+
 
 
   /* ==========================================================================
@@ -333,55 +330,38 @@ export class AsistenciaFormComponent implements OnInit {
 
 
 
-  /* Las permutas se guardan una sola vez y se consultan en ambos turnos. */
+  /* Edición manual: ninguna fecha/plaza/turno se toma de programación. */
   cambiarHayPermutas(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.hayPermutas.set(checked);
     if (checked && this.permutas.length === 0) this.agregarPermuta();
-    if (!checked) {
-      this.permutas.clear();
-      this.limpiarCandidatos();
-    }
-  }
-
-  private limpiarCandidatos(): void {
-    this.candidatosPermuta.set({});
-    this.candidatosConsultados.set({});
-    this.buscandoCandidatos.set({});
-    this.candidatosQuery.clear();
+    if (!checked) this.permutas.clear();
   }
 
   agregarPermuta(): void {
-    const fecha = this.form.controls.fecha.value || this.today();
-    const plaza = this.form.controls.plazaId.value;
     this.permutas.push(this.fb.group({
       solicitanteCodigo: [null as number | null, [Validators.required, Validators.min(1)]],
-      solicitanteFecha: [fecha, Validators.required],
+      solicitanteNombre: ['', Validators.required],
+      solicitanteFecha: ['', Validators.required],
       solicitanteTurnoId: [null as number | null, Validators.required],
-      solicitanteNombre: [''],
-      solicitantePlaza: [''],
-      solicitantePlazaId: [null as number | null],
-      solicitanteTurno: [''],
+      solicitantePlazaId: [null as number | null, Validators.required],
       solicitanteTurnoNuevoId: [null as number | null, Validators.required],
-      solicitanteFechaNueva: [fecha, Validators.required],
-      solicitantePlazaNuevaId: [plaza as number | null, Validators.required],
+      solicitanteFechaNueva: ['', Validators.required],
+      solicitantePlazaNuevaId: [null as number | null, Validators.required],
 
       aceptanteCodigo: [null as number | null, [Validators.required, Validators.min(1)]],
-      aceptanteFecha: [fecha, Validators.required],
+      aceptanteNombre: ['', Validators.required],
+      aceptanteFecha: ['', Validators.required],
       aceptanteTurnoId: [null as number | null, Validators.required],
-      aceptanteNombre: [''],
-      aceptantePlaza: [''],
-      aceptantePlazaId: [null as number | null],
-      aceptanteTurno: [''],
+      aceptantePlazaId: [null as number | null, Validators.required],
       aceptanteTurnoNuevoId: [null as number | null, Validators.required],
-      aceptanteFechaNueva: [fecha, Validators.required],
-      aceptantePlazaNuevaId: [plaza as number | null, Validators.required]
+      aceptanteFechaNueva: ['', Validators.required],
+      aceptantePlazaNuevaId: [null as number | null, Validators.required]
     }));
   }
 
   quitarPermuta(index: number): void {
     this.permutas.removeAt(index);
-    this.limpiarCandidatos();
     if (this.permutas.length === 0) this.hayPermutas.set(false);
   }
 
@@ -389,150 +369,27 @@ export class AsistenciaFormComponent implements OnInit {
     return lado === 'solicitante' ? 'aceptante' : 'solicitante';
   }
 
-  private llaveCandidatos(index: number, lado: 'solicitante' | 'aceptante'): string {
-    return index + ':' + lado;
-  }
-
-  listaCandidatos(index: number, lado: 'solicitante' | 'aceptante'): AgenteProgramadoPermuta[] {
-    return this.candidatosPermuta()[this.llaveCandidatos(index, lado)] || [];
-  }
-
-  // Un cambio de código o fecha invalida inmediatamente los datos previos.
+  // Solo se valida que el código exista en el catálogo de agentes.
+  // Nunca se cambia lo escrito manualmente para turno, plaza o fechas.
   buscarAgentePermuta(index: number, lado: 'solicitante' | 'aceptante'): void {
     const grupo = this.permutas.at(index);
     if (!grupo) return;
-
     const codigo = Number(grupo.get(lado + 'Codigo')?.value || 0);
-    const fecha = String(grupo.get(lado + 'Fecha')?.value || '');
-    const otro = this.otroLado(lado);
-
-    grupo.patchValue({
-      [lado + 'TurnoId']: null,
-      [lado + 'Nombre']: '',
-      [lado + 'Plaza']: '',
-      [lado + 'PlazaId']: null,
-      [lado + 'Turno']: ''
-    }, { emitEvent: false });
-
-    if (!codigo || !fecha) return;
-    this.permutasApi.agente(codigo, fecha).subscribe({
+    grupo.get(lado + 'Nombre')?.setValue('');
+    if (!Number.isInteger(codigo) || codigo <= 0) return;
+    this.permutasApi.agente(codigo).subscribe({
       next: agente => {
         if (this.permutas.at(index) !== grupo ||
-            Number(grupo.get(lado + 'Codigo')?.value) !== codigo ||
-            String(grupo.get(lado + 'Fecha')?.value) !== fecha) return;
-        grupo.patchValue({
-          [lado + 'Nombre']: agente.nombre,
-          [lado + 'Plaza']: agente.plaza,
-          [lado + 'PlazaId']: agente.plazaId,
-          [lado + 'Turno']: agente.turno,
-          [lado + 'TurnoId']: agente.turnoId,
-
-          // La jornada original de este agente es la jornada que hará el otro.
-          [otro + 'TurnoNuevoId']: agente.turnoId,
-          [otro + 'FechaNueva']: agente.fecha,
-          [otro + 'PlazaNuevaId']: agente.plazaId
-        }, { emitEvent: false });
-
-        // Si ya se eligió a qué turno irá, buscar a quién corresponde.
-        if (!Number(grupo.get(otro + 'Codigo')?.value)) {
-          this.buscarCandidatosPermuta(index, lado);
-        }
-      },
-      error: err => {
-        if (this.permutas.at(index) !== grupo) return;
-        this.error.set('Permuta: no se pudo validar el agente ' +
-          codigo + '. ' + this.errorMessage(err));
-      }
-    });
-  }
-
-  /**
-   * La jornada a la que va el participante A pertenece originalmente a B.
-   * Cuando hay varios candidatos, el controlador elige quién aceptó el cambio.
-   * Si solo existe uno, se autocompleta el otro participante.
-   */
-  cambiarDestinoPermuta(index: number, lado: 'solicitante' | 'aceptante'): void {
-    const grupo = this.permutas.at(index);
-    if (!grupo) return;
-    const otro = this.otroLado(lado);
-    const turno = Number(grupo.get(lado + 'TurnoNuevoId')?.value || 0);
-    const plaza = Number(grupo.get(lado + 'PlazaNuevaId')?.value || 0);
-    const fecha = String(grupo.get(lado + 'FechaNueva')?.value || '');
-    const otroOriginal = Number(grupo.get(otro + 'TurnoId')?.value || 0);
-    if (otroOriginal && (
-        otroOriginal !== turno ||
-        Number(grupo.get(otro + 'PlazaId')?.value || 0) !== plaza ||
-        String(grupo.get(otro + 'Fecha')?.value || '') !== fecha)) {
-      // Cambió la jornada buscada: el otro agente ya no coincide.
-      // Evita que un código anterior se conserve como si fuese válido.
-      grupo.patchValue({
-        [otro + 'Codigo']: null,
-        [otro + 'Fecha']: fecha,
-        [otro + 'TurnoId']: null,
-        [otro + 'Nombre']: '',
-        [otro + 'Plaza']: '',
-        [otro + 'PlazaId']: null,
-        [otro + 'Turno']: ''
-      }, { emitEvent: false });
-    }
-    this.buscarCandidatosPermuta(index, lado);
-  }
-
-  buscarCandidatosPermuta(index: number, lado: 'solicitante' | 'aceptante'): void {
-    const grupo = this.permutas.at(index);
-    if (!grupo) return;
-    const key = this.llaveCandidatos(index, lado);
-    const turnoId = Number(grupo.get(lado + 'TurnoNuevoId')?.value || 0);
-    const plazaId = Number(grupo.get(lado + 'PlazaNuevaId')?.value || 0);
-    const fecha = String(grupo.get(lado + 'FechaNueva')?.value || '');
-    const clave = plazaId + ':' + turnoId + ':' + fecha;
-
-    this.candidatosQuery.set(key, clave);
-    this.candidatosPermuta.update(prev => ({ ...prev, [key]: [] }));
-    this.candidatosConsultados.update(prev => ({ ...prev, [key]: false }));
-    if (!plazaId || !turnoId || !fecha) {
-      this.buscandoCandidatos.update(prev => ({ ...prev, [key]: false }));
-      return;
-    }
-    this.buscandoCandidatos.update(prev => ({ ...prev, [key]: true }));
-    this.permutasApi.candidatos(plazaId, turnoId, fecha).subscribe({
-      next: disponibles => {
-        if (this.permutas.at(index) !== grupo ||
-            this.candidatosQuery.get(key) !== clave) return;
-        const codigoPropio = Number(grupo.get(lado + 'Codigo')?.value || 0);
-        const opciones = disponibles.filter(x => x.codigo !== codigoPropio);
-        this.candidatosPermuta.update(prev => ({ ...prev, [key]: opciones }));
-        this.candidatosConsultados.update(prev => ({ ...prev, [key]: true }));
-        this.buscandoCandidatos.update(prev => ({ ...prev, [key]: false }));
-        const otro = this.otroLado(lado);
-        if (opciones.length === 1 && !Number(grupo.get(otro + 'Codigo')?.value)) {
-          this.seleccionarAgentePermuta(index, lado, opciones[0].codigo);
-        }
+            Number(grupo.get(lado + 'Codigo')?.value) !== codigo) return;
+        grupo.get(lado + 'Nombre')?.setValue(agente.nombre);
       },
       error: err => {
         if (this.permutas.at(index) !== grupo ||
-            this.candidatosQuery.get(key) !== clave) return;
-        this.buscandoCandidatos.update(prev => ({ ...prev, [key]: false }));
-        this.error.set('No se pudieron obtener los agentes disponibles. ' + this.errorMessage(err));
+            Number(grupo.get(lado + 'Codigo')?.value) !== codigo) return;
+        this.error.set('Permuta: el código ' + codigo +
+          ' no se pudo validar como agente de recaudación activo. ' + this.errorMessage(err));
       }
     });
-  }
-
-  seleccionarCandidatoPermuta(index: number, lado: 'solicitante' | 'aceptante', event: Event): void {
-    const codigo = Number((event.target as HTMLSelectElement).value || 0);
-    if (codigo) this.seleccionarAgentePermuta(index, lado, codigo);
-  }
-
-  private seleccionarAgentePermuta(index: number, lado: 'solicitante' | 'aceptante', codigo: number): void {
-    const grupo = this.permutas.at(index);
-    if (!grupo) return;
-    const otro = this.otroLado(lado);
-    const fecha = String(grupo.get(lado + 'FechaNueva')?.value || '');
-    grupo.patchValue({
-      [otro + 'Codigo']: codigo,
-      [otro + 'Fecha']: fecha
-    }, { emitEvent: false });
-    this.buscarAgentePermuta(index, otro);
   }
 
   private cargarPermutasPrevias(): void {
@@ -1365,8 +1222,7 @@ export class AsistenciaFormComponent implements OnInit {
       }
       const participantes = new Set<string>();
       for (const grupo of this.permutas.controls) {
-        // El turno al que irá cada agente debe coincidir con la programación
-        // original del compañero (plaza, turno y fecha), en ambas direcciones.
+        // Las jornadas son manuales, pero el intercambio debe ser recíproco.
         for (const lado of ['solicitante', 'aceptante'] as const) {
           const otro = this.otroLado(lado);
           if (Number(grupo.get(lado + 'TurnoNuevoId')?.value) !==
@@ -1375,9 +1231,17 @@ export class AsistenciaFormComponent implements OnInit {
                 String(grupo.get(otro + 'Fecha')?.value) ||
               Number(grupo.get(lado + 'PlazaNuevaId')?.value) !==
                 Number(grupo.get(otro + 'PlazaId')?.value)) {
-            this.error.set('El turno a venir debe ser el turno original de la otra persona, con su fecha y plaza.');
+            this.error.set('El turno a venir debe coincidir con la jornada original ingresada para el compañero (plaza, fecha y turno).');
             return false;
           }
+        }
+        const mismoTurno =
+          Number(grupo.get('solicitantePlazaId')?.value) === Number(grupo.get('aceptantePlazaId')?.value) &&
+          Number(grupo.get('solicitanteTurnoId')?.value) === Number(grupo.get('aceptanteTurnoId')?.value) &&
+          String(grupo.get('solicitanteFecha')?.value) === String(grupo.get('aceptanteFecha')?.value);
+        if (mismoTurno) {
+          this.error.set('Las jornadas originales no pueden ser idénticas: no habría permuta.');
+          return false;
         }
         const a = Number(grupo.get('solicitanteCodigo')?.value);
         const b = Number(grupo.get('aceptanteCodigo')?.value);
@@ -1399,7 +1263,7 @@ export class AsistenciaFormComponent implements OnInit {
           grupo.get(lado + 'Fecha')?.value === this.form.controls.fecha.value
         );
         if (!coincide) {
-          this.error.set('Una de las jornadas de cada permuta debe corresponder al turno que registras.');
+          this.error.set('Al menos una jornada original debe coincidir con la plaza, turno y fecha de la asistencia actual.');
           return false;
         }
       }
@@ -1688,9 +1552,11 @@ export class AsistenciaFormComponent implements OnInit {
             codigoSolicitante: Number(p.solicitanteCodigo),
             fechaSolicitante: String(p.solicitanteFecha),
             turnoSolicitanteId: Number(p.solicitanteTurnoId),
+            plazaSolicitanteId: Number(p.solicitantePlazaId),
             codigoAceptante: Number(p.aceptanteCodigo),
             fechaAceptante: String(p.aceptanteFecha),
-            turnoAceptanteId: Number(p.aceptanteTurnoId)
+            turnoAceptanteId: Number(p.aceptanteTurnoId),
+            plazaAceptanteId: Number(p.aceptantePlazaId)
           }))
         : []
 
@@ -2189,7 +2055,6 @@ export class AsistenciaFormComponent implements OnInit {
     this.ausencias
       .clear();
     this.permutas.clear();
-    this.limpiarCandidatos();
     this.hayPermutas.set(false);
     this.permutasPrevias.set([]);
 

@@ -31,6 +31,20 @@ export class PermutasApiService {
     return this.http.get<PermutaDetalle[]>(this.base, { params });
   }
 
+  exportarExcel(
+    filtros: { inicio?: string; fin?: string; plazaId?: number | null;
+               turnoId?: number | null; codigo?: number | null },
+    anio: number
+  ) {
+    let params = new HttpParams().set('anio', anio);
+    if (filtros.inicio) params = params.set('inicio', filtros.inicio);
+    if (filtros.fin) params = params.set('fin', filtros.fin);
+    if (filtros.plazaId != null) params = params.set('plazaId', filtros.plazaId);
+    if (filtros.turnoId != null) params = params.set('turnoId', filtros.turnoId);
+    if (filtros.codigo != null) params = params.set('codigo', filtros.codigo);
+    return this.http.get(this.base + '/exportar', { params, responseType: 'blob' });
+  }
+
   dashboard(mes: string) {
     return this.http.get<ResumenPermutas>(this.base + '/dashboard', {
       params: new HttpParams().set('mes', mes)

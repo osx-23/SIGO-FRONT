@@ -23,6 +23,7 @@ export class PermutasComponent implements OnInit {
   readonly resumen = signal<ResumenPermutas | null>(null);
   readonly cargando = signal(false);
   readonly cargandoDashboard = signal(false);
+  readonly exportando = signal(false);
   readonly error = signal('');
 
   periodo = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0');
@@ -98,6 +99,41 @@ export class PermutasComponent implements OnInit {
   barraPorcentaje(valor: number): number {
     const max = Math.max(1, ...(this.resumen()?.porPlaza.map(p => p.total) ?? [1]));
     return Math.round(valor * 100 / max);
+  }
+
+  exportarExcel(): void {
+    if (this.exportando()) return;
+    if (this.inicio && this.fin && this.inicio > this.fin) {
+      this.error.set('La fecha inicial no puede superar la final.');
+      return;
+    }
+    this.error.set('');
+    this.exportando.set(true);
+    this.api.exportarExcel({
+      inicio: this.inicio, fin: this.fin, plazaId: this.plazaId,
+      turnoId: this.turnoId, codigo: this.codigo
+    }, Number(this.periodo.slice(0, 4))).subscribe({
+      next: blob => {
+        this.exportando.set(false);
+        if (!blob.size) {
+          this.error.set('El servidor devolvió un Excel vacío.');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'SIGO_Permutas_' + this.periodo.slice(0, 4) +
+          '_' + (this.inicio || 'todas') + '_' + (this.fin || 'todas') + '.xlsx';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      },
+      error: () => {
+        this.exportando.set(false);
+        this.error.set('No se pudo generar el Excel de permutas. Revisa la conexión con el backend.');
+      }
+    });
   }
 
   limpiarFiltros(): void {

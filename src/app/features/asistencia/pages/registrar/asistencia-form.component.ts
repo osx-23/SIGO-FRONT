@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 
 import {
   Component,
+  DestroyRef,
   HostListener,
   OnInit,
   inject,
@@ -16,7 +17,8 @@ import {
   Validators
 } from '@angular/forms';
 
-import { forkJoin } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, forkJoin, of, switchMap, tap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { environment } from '../../../../../environments/environment';
 
@@ -91,6 +93,7 @@ export class AsistenciaFormComponent implements OnInit {
     inject(AsistenciaProgramacionService);
 
   private readonly permutasApi = inject(PermutasApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly http =
     inject(HttpClient);
@@ -339,25 +342,57 @@ export class AsistenciaFormComponent implements OnInit {
   }
 
   agregarPermuta(): void {
-    this.permutas.push(this.fb.group({
+    const hoy = this.today();
+    const plazaId = this.form.controls.plazaId.value ?? null;
+    const grupo = this.fb.group({
       solicitanteCodigo: [null as number | null, [Validators.required, Validators.min(1)]],
       solicitanteNombre: ['', Validators.required],
-      solicitanteFecha: ['', Validators.required],
+      solicitanteEstadoNombre: [''],
+      solicitanteFecha: [hoy, Validators.required],
       solicitanteTurnoId: [null as number | null, Validators.required],
-      solicitantePlazaId: [null as number | null, Validators.required],
+      solicitantePlazaId: [plazaId as number | null, Validators.required],
       solicitanteTurnoNuevoId: [null as number | null, Validators.required],
-      solicitanteFechaNueva: ['', Validators.required],
-      solicitantePlazaNuevaId: [null as number | null, Validators.required],
+      solicitanteFechaNueva: [hoy, Validators.required],
+      solicitantePlazaNuevaId: [plazaId as number | null, Validators.required],
 
       aceptanteCodigo: [null as number | null, [Validators.required, Validators.min(1)]],
       aceptanteNombre: ['', Validators.required],
-      aceptanteFecha: ['', Validators.required],
+      aceptanteEstadoNombre: [''],
+      aceptanteFecha: [hoy, Validators.required],
       aceptanteTurnoId: [null as number | null, Validators.required],
-      aceptantePlazaId: [null as number | null, Validators.required],
+      aceptantePlazaId: [plazaId as number | null, Validators.required],
       aceptanteTurnoNuevoId: [null as number | null, Validators.required],
-      aceptanteFechaNueva: ['', Validators.required],
-      aceptantePlazaNuevaId: [null as number | null, Validators.required]
-    }));
+      aceptanteFechaNueva: [hoy, Validators.required],
+      aceptantePlazaNuevaId: [plazaId as number | null, Validators.required]
+    });
+    this.permutas.push(grupo);
+
+    // Consultar el nombre al dejar de escribir durante 350 ms;
+    // switchMap cancela búsquedas antiguas para evitar nombres erróneos.
+    for (const lado of ['solicitante', 'aceptante'] as const) {
+      grupo.get(lado + 'Codigo')?.valueChanges.pipe(
+        tap(() => {
+          grupo.get(lado + 'Nombre')?.setValue('');
+          grupo.get(lado + 'EstadoNombre')?.setValue('');
+        }),
+        debounceTime(350),
+        distinctUntilChanged(),
+        switchMap(value => {
+          const codigo = Number(value);
+          if (!Number.isInteger(codigo) || codigo <= 0) return of(null);
+          grupo.get(lado + 'EstadoNombre')?.setValue('Buscando nombre...');
+          return this.permutasApi.agente(codigo).pipe(catchError(() => of(null)));
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe(agente => {
+        if (!this.permutas.controls.includes(grupo)) return;
+        const codigo = Number(grupo.get(lado + 'Codigo')?.value);
+        grupo.get(lado + 'Nombre')?.setValue(agente?.nombre ?? '');
+        grupo.get(lado + 'EstadoNombre')?.setValue(
+          agente ? '' : (codigo > 0 ? 'Código inexistente o agente inactivo' : '')
+        );
+      });
+    }
   }
 
   quitarPermuta(index: number): void {
@@ -369,27 +404,24 @@ export class AsistenciaFormComponent implements OnInit {
     return lado === 'solicitante' ? 'aceptante' : 'solicitante';
   }
 
-  // Solo se valida que el código exista en el catálogo de agentes.
-  // Nunca se cambia lo escrito manualmente para turno, plaza o fechas.
-  buscarAgentePermuta(index: number, lado: 'solicitante' | 'aceptante'): void {
+  /**
+   * Una sola selección define ambas jornadas: si el solicitante tiene A
+   * como original y B como destino, el aceptante hereda B como original
+   * y A como destino. Se incluyen también fecha y plaza.
+   * Puede iniciarse la edición desde cualquiera de los dos agentes.
+   */
+  sincronizarJornadasPermuta(index: number, lado: 'solicitante' | 'aceptante',
+                            tipo: 'original' | 'nuevo'): void {
     const grupo = this.permutas.at(index);
     if (!grupo) return;
-    const codigo = Number(grupo.get(lado + 'Codigo')?.value || 0);
-    grupo.get(lado + 'Nombre')?.setValue('');
-    if (!Number.isInteger(codigo) || codigo <= 0) return;
-    this.permutasApi.agente(codigo).subscribe({
-      next: agente => {
-        if (this.permutas.at(index) !== grupo ||
-            Number(grupo.get(lado + 'Codigo')?.value) !== codigo) return;
-        grupo.get(lado + 'Nombre')?.setValue(agente.nombre);
-      },
-      error: err => {
-        if (this.permutas.at(index) !== grupo ||
-            Number(grupo.get(lado + 'Codigo')?.value) !== codigo) return;
-        this.error.set('Permuta: el código ' + codigo +
-          ' no se pudo validar como agente de recaudación activo. ' + this.errorMessage(err));
-      }
-    });
+    const contrario = this.otroLado(lado);
+    const campos = tipo === 'original'
+      ? [['TurnoId', 'TurnoNuevoId'], ['Fecha', 'FechaNueva'], ['PlazaId', 'PlazaNuevaId']]
+      : [['TurnoNuevoId', 'TurnoId'], ['FechaNueva', 'Fecha'], ['PlazaNuevaId', 'PlazaId']];
+    for (const [origen, destino] of campos) {
+      const valor = grupo.get(lado + origen)?.value;
+      grupo.get(contrario + destino)?.setValue(valor, { emitEvent: false });
+    }
   }
 
   private cargarPermutasPrevias(): void {

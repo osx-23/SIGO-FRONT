@@ -21,6 +21,8 @@ import { forkJoin } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 
 import { AsistenciaApiService } from '../../services/asistencia-api.service';
+import { PermutasApiService } from '../../services/permutas-api.service';
+import { PermutaDetalle, PermutaRequest } from '../../models/permutas.models';
 
 import {
   AsistenciaProgramacionService
@@ -88,6 +90,8 @@ export class AsistenciaFormComponent implements OnInit {
   private readonly programacion =
     inject(AsistenciaProgramacionService);
 
+  private readonly permutasApi = inject(PermutasApiService);
+
   private readonly http =
     inject(HttpClient);
 
@@ -116,6 +120,11 @@ export class AsistenciaFormComponent implements OnInit {
 
   readonly excepcionControlador =
     signal(false);
+
+  readonly hayPermutas = signal(false);
+  readonly permutasPrevias = signal<PermutaDetalle[]>([]);
+  readonly loadingPermutas = signal(false);
+  private ultimaConsultaPermutas = '';
 
 
   /* ==========================================================================
@@ -257,13 +266,19 @@ export class AsistenciaFormComponent implements OnInit {
     notas: [''],
 
     ausencias:
-      this.fb.array([])
+      this.fb.array([]),
+
+    permutas: this.fb.array([])
 
   });
 
 
   get ausencias(): FormArray {
     return this.form.controls.ausencias;
+  }
+
+  get permutas(): FormArray {
+    return this.form.controls.permutas;
   }
 
 
@@ -306,9 +321,97 @@ export class AsistenciaFormComponent implements OnInit {
         () =>
           this.syncAusencias()
       );
+    this.form.controls.plazaId.valueChanges.subscribe(() => this.cargarPermutasPrevias());
+    this.form.controls.turnoId.valueChanges.subscribe(() => this.cargarPermutasPrevias());
+    this.form.controls.fecha.valueChanges.subscribe(() => this.cargarPermutasPrevias());
 
   }
 
+
+
+  /* Permutas: ambos lados se resuelven contra la programación oficial. */
+  cambiarHayPermutas(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.hayPermutas.set(checked);
+    if (checked && this.permutas.length === 0) this.agregarPermuta();
+    if (!checked) this.permutas.clear();
+  }
+
+  agregarPermuta(): void {
+    const fecha = this.form.controls.fecha.value || this.today();
+    this.permutas.push(this.fb.group({
+      solicitanteCodigo: [null as number | null, [Validators.required, Validators.min(1)]],
+      solicitanteFecha: [fecha, Validators.required],
+      solicitanteTurnoId: [null as number | null, Validators.required],
+      solicitanteNombre: [''],
+      solicitantePlaza: [''],
+      solicitantePlazaId: [null as number | null],
+      solicitanteTurno: [''],
+      aceptanteCodigo: [null as number | null, [Validators.required, Validators.min(1)]],
+      aceptanteFecha: [fecha, Validators.required],
+      aceptanteTurnoId: [null as number | null, Validators.required],
+      aceptanteNombre: [''],
+      aceptantePlaza: [''],
+      aceptantePlazaId: [null as number | null],
+      aceptanteTurno: ['']
+    }));
+  }
+
+  quitarPermuta(index: number): void {
+    this.permutas.removeAt(index);
+    if (this.permutas.length === 0) this.hayPermutas.set(false);
+  }
+
+  buscarAgentePermuta(index: number, lado: 'solicitante' | 'aceptante'): void {
+    const grupo = this.permutas.at(index);
+    if (!grupo) return;
+    const codigo = Number(grupo.get(lado + 'Codigo')?.value || 0);
+    const fecha = String(grupo.get(lado + 'Fecha')?.value || '');
+    for (const campo of ['TurnoId', 'Nombre', 'Plaza', 'PlazaId', 'Turno']) {
+      grupo.get(lado + campo)?.reset(null, { emitEvent: false });
+    }
+    if (!codigo || !fecha) return;
+    this.permutasApi.agente(codigo, fecha).subscribe({
+      next: agente => {
+        // Ignorar respuestas obsoletas si se editó el código o la fecha.
+        if (Number(grupo.get(lado + 'Codigo')?.value) !== codigo ||
+            String(grupo.get(lado + 'Fecha')?.value) !== fecha) return;
+        grupo.get(lado + 'Nombre')?.setValue(agente.nombre);
+        grupo.get(lado + 'Plaza')?.setValue(agente.plaza);
+        grupo.get(lado + 'PlazaId')?.setValue(agente.plazaId);
+        grupo.get(lado + 'Turno')?.setValue(agente.turno);
+        grupo.get(lado + 'TurnoId')?.setValue(agente.turnoId);
+      },
+      error: err => this.error.set(
+        'Permuta: no se pudo validar el agente ' + codigo + '. ' + this.errorMessage(err))
+    });
+  }
+
+  private cargarPermutasPrevias(): void {
+    const plazaId = Number(this.form.controls.plazaId.value || 0);
+    const turnoId = Number(this.form.controls.turnoId.value || 0);
+    const fecha = this.form.controls.fecha.value || '';
+    const clave = plazaId + ':' + turnoId + ':' + fecha;
+    this.ultimaConsultaPermutas = clave;
+    this.permutasPrevias.set([]);
+    if (!plazaId || !turnoId || !fecha) {
+      this.loadingPermutas.set(false);
+      return;
+    }
+    this.loadingPermutas.set(true);
+    this.permutasApi.delTurno(plazaId, turnoId, fecha).subscribe({
+      next: data => {
+        if (this.ultimaConsultaPermutas !== clave) return;
+        this.permutasPrevias.set(data);
+        this.loadingPermutas.set(false);
+      },
+      error: err => {
+        if (this.ultimaConsultaPermutas !== clave) return;
+        this.loadingPermutas.set(false);
+        this.error.set('No se pudieron consultar las permutas del turno. ' + this.errorMessage(err));
+      }
+    });
+  }
 
   /* ==========================================================================
      PEGADO
@@ -1103,6 +1206,43 @@ export class AsistenciaFormComponent implements OnInit {
 
   private validarRegistro(): boolean {
 
+    if (this.loadingPermutas()) {
+      this.error.set('Espera a que termine la consulta de permutas anteriores.');
+      return false;
+    }
+    if (this.hayPermutas()) {
+      if (!this.permutas.length || this.permutas.invalid) {
+        this.error.set('Completa los códigos, las fechas y valida los turnos de todas las permutas.');
+        return false;
+      }
+      const participantes = new Set<string>();
+      for (const grupo of this.permutas.controls) {
+        const a = Number(grupo.get('solicitanteCodigo')?.value);
+        const b = Number(grupo.get('aceptanteCodigo')?.value);
+        if (a === b) {
+          this.error.set('El solicitante y el aceptante no pueden ser la misma persona.');
+          return false;
+        }
+        for (const lado of ['solicitante', 'aceptante']) {
+          const clave = grupo.get(lado + 'Codigo')?.value + ':' + grupo.get(lado + 'Fecha')?.value;
+          if (participantes.has(clave)) {
+            this.error.set('No puedes incluir al mismo agente dos veces en la misma fecha.');
+            return false;
+          }
+          participantes.add(clave);
+        }
+        const coincide = ['solicitante', 'aceptante'].some(lado =>
+          Number(grupo.get(lado + 'PlazaId')?.value) === Number(this.form.controls.plazaId.value) &&
+          Number(grupo.get(lado + 'TurnoId')?.value) === Number(this.form.controls.turnoId.value) &&
+          grupo.get(lado + 'Fecha')?.value === this.form.controls.fecha.value
+        );
+        if (!coincide) {
+          this.error.set('Una de las jornadas de cada permuta debe corresponder al turno que registras.');
+          return false;
+        }
+      }
+    }
+
     if (
       this.loadingProgramados()
     ) {
@@ -1380,7 +1520,17 @@ export class AsistenciaFormComponent implements OnInit {
           })
         ),
 
-      evidencias: []
+      evidencias: [],
+      permutas: this.hayPermutas()
+        ? this.permutas.getRawValue().map((p: any): PermutaRequest => ({
+            codigoSolicitante: Number(p.solicitanteCodigo),
+            fechaSolicitante: String(p.solicitanteFecha),
+            turnoSolicitanteId: Number(p.solicitanteTurnoId),
+            codigoAceptante: Number(p.aceptanteCodigo),
+            fechaAceptante: String(p.aceptanteFecha),
+            turnoAceptanteId: Number(p.aceptanteTurnoId)
+          }))
+        : []
 
     };
 
@@ -1876,6 +2026,9 @@ export class AsistenciaFormComponent implements OnInit {
 
     this.ausencias
       .clear();
+    this.permutas.clear();
+    this.hayPermutas.set(false);
+    this.permutasPrevias.set([]);
 
 
     this.agentes

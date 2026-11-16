@@ -100,6 +100,8 @@ export interface AsistenciaRequest {
 
   evidencias: string[];
 
+  permutas?: import('./permutas.models').PermutaRequest[];
+
 }
 
 /*

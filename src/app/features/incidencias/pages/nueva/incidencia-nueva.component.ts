@@ -4,7 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin, of, switchMap } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/auth.service';
-import { turnoActualPorHora } from '../../../../core/utils/turno-operativo.util';
+import { etiquetaTurno, turnoActualPorHora } from '../../../../core/utils/turno-operativo.util';
 import { Plaza, Turno } from '../../../asistencia/models/asistencia.models';
 import { AsistenciaApiService } from '../../../asistencia/services/asistencia-api.service';
 import { ImageCropperModalComponent } from '../../../asistencia/shared/image-cropper-modal.component';
@@ -37,6 +37,7 @@ export class IncidenciaNuevaComponent implements OnInit, OnDestroy {
 
   plazas: Plaza[] = [];
   turnos: Turno[] = [];
+  readonly etiquetaTurno = etiquetaTurno;
   tipos: TipoIncidencia[] = [];
   vias: ViaIncidencia[] = [];
   fotos: ArchivoPreview[] = [];

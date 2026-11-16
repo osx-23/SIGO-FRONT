@@ -330,7 +330,12 @@
             <p
               class="mt-2 text-sm leading-6 text-slate-500"
             >
-              Al iniciar se cargarán los productos disponibles para tu plaza.
+              @if (auth.tieneRol('OPERADOR')) {
+                Registra los productos cuyo stock cambió durante tu turno.
+                Los demás conservarán su último stock al finalizar el conteo.
+              } @else {
+                Al iniciar se cargarán los productos disponibles para tu plaza.
+              }
             </p>
 
 

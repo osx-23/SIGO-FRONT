@@ -20,3 +20,19 @@ export function turnoActualPorHora<T extends { id: number; codigo: string; nombr
       turnoNombre === codigo || turnoNombre === `TURNO ${codigo}`;
   }) ?? null;
 }
+
+/** Evita mostrar "Turno A · Turno A" cuando código y nombre coinciden. */
+export function etiquetaTurno(turno: { codigo: string; nombre?: string | null }): string {
+  const codigo = String(turno.codigo ?? '').trim();
+  const nombre = String(turno.nombre ?? '').trim();
+  const titulo = /^turno\s+/i.test(codigo) ? codigo : `Turno ${codigo}`;
+
+  if (!nombre) return titulo;
+
+  const normalizar = (texto: string): string =>
+    texto.replace(/^turno\s+/i, '').replace(/\s+/g, ' ').trim().toUpperCase();
+
+  return normalizar(nombre) === normalizar(codigo)
+    ? titulo
+    : `${titulo} · ${nombre}`;
+}

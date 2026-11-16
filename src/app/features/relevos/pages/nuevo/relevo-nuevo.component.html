@@ -155,7 +155,12 @@
             <p class="text-xs font-bold uppercase tracking-wider text-blue-700">Paso 1 · Inicio</p>
           }
           <h2 class="mt-2 text-xl font-bold text-slate-900">Iniciar relevo de turno</h2>
-          @if (!auth.tieneRol('OPERADOR')) {
+          @if (auth.tieneRol('OPERADOR')) {
+            <p class="mt-2 text-sm leading-6 text-slate-500">
+              Registra el estado de los equipos y las vías antes de entregar tu turno.
+              Confirma el turno sugerido o selecciona otro para comenzar.
+            </p>
+          } @else {
             <p class="mt-2 text-sm leading-6 text-slate-500">
               Selecciona tu plaza y turno. Al iniciar se guardarán la fecha y hora en el servidor. Si no finalizas en 8 horas, se anulará automáticamente.
             </p>
@@ -185,16 +190,25 @@
                     class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500">
               <option [ngValue]="null">Selecciona un turno</option>
               @for (turno of turnos; track turno.id) {
-                <option [ngValue]="turno.id">Turno {{ turno.codigo }} · {{ turno.nombre }}</option>
+                <option [ngValue]="turno.id">{{ etiquetaTurno(turno) }}</option>
               }
             </select>
           </label>
         </div>
-        <div class="mt-6 flex justify-end">
+        <div class="mt-6" [class.flex]="!auth.tieneRol('OPERADOR')" [class.justify-end]="!auth.tieneRol('OPERADOR')">
           <button type="button" (click)="iniciarRelevo()"
                   [disabled]="iniciandoSesion() || cargandoVias() || !form.controls.plazaId.value || !form.controls.turnoId.value"
-                  class="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
-            {{ iniciandoSesion() ? 'Iniciando...' : 'Iniciar relevo' }}
+                  class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  [class.w-full]="auth.tieneRol('OPERADOR')">
+            @if (iniciandoSesion()) {
+              <span class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true"></span>
+              Iniciando relevo...
+            } @else {
+              <svg viewBox="0 0 24 24" class="h-5 w-5 fill-current" aria-hidden="true">
+                <path d="M8 5v14l11-7L8 5Z"/>
+              </svg>
+              Iniciar relevo
+            }
           </button>
         </div>
       </section>
@@ -346,7 +360,7 @@
                 <option
                   [ngValue]="turno.id"
                 >
-                  Turno {{ turno.codigo }} · {{ turno.nombre }}
+                  {{ etiquetaTurno(turno) }}
                 </option>
 
               }

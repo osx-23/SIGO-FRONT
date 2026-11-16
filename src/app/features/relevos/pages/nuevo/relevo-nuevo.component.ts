@@ -26,7 +26,7 @@ import {
 import {
   AuthService
 } from '../../../../core/auth/auth.service';
-import { turnoActualPorHora } from '../../../../core/utils/turno-operativo.util';
+import { etiquetaTurno, turnoActualPorHora } from '../../../../core/utils/turno-operativo.util';
 
 import {
   Plaza,
@@ -160,6 +160,8 @@ export class RelevoNuevoComponent implements OnInit, OnDestroy {
   plazas: Plaza[] = [];
 
   turnos: Turno[] = [];
+
+  readonly etiquetaTurno = etiquetaTurno;
 
   elementos: ElementoRelevo[] = [];
 

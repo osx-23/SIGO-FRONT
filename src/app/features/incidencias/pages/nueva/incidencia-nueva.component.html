@@ -55,7 +55,7 @@
             <select class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5" formControlName="turnoId">
               <option [ngValue]="null">Selecciona un turno</option>
               @for (turno of turnos; track turno.id) {
-                <option [ngValue]="turno.id">Turno {{ turno.codigo }}{{ turno.nombre ? ' · ' + turno.nombre : '' }}</option>
+                <option [ngValue]="turno.id">{{ etiquetaTurno(turno) }}</option>
               }
             </select>
           </label>

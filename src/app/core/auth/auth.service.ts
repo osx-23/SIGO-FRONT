@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -12,13 +13,32 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  // La sesión sobrevive al F5, pero no se guarda permanentemente en localStorage.
+  private readonly tokenKey = 'sigo_sesion_token';
+  private readonly usuarioKey = 'sigo_sesion_usuario';
   private accessToken: string | null = null;
-  private bienvenidaAgentePendiente = true;
+  private bienvenidaAgentePendiente = false;
+  private restauracionPendiente: Promise<UsuarioSesion | null> | null = null;
   readonly usuario = signal<UsuarioSesion | null>(null);
 
   constructor(private readonly http: HttpClient) {
-    localStorage.removeItem('sigo_token');
-    localStorage.removeItem('sigo_usuario');
+    try {
+      // El almacenamiento de sesión se conserva al recargar la misma pestaña.
+      this.accessToken = sessionStorage.getItem(this.tokenKey);
+      const perfil = sessionStorage.getItem(this.usuarioKey);
+      if (this.accessToken && perfil) {
+        const guardado: unknown = JSON.parse(perfil);
+        if (this.esUsuarioSesion(guardado)) {
+          this.usuario.set(this.normalizarUsuario(guardado));
+        }
+      }
+
+      // Limpiar cualquier formato antiguo que almacenaba tokens de forma persistente.
+      localStorage.removeItem('sigo_token');
+      localStorage.removeItem('sigo_usuario');
+    } catch {
+      // Si el navegador bloquea el almacenamiento, el inicio de sesión en memoria sigue funcionando.
+    }
   }
 
   async login(codigo: number, password: string): Promise<LoginResponse> {
@@ -30,8 +50,6 @@ export class AuthService {
     );
 
     this.accessToken = response.token;
-    localStorage.removeItem('sigo_token');
-    localStorage.removeItem('sigo_usuario');
 
     const usuario = this.normalizarUsuario({
       ...response.usuario,
@@ -50,34 +68,47 @@ export class AuthService {
     };
   }
 
-  async restore(): Promise<UsuarioSesion | null> {
-    if (!this.token()) {
-      return null;
-    }
+  restore(): Promise<UsuarioSesion | null> {
+    const token = this.token();
+    if (!token) return Promise.resolve(null);
+    if (this.restauracionPendiente) return this.restauracionPendiente;
 
-    try {
-      const response = await firstValueFrom(
-        this.http.get<UsuarioSesion>(
-          `${environment.apiUrl}/auth/me`
-        )
-      );
+    // Verifica permisos actuales en el backend antes de la primera navegación.
+    // Un fallo transitorio de red no debe borrar una sesión previamente válida.
+    this.restauracionPendiente = (async () => {
+      try {
+        const response = await firstValueFrom(
+          this.http.get<UsuarioSesion>(`${environment.apiUrl}/auth/me`)
+        );
 
-      const previo = this.usuario();
+        if (this.token() !== token) return null;
 
-      const usuario = this.normalizarUsuario({
-        ...response,
-        requiereCambioPassword:
-          response.requiereCambioPassword ??
-          previo?.requiereCambioPassword ??
-          false
-      });
+        const previo = this.usuario();
+        const usuario = this.normalizarUsuario({
+          ...response,
+          requiereCambioPassword:
+            response.requiereCambioPassword ??
+            previo?.requiereCambioPassword ??
+            false
+        });
 
-      this.persistirUsuario(usuario);
-      return usuario;
-    } catch {
-      this.logout();
-      return null;
-    }
+        this.persistirUsuario(usuario);
+        return usuario;
+      } catch (error) {
+        if (this.token() !== token) return null;
+        if (error instanceof HttpErrorResponse &&
+            (error.status === 401 || error.status === 403)) {
+          this.logout();
+          return null;
+        }
+        // Permite reintentar la conexión sin pedir credenciales por un corte de red.
+        return this.usuario();
+      } finally {
+        this.restauracionPendiente = null;
+      }
+    })();
+
+    return this.restauracionPendiente;
   }
 
   async cambiarPassword(
@@ -92,9 +123,8 @@ export class AuthService {
     );
 
     const codigo = this.usuario()?.codigo;
-    this.accessToken = null;
+    this.logout();
     if (codigo == null) {
-      this.usuario.set(null);
       throw new Error('Inicia sesión nuevamente con tu nueva contraseña');
     }
     await this.login(codigo, passwordNueva);
@@ -102,10 +132,16 @@ export class AuthService {
 
   logout(): void {
     this.accessToken = null;
-    this.bienvenidaAgentePendiente = true;
-    localStorage.removeItem('sigo_token');
-    localStorage.removeItem('sigo_usuario');
+    this.bienvenidaAgentePendiente = false;
     this.usuario.set(null);
+    try {
+      sessionStorage.removeItem(this.tokenKey);
+      sessionStorage.removeItem(this.usuarioKey);
+      localStorage.removeItem('sigo_token');
+      localStorage.removeItem('sigo_usuario');
+    } catch {
+      // La sesión en memoria se cierra aunque el almacenamiento no esté disponible.
+    }
   }
 
   /** Se consume una sola vez por inicio de sesión, exclusivamente en Inicio del agente. */
@@ -178,6 +214,26 @@ export class AuthService {
 
   private persistirUsuario(usuario: UsuarioSesion): void {
     this.usuario.set(usuario);
+    if (!this.accessToken) return;
+
+    try {
+      sessionStorage.setItem(this.tokenKey, this.accessToken);
+      sessionStorage.setItem(this.usuarioKey, JSON.stringify(usuario));
+    } catch {
+      // El inicio de sesión sigue disponible en memoria si el almacenamiento está bloqueado.
+    }
+  }
+
+  private esUsuarioSesion(valor: unknown): valor is UsuarioSesion {
+    if (!valor || typeof valor !== 'object') return false;
+    const usuario = valor as Partial<UsuarioSesion>;
+    return typeof usuario.id === 'number' &&
+      typeof usuario.codigo === 'number' &&
+      typeof usuario.nombre === 'string' &&
+      (usuario.rol === 'OPERADOR' ||
+       usuario.rol === 'CONTROLADOR' ||
+       usuario.rol === 'SUPERVISOR') &&
+      Array.isArray(usuario.modulos);
   }
 
   private normalizarUsuario(

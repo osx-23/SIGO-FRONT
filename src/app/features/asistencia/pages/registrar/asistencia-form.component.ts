@@ -451,6 +451,33 @@ export class AsistenciaFormComponent implements OnInit {
    * Cuando hay varios candidatos, el controlador elige quién aceptó el cambio.
    * Si solo existe uno, se autocompleta el otro participante.
    */
+  cambiarDestinoPermuta(index: number, lado: 'solicitante' | 'aceptante'): void {
+    const grupo = this.permutas.at(index);
+    if (!grupo) return;
+    const otro = this.otroLado(lado);
+    const turno = Number(grupo.get(lado + 'TurnoNuevoId')?.value || 0);
+    const plaza = Number(grupo.get(lado + 'PlazaNuevaId')?.value || 0);
+    const fecha = String(grupo.get(lado + 'FechaNueva')?.value || '');
+    const otroOriginal = Number(grupo.get(otro + 'TurnoId')?.value || 0);
+    if (otroOriginal && (
+        otroOriginal !== turno ||
+        Number(grupo.get(otro + 'PlazaId')?.value || 0) !== plaza ||
+        String(grupo.get(otro + 'Fecha')?.value || '') !== fecha)) {
+      // Cambió la jornada buscada: el otro agente ya no coincide.
+      // Evita que un código anterior se conserve como si fuese válido.
+      grupo.patchValue({
+        [otro + 'Codigo']: null,
+        [otro + 'Fecha']: fecha,
+        [otro + 'TurnoId']: null,
+        [otro + 'Nombre']: '',
+        [otro + 'Plaza']: '',
+        [otro + 'PlazaId']: null,
+        [otro + 'Turno']: ''
+      }, { emitEvent: false });
+    }
+    this.buscarCandidatosPermuta(index, lado);
+  }
+
   buscarCandidatosPermuta(index: number, lado: 'solicitante' | 'aceptante'): void {
     const grupo = this.permutas.at(index);
     if (!grupo) return;

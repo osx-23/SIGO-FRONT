@@ -6,6 +6,7 @@
     <!-- HEADER -->
     <!-- ===================================================== -->
 
+    @if (!auth.tieneRol('OPERADOR')) {
     <section
       class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
     >
@@ -69,6 +70,7 @@
 
       </div>
     </section>
+    }
 
 
     <!-- ===================================================== -->

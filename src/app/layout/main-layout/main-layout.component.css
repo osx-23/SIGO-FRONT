@@ -1864,3 +1864,153 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   .agent-back-home { transition: none; }
 }
+
+
+
+/* Cabecera del rol OPERADOR: identidad compacta, azul SIGO y navegación directa. */
+.agent-shell .content > header {
+  isolation: isolate;
+  min-height: 90px;
+  padding: 15px clamp(16px, 2.7vw, 36px);
+  gap: clamp(14px, 2vw, 24px);
+  border-bottom: 1px solid rgba(124, 189, 247, .36);
+  background: linear-gradient(112deg, #09254e 0%, #0d468d 56%, #1479cf 100%);
+  box-shadow: 0 8px 24px rgba(8, 34, 76, .16);
+  color: #fff;
+}
+
+.agent-shell .content > header::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 93% 14%, rgba(134, 205, 255, .25), transparent 44%),
+    linear-gradient(125deg, transparent 51%, rgba(255,255,255,.04) 52%, transparent 77%);
+}
+
+.agent-shell .user-identity {
+  min-width: 0;
+  padding: 0;
+}
+
+.agent-shell .user-identity b {
+  color: #fff;
+  font-size: clamp(.95rem, 1.65vw, 1.2rem);
+  line-height: 1.35;
+  font-weight: 800;
+  letter-spacing: -.012em;
+}
+
+.agent-shell .plaza-card {
+  flex: none;
+  min-width: 0;
+  min-height: 48px;
+  padding: 6px 15px 6px 7px;
+  margin-left: auto;
+  gap: 10px;
+  border: 1px solid rgba(210, 233, 255, .45);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .13);
+  box-shadow: 0 6px 20px rgba(2, 22, 59, .13);
+  backdrop-filter: blur(8px);
+}
+
+.agent-shell .plaza-icon {
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+  box-shadow: none;
+}
+
+.agent-shell .plaza-card strong {
+  color: #fff;
+  margin: 0;
+  max-width: none;
+  font-size: 1.02rem;
+  font-weight: 850;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.agent-shell .agent-back-home {
+  min-height: 47px;
+  padding: 11px 15px;
+  border: 1px solid rgba(208, 230, 255, .43);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+  box-shadow: 0 4px 13px rgba(2, 23, 62, .10);
+  backdrop-filter: blur(6px);
+  font-size: .86rem;
+  font-weight: 800;
+}
+
+.agent-shell .agent-back-home:hover {
+  background: rgba(255, 255, 255, .25);
+  border-color: rgba(255,255,255,.82);
+}
+
+.agent-shell .agent-back-home:focus-visible {
+  outline: 3px solid #a7dcff;
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .agent-shell .content > header {
+    grid-template-columns: minmax(0,1fr) auto;
+    grid-template-rows: auto auto;
+    padding: 12px 15px 14px;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .agent-shell .agent-back-home {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: start;
+    min-height: 43px;
+    padding: 8px 13px;
+    font-size: .8rem;
+  }
+
+  .agent-shell .user-identity {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+  }
+
+  .agent-shell .user-identity b {
+    font-size: clamp(.82rem, 3.4vw, 1.06rem);
+    line-height: 1.35;
+  }
+
+  .agent-shell .plaza-card {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 5px 10px 5px 5px;
+    gap: 6px;
+    border-radius: 14px;
+  }
+
+  .agent-shell .plaza-icon {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+    padding: 7px;
+    border-radius: 10px;
+  }
+
+  .agent-shell .plaza-card strong {
+    font-size: .88rem;
+  }
+}
+
+@media (max-width: 355px) {
+  .agent-shell .content > header {
+    padding-inline: 10px;
+  }
+  .agent-shell .plaza-card {
+    padding-right: 8px;
+  }
+}

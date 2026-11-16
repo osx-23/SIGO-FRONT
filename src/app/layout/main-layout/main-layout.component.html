@@ -941,9 +941,9 @@
           }}
         </b>
 
-        <span>
-          {{ auth.tieneRol('OPERADOR') ? 'Agente de recaudación' : auth.usuario()?.rol }}
-        </span>
+        @if (!auth.tieneRol('OPERADOR')) {
+          <span>{{ auth.usuario()?.rol }}</span>
+        }
 
       </div>
 
@@ -962,9 +962,9 @@
 
         <div>
 
-          <small>
-            Plaza
-          </small>
+          @if (!auth.tieneRol('OPERADOR')) {
+            <small>Plaza</small>
+          }
 
           <strong>
             {{

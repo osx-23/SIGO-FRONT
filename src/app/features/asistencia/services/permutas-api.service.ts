@@ -14,6 +14,14 @@ export class PermutasApiService {
     });
   }
 
+  candidatos(plazaId: number, turnoId: number, fecha: string) {
+    const params = new HttpParams()
+      .set('plazaId', plazaId)
+      .set('turnoId', turnoId)
+      .set('fecha', fecha);
+    return this.http.get<AgenteProgramadoPermuta[]>(this.base + '/candidatos', { params });
+  }
+
   delTurno(plazaId: number, turnoId: number, fecha: string) {
     const params = new HttpParams()
       .set('plazaId', plazaId)

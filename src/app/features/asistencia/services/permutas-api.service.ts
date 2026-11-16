@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../../../environments/environment';
-import { AgenteProgramadoPermuta, PermutaDetalle, ResumenPermutas } from '../models/permutas.models';
+import { PermutaDetalle, ResumenPermutas } from '../models/permutas.models';
 
 @Injectable({ providedIn: 'root' })
 export class PermutasApiService {

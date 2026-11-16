@@ -135,11 +135,13 @@ export class AuthService {
     if (this.requiereCambio()) return '/cambiar-password';
 
     if (this.tieneRol('OPERADOR')) {
-      if (this.tieneModulo('MI_HORARIO')) return '/programacion/mi-horario';
-      if (this.tieneModulo('RELEVOS')) return '/relevos/nuevo';
-      if (this.tieneModulo('INVENTARIO')) return '/inventario/nuevo';
-      if (this.tieneModulo('INCIDENCIAS')) return '/incidencias/nueva';
-      return '/acceso-pendiente';
+      const tieneAccesos = ([
+        'MI_HORARIO',
+        'INVENTARIO',
+        'RELEVOS',
+        'INCIDENCIAS'
+      ] as const).some(modulo => this.tieneModulo(modulo));
+      return tieneAccesos ? '/agente/inicio' : '/acceso-pendiente';
     }
 
     if (this.tieneRol('SUPERVISOR', 'CONTROLADOR')) {

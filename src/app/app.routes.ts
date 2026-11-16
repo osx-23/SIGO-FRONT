@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
-import { authGuard, moduleGuard, passwordChangedGuard } from './core/auth/guards';
+import { authGuard, moduleGuard, passwordChangedGuard, roleGuard } from './core/auth/guards';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { ASISTENCIA_ROUTES } from './features/asistencia/asistencia.routes';
 import { INVENTARIO_ROUTES } from './features/inventario/inventario.routes';
@@ -36,6 +36,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/acceso-pendiente/acceso-pendiente.component')
         .then(m => m.AccesoPendienteComponent)
+  },
+  {
+    path: 'agente/inicio',
+    canActivate: [authGuard, passwordChangedGuard, roleGuard('OPERADOR')],
+    loadComponent: () =>
+      import('./features/agente/inicio-agente.component')
+        .then(m => m.InicioAgenteComponent)
   },
   {
     path: '',

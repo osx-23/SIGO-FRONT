@@ -1,0 +1,167 @@
+<div class="agent-landing">
+  <header class="agent-hero">
+    <div class="hero-shine" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <div class="hero-top">
+        <div class="sigo-brand" aria-label="SIGO - Sistema Integral de Gestión Operativa">
+          <svg class="brand-mark" viewBox="0 0 64 42" fill="none" aria-hidden="true">
+            <path d="M4 36C18 14 35 5 60 4 37 15 23 25 17 36H4Z" fill="currentColor"/>
+            <path d="M23 36C32 17 46 9 60 4 48 14 41 23 36 36H23Z" fill="currentColor" opacity=".72"/>
+          </svg>
+          <span class="brand-word">SIGO</span>
+          <span class="brand-separator" aria-hidden="true"></span>
+          <span class="brand-description">Sistema Integral de<br>Gestión Operativa</span>
+        </div>
+        <button type="button" class="sign-out" (click)="cerrarSesion()" aria-label="Cerrar sesión">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/>
+            <path d="M15 16l4-4-4-4M19 12H9"/>
+          </svg>
+          <span>Salir</span>
+        </button>
+      </div>
+
+      <div class="hero-message">
+        <p class="hero-label">PORTAL DEL AGENTE</p>
+        <h1>¡Bienvenido!</h1>
+        <div class="agent-meta">
+          <span class="agent-symbol" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="8" r="3.5"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/>
+            </svg>
+          </span>
+          <div>
+            <strong>{{ auth.usuario()?.nombre || 'Agente de recaudación' }}</strong>
+            <span>Agente de recaudación
+              @if (auth.usuario()?.plaza) { · {{ auth.usuario()?.plaza }} }
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <svg class="toll-scene" viewBox="0 0 560 270" fill="none" aria-hidden="true" preserveAspectRatio="xMidYMax meet">
+        <defs>
+          <linearGradient id="sigo-roof" x1="80" y1="0" x2="410" y2="150" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#63B7F4"/><stop offset="1" stop-color="#163E74"/>
+          </linearGradient>
+          <linearGradient id="sigo-booth" x1="0" y1="0" x2="1" y2="1">
+            <stop stop-color="#CDEAFF"/><stop offset="1" stop-color="#4B83B5"/>
+          </linearGradient>
+        </defs>
+        <path d="M15 260 200 155h220l135 105H15Z" fill="#8CC0ED" opacity=".24"/>
+        <path d="M0 261 214 174h260l86 87H0Z" fill="#CEE8FF" opacity=".24"/>
+        <path d="M74 120h465l-27 31H48l26-31Z" fill="url(#sigo-roof)"/>
+        <path d="M83 104h456v17H74l9-17Z" fill="#A4D7FA"/>
+        <path d="M106 152h12v87h-12zM477 152h12v87h-12z" fill="#6B9ECC"/>
+        <path d="M242 153h99v86h-99z" fill="url(#sigo-booth)" stroke="#E2F5FF" stroke-width="3"/>
+        <path d="M254 165h77v31h-77z" fill="#194B79"/>
+        <path d="M263 166v29m29-29v29m28-29v29" stroke="#72B8EC" stroke-width="3"/>
+        <path d="M239 237h108v12H239z" fill="#A3CAEA"/>
+        <path d="M174 151h67v36h-67z" fill="#123459" stroke="#75B5E4" stroke-width="3"/>
+        <path d="m194 166 13 12 13-12m-13 12v-21" stroke="#4AF58A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M363 151h67v36h-67z" fill="#123459" stroke="#75B5E4" stroke-width="3"/>
+        <path d="m383 166 13 12 13-12m-13 12v-21" stroke="#4AF58A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M38 218h199v7H38z" fill="#F5FCFF"/>
+        <path d="M38 218h24v7H38zm48 0h24v7H86zm48 0h24v7h-24zm48 0h24v7h-24z" fill="#EA5A67"/>
+        <path d="M35 218h10v39H35z" fill="#A8CCEA"/>
+        <path d="M497 224h43v36h-43zM124 224h43v36h-43z" fill="#F1CE5B"/>
+        <path d="m497 253 16-29m0 36 19-36m-408 29 16-29m0 36 19-36" stroke="#27445E" stroke-width="9"/>
+        <path d="M0 260h560" stroke="#B6D9F5" stroke-width="5"/>
+      </svg>
+    </div>
+    <svg class="hero-wave" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 26c225 53 457 54 701 1C973-33 1204 19 1440 7v73H0V26Z" fill="#eaf4ff"/>
+      <path d="M0 45c253 47 512 34 757 2 241-31 455 3 683 1v32H0V45Z" fill="#f3f8ff"/>
+    </svg>
+  </header>
+
+  <main class="landing-main">
+    <div class="section-heading">
+      <span aria-hidden="true"></span>
+      <h2>¿Qué desea hacer?</h2>
+      <span aria-hidden="true"></span>
+    </div>
+
+    <div class="action-grid">
+      @if (auth.tieneModulo('MI_HORARIO')) {
+        <a class="action-card schedule-card" routerLink="/programacion/mi-horario" aria-label="Ir a Mi horario">
+          <div class="card-main">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 100 100" fill="none">
+                <rect x="15" y="20" width="60" height="58" rx="8" fill="#DBEEFF" stroke="currentColor" stroke-width="6"/>
+                <path d="M17 38h56M30 13v14M60 13v14" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                <path d="M29 50h9v9h-9zm18 0h9v9h-9zM29 65h9v8h-9z" fill="#6FB7F5"/>
+                <circle cx="72" cy="74" r="18" fill="#fff" stroke="currentColor" stroke-width="5"/>
+                <path d="M72 64v11l7 4" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3>Mi horario</h3>
+            <p>Consulta tus turnos y casetas asignadas.</p>
+          </div>
+          <div class="card-cta"><span>Ir a Mi horario</span><span aria-hidden="true">→</span></div>
+        </a>
+      }
+
+      @if (auth.tieneModulo('INVENTARIO')) {
+        <a class="action-card stock-card" routerLink="/inventario/nuevo" aria-label="Ir a Almacén">
+          <div class="card-main">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 100 100" fill="none">
+                <path d="M18 32 50 15l32 17v40L50 88 18 72V32Z" fill="#B8DEFF" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+                <path d="m18 32 32 17 32-17M50 49v39M34 23l33 17v13" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+                <path d="m42 19 32 17-10 5-32-17 10-5Z" fill="#fff" opacity=".9"/>
+                <path d="M63 64h11m-11 7h8" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3>Almacén</h3>
+            <p>Registra tus inventarios y consulta tus movimientos.</p>
+          </div>
+          <div class="card-cta"><span>Ir a Almacén</span><span aria-hidden="true">→</span></div>
+        </a>
+      }
+
+      @if (auth.tieneModulo('RELEVOS')) {
+        <a class="action-card relevo-card" routerLink="/relevos/nuevo" aria-label="Ir a Relevo">
+          <div class="card-main">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 100 100" fill="none">
+                <path d="M20 49a30 30 0 0 1 54-18" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+                <path d="m73 17 4 19-19-3" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M80 51a30 30 0 0 1-54 18" stroke="#2190E8" stroke-width="9" stroke-linecap="round"/>
+                <path d="m27 83-4-19 19 3" stroke="#2190E8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>Relevo</h3>
+            <p>Registra relevos de forma rápida y ordenada.</p>
+          </div>
+          <div class="card-cta"><span>Ir a Relevo</span><span aria-hidden="true">→</span></div>
+        </a>
+      }
+
+      @if (auth.tieneModulo('INCIDENCIAS')) {
+        <a class="action-card incident-card" routerLink="/incidencias/nueva" aria-label="Ir a Incidentes">
+          <div class="card-main">
+            <div class="card-icon" aria-hidden="true">
+              <svg viewBox="0 0 100 100" fill="none">
+                <path d="M50 16c-3 0-5 2-7 6L12 75c-2 5 1 9 7 9h62c6 0 9-4 7-9L57 22c-2-4-4-6-7-6Z" fill="#EDF7FF" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
+                <path d="M50 40v19" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>
+                <circle cx="50" cy="70" r="4" fill="currentColor"/>
+                <path d="m78 17 6-9m4 23 10-3" stroke="#2696EA" stroke-width="5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h3>Incidentes</h3>
+            <p>Reporta incidencias operativas al instante.</p>
+          </div>
+          <div class="card-cta"><span>Ir a Incidentes</span><span aria-hidden="true">→</span></div>
+        </a>
+      }
+    </div>
+
+    @if (!tieneOpciones()) {
+      <div class="no-access" role="status">
+        <h3>Sin módulos disponibles</h3>
+        <p>Tu cuenta todavía no tiene módulos habilitados. Comunícate con un supervisor.</p>
+      </div>
+    }
+  </main>
+</div>

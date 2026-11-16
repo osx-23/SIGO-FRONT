@@ -1,9 +1,10 @@
 <div
   class="shell"
   [class.collapsed]="collapsed()"
+  [class.agent-shell]="auth.tieneRol('OPERADOR')"
 >
 
-  @if(bienvenidaVisible()){
+  @if (!auth.tieneRol('OPERADOR') && bienvenidaVisible()) {
     <div
       class="welcome-screen"
       aria-live="polite"
@@ -46,7 +47,7 @@
             <span class="welcome-meta-separator"></span>
 
             <span>
-              {{ auth.usuario()?.rol }}
+              {{ auth.tieneRol('OPERADOR') ? 'Agente de recaudación' : auth.usuario()?.rol }}
             </span>
           </div>
         </div>
@@ -59,6 +60,7 @@
     </div>
   }
 
+  @if (!auth.tieneRol('OPERADOR')) {
   <aside
     [class.open]="sidebarOpen()"
   >
@@ -99,22 +101,6 @@
          ===================================================== -->
 
     <nav>
-
-      @if (auth.tieneRol('OPERADOR')) {
-        <a
-          routerLink="/agente/inicio"
-          routerLinkActive="active"
-          (click)="close()"
-          data-tooltip="Inicio del agente"
-        >
-          <span class="nav-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m12 3 9 7v11h-6v-7H9v7H3V10l9-7Z"/>
-            </svg>
-          </span>
-          <span class="nav-label">Volver al inicio</span>
-        </a>
-      }
 
       <!-- DASHBOARD -->
 
@@ -899,11 +885,12 @@
     </button>
 
   </aside>
+  }
 
 
   <!-- OVERLAY -->
 
-  @if (sidebarOpen()) {
+  @if (!auth.tieneRol('OPERADOR') && sidebarOpen()) {
 
     <button
       class="overlay"
@@ -923,19 +910,26 @@
 
     <header>
 
-      <button
-        class="menu"
-        type="button"
-        (click)="toggle()"
-      >
-
-        <svg viewBox="0 0 24 24">
-          <path
-            d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z"
-          />
-        </svg>
-
-      </button>
+      @if (auth.tieneRol('OPERADOR')) {
+        <a class="agent-back-home" routerLink="/agente/inicio" aria-label="Volver al inicio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 12H5m7-7-7 7 7 7"/>
+          </svg>
+          <span>Volver al inicio</span>
+        </a>
+      } @else {
+        <button
+          class="menu"
+          type="button"
+          (click)="toggle()"
+          aria-label="Abrir o cerrar menú"
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M4 6h16v2H4V6Zm0 5h16v2H4v-2Zm0 5h16v2H4v-2Z"/>
+          </svg>
+        </button>
+      }
 
 
       <div class="user-identity">
@@ -948,7 +942,7 @@
         </b>
 
         <span>
-          {{ auth.usuario()?.rol }}
+          {{ auth.tieneRol('OPERADOR') ? 'Agente de recaudación' : auth.usuario()?.rol }}
         </span>
 
       </div>

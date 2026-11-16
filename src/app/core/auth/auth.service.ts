@@ -13,6 +13,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private accessToken: string | null = null;
+  private bienvenidaAgentePendiente = true;
   readonly usuario = signal<UsuarioSesion | null>(null);
 
   constructor(private readonly http: HttpClient) {
@@ -41,6 +42,7 @@ export class AuthService {
     });
 
     this.persistirUsuario(usuario);
+    this.bienvenidaAgentePendiente = true;
 
     return {
       ...response,
@@ -100,9 +102,19 @@ export class AuthService {
 
   logout(): void {
     this.accessToken = null;
+    this.bienvenidaAgentePendiente = true;
     localStorage.removeItem('sigo_token');
     localStorage.removeItem('sigo_usuario');
     this.usuario.set(null);
+  }
+
+  /** Se consume una sola vez por inicio de sesión, exclusivamente en Inicio del agente. */
+  consumirBienvenidaAgente(): boolean {
+    if (!this.tieneRol('OPERADOR') || !this.bienvenidaAgentePendiente) {
+      return false;
+    }
+    this.bienvenidaAgentePendiente = false;
+    return true;
   }
 
   token(): string | null {

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 
@@ -9,9 +9,27 @@ import { AuthService } from '../../core/auth/auth.service';
   templateUrl: './inicio-agente.component.html',
   styleUrl: './inicio-agente.component.css'
 })
-export class InicioAgenteComponent {
+export class InicioAgenteComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  readonly bienvenidaVisible = signal(this.auth.consumirBienvenidaAgente());
+  private timerBienvenida: ReturnType<typeof setTimeout> | null = null;
+
+  ngOnInit(): void {
+    if (this.bienvenidaVisible()) {
+      this.timerBienvenida = setTimeout(() => {
+        this.bienvenidaVisible.set(false);
+        this.timerBienvenida = null;
+      }, 2800);
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.timerBienvenida !== null) {
+      clearTimeout(this.timerBienvenida);
+      this.timerBienvenida = null;
+    }
+  }
 
   tieneOpciones(): boolean {
     return this.auth.tieneModulo('MI_HORARIO')

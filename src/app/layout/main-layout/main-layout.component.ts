@@ -85,14 +85,14 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
 
     this.actualizarIncidenciasPendientes();
 
-    this.timerBienvenida =
-      setTimeout(
-        () =>
-          this.bienvenidaVisible.set(
-            false
-          ),
-        4800
-      );
+    // El agente recibe su bienvenida una sola vez en la pantalla de inicio.
+    // Evita reproducirla cada vez que navega entre rutas operativas.
+    if (this.auth.tieneRol('OPERADOR')) {
+      this.bienvenidaVisible.set(false);
+    } else {
+      this.timerBienvenida =
+        setTimeout(() => this.bienvenidaVisible.set(false), 4800);
+    }
 
     this.timerIncidencias =
       setInterval(

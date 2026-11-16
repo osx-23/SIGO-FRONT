@@ -1,4 +1,14 @@
 <div class="agent-landing">
+  @if (bienvenidaVisible()) {
+    <div class="agent-welcome-once" role="status" aria-live="polite" aria-label="Bienvenida a SIGO">
+      <div class="agent-welcome-content">
+        <img src="assets/sigo_logo.png" alt="SIGO" class="agent-welcome-logo">
+        <p>Bienvenido,</p>
+        <h1>{{ auth.usuario()?.nombre || 'Agente' }}</h1>
+        <span>Todo listo para comenzar</span>
+      </div>
+    </div>
+  }
   <header class="agent-hero">
     <div class="hero-shine" aria-hidden="true"></div>
     <div class="hero-inner">

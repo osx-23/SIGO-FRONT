@@ -47,3 +47,73 @@
 @media(max-width:400px){.hero-inner{padding-inline:15px}.brand-description{font-size:.58rem}.sigo-brand{gap:6px}.brand-logo{height:46px;max-width:135px}.brand-separator{height:30px}.sign-out{padding:10px}.sign-out span{display:none}.hero-message{width:88%}.toll-scene{opacity:.23}.agent-meta div span{font-size:.73rem}.landing-main{width:calc(100% - 22px)}.section-heading{gap:7px}.section-heading>span{width:19px}.section-heading h2{font-size:1.65rem}.action-grid{gap:10px}.card-main{min-height:218px;padding:13px 12px 15px}.card-icon{width:76px;height:78px}.card-icon svg{width:74px;height:74px}.card-main h3{font-size:1.23rem}.card-main p{font-size:.78rem}.card-cta{padding:12px;font-size:.77rem}.card-cta>span:last-child{font-size:1.5rem}}
 @media(max-width:320px){.action-grid{grid-template-columns:1fr}.card-main{min-height:160px;align-items:center;text-align:center}.card-icon{margin-bottom:4px}.brand-description{display:none}.brand-separator{display:none}}
 @media(prefers-reduced-motion:reduce){.action-card,.sign-out{transition:none}.action-card:hover{transform:none}}
+
+
+/* Bienvenida inicial: solo en el primer ingreso del agente por sesión. */
+.agent-welcome-once {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 26px;
+  background: radial-gradient(circle at 70% 10%, #216eb8, transparent 60%),
+    linear-gradient(135deg, #061e45, #0b3976);
+  color: #fff;
+  pointer-events: none;
+  animation: welcome-once-exit 2.8s both;
+}
+
+.agent-welcome-content {
+  width: min(740px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  animation: welcome-once-enter .65s ease-out both;
+}
+
+.agent-welcome-logo {
+  width: auto;
+  height: clamp(62px, 10vw, 90px);
+  max-width: min(340px, 80vw);
+  object-fit: contain;
+  object-position: left center;
+  margin-bottom: 24px;
+}
+
+.agent-welcome-content p {
+  margin: 0;
+  color: #cde8ff;
+  font-size: clamp(1.3rem, 3vw, 1.9rem);
+  font-weight: 700;
+}
+
+.agent-welcome-content h1 {
+  margin: 0;
+  font-size: clamp(2.1rem, 7vw, 4.7rem);
+  line-height: 1.12;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.agent-welcome-content > span {
+  margin-top: 18px;
+  color: #b5dfff;
+  font-weight: 650;
+}
+
+@keyframes welcome-once-enter {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes welcome-once-exit {
+  0%, 72% { opacity: 1; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-welcome-once { display: none; animation: none; }
+  .agent-welcome-content { animation: none; }
+}

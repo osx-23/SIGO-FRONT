@@ -1,26 +1,23 @@
 :host{display:block;min-height:100dvh}
 *{box-sizing:border-box}
 .agent-landing{min-height:100dvh;background:linear-gradient(180deg,#eaf4ff 0%,#f4f9ff 44%,#edf6ff 100%);color:#071d3f;font-family:inherit;overflow-x:hidden}
-.agent-hero{position:relative;min-height:335px;background:linear-gradient(112deg,#062657 0%,#063877 49%,#1677c7 100%);color:#fff;isolation:isolate;overflow:hidden}
+.agent-hero{position:relative;min-height:275px;background:linear-gradient(112deg,#062657 0%,#063877 49%,#1677c7 100%);color:#fff;isolation:isolate;overflow:hidden}
 .hero-shine{position:absolute;inset:-120px -14% auto auto;width:min(850px,95vw);height:400px;border-radius:50%;background:radial-gradient(circle,rgba(92,183,249,.24),transparent 68%);pointer-events:none}
-.hero-inner{position:relative;max-width:1150px;min-height:320px;padding:30px 32px 82px;margin:0 auto}
+.hero-inner{position:relative;max-width:1150px;min-height:270px;padding:30px 32px 82px;margin:0 auto}
 .hero-top{position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:24px}
 .sigo-brand{display:flex;align-items:center;gap:12px;min-width:0;color:#fff}
-.brand-mark{width:53px;height:39px;flex:none}
-.brand-word{font-size:clamp(2rem,4vw,2.8rem);font-weight:900;font-style:italic;letter-spacing:-.07em;line-height:1}
+.brand-logo{display:block;flex:none;width:auto;max-width:min(190px,36vw);height:64px;object-fit:contain;object-position:left center}
 .brand-separator{width:1px;height:36px;margin:0 7px;background:rgba(255,255,255,.72)}
 .brand-description{font-size:clamp(.67rem,1.5vw,.9rem);font-weight:500;line-height:1.25;white-space:nowrap}
 .sign-out{position:relative;z-index:4;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:9px 15px;border:1px solid rgba(255,255,255,.32);border-radius:12px;background:rgba(3,26,65,.35);color:#fff;font:inherit;font-size:.84rem;font-weight:700;cursor:pointer;backdrop-filter:blur(6px);transition:background .2s,border-color .2s}
 .sign-out:hover{background:rgba(3,26,65,.65);border-color:#fff}
 .sign-out svg{width:19px;height:19px}
-.hero-message{position:relative;z-index:2;width:min(60%,640px);margin-top:42px}
-.hero-label{margin:0 0 8px;font-size:.7rem;font-weight:800;letter-spacing:.2em;color:#afdaff}
-.hero-message h1{margin:0 0 17px;font-size:clamp(2rem,4.6vw,3.2rem);font-weight:850;letter-spacing:-.04em;line-height:1.05}
+.hero-message{position:relative;z-index:2;width:min(60%,640px);margin-top:52px}
 .agent-meta{display:flex;align-items:center;gap:12px}
 .agent-symbol{display:grid;place-items:center;flex:none;width:42px;height:42px;border:1px solid rgba(255,255,255,.48);border-radius:50%;background:rgba(255,255,255,.12)}
 .agent-symbol svg{width:26px;height:26px}
 .agent-meta div{display:flex;flex-direction:column;min-width:0;gap:3px}
-.agent-meta strong{font-size:clamp(.88rem,1.65vw,1rem);font-weight:750;overflow-wrap:anywhere}
+.agent-meta strong{font-size:clamp(1rem,1.85vw,1.26rem);font-weight:800;line-height:1.3;overflow-wrap:anywhere}
 .agent-meta div span{color:#d2eaff;font-size:.81rem}
 .toll-scene{position:absolute;right:1%;bottom:30px;width:min(56%,570px);height:auto;opacity:.86;filter:drop-shadow(0 17px 22px rgba(0,18,49,.24));pointer-events:none}
 .hero-wave{position:absolute;bottom:-1px;left:0;z-index:2;width:100%;height:65px;pointer-events:none}
@@ -45,8 +42,8 @@
 .incident-card .card-cta{background:linear-gradient(105deg,#0b4788,#041f51)}
 .no-access{max-width:580px;margin:28px auto;padding:28px;text-align:center;background:#fff;border:1px solid #d4e7f8;border-radius:22px}
 .no-access h3{margin:0 0 9px}.no-access p{margin:0;color:#475569;line-height:1.5}
-@media(min-width:1000px){.agent-hero{min-height:380px}.hero-inner{min-height:365px;padding-top:35px}.hero-message{margin-top:53px}.toll-scene{bottom:39px}.landing-main{padding-top:10px}.card-main{min-height:250px}}
-@media(max-width:700px){.agent-hero{min-height:306px}.hero-inner{min-height:300px;padding:20px 20px 70px}.hero-message{width:70%;margin-top:40px}.toll-scene{width:70%;right:-18%;bottom:30px;opacity:.48}.hero-message h1{font-size:2.2rem}.landing-main{padding-top:13px}.section-heading{gap:12px;margin-bottom:22px}.section-heading>span{width:32px}.action-grid{gap:15px}.card-main{padding:16px 16px 18px;min-height:226px}.card-icon{width:94px;height:90px;margin-bottom:7px}.card-icon svg{width:80px;height:80px}.card-main h3{font-size:1.34rem}.card-main p{font-size:.87rem;line-height:1.45}.card-cta{min-height:55px;padding:12px 16px;font-size:.84rem}.action-card{border-radius:22px}.brand-word{font-size:2rem}.brand-mark{width:41px;height:32px}.brand-separator{margin:0 3px}}
-@media(max-width:400px){.hero-inner{padding-inline:15px}.brand-description{font-size:.58rem}.sigo-brand{gap:6px}.brand-mark{width:32px}.brand-word{font-size:1.7rem}.brand-separator{height:30px}.sign-out{padding:10px}.sign-out span{display:none}.hero-message{width:88%}.toll-scene{opacity:.23}.agent-meta div span{font-size:.73rem}.landing-main{width:calc(100% - 22px)}.section-heading{gap:7px}.section-heading>span{width:19px}.section-heading h2{font-size:1.65rem}.action-grid{gap:10px}.card-main{min-height:218px;padding:13px 12px 15px}.card-icon{width:76px;height:78px}.card-icon svg{width:74px;height:74px}.card-main h3{font-size:1.23rem}.card-main p{font-size:.78rem}.card-cta{padding:12px;font-size:.77rem}.card-cta>span:last-child{font-size:1.5rem}}
-@media(max-width:320px){.action-grid{grid-template-columns:1fr}.card-main{min-height:160px;align-items:center;text-align:center}.card-icon{margin-bottom:4px}.hero-message h1{font-size:1.85rem}.brand-description{display:none}.brand-separator{display:none}}
+@media(min-width:1000px){.agent-hero{min-height:300px}.hero-inner{min-height:292px;padding-top:35px}.hero-message{margin-top:49px}.toll-scene{bottom:39px}.landing-main{padding-top:10px}.card-main{min-height:250px}}
+@media(max-width:700px){.agent-hero{min-height:250px}.hero-inner{min-height:245px;padding:20px 20px 70px}.hero-message{width:70%;margin-top:38px}.toll-scene{width:70%;right:-18%;bottom:30px;opacity:.48}.landing-main{padding-top:13px}.section-heading{gap:12px;margin-bottom:22px}.section-heading>span{width:32px}.action-grid{gap:15px}.card-main{padding:16px 16px 18px;min-height:226px}.card-icon{width:94px;height:90px;margin-bottom:7px}.card-icon svg{width:80px;height:80px}.card-main h3{font-size:1.34rem}.card-main p{font-size:.87rem;line-height:1.45}.card-cta{min-height:55px;padding:12px 16px;font-size:.84rem}.action-card{border-radius:22px}.brand-logo{height:54px;max-width:170px}.brand-separator{margin:0 3px}}
+@media(max-width:400px){.hero-inner{padding-inline:15px}.brand-description{font-size:.58rem}.sigo-brand{gap:6px}.brand-logo{height:46px;max-width:135px}.brand-separator{height:30px}.sign-out{padding:10px}.sign-out span{display:none}.hero-message{width:88%}.toll-scene{opacity:.23}.agent-meta div span{font-size:.73rem}.landing-main{width:calc(100% - 22px)}.section-heading{gap:7px}.section-heading>span{width:19px}.section-heading h2{font-size:1.65rem}.action-grid{gap:10px}.card-main{min-height:218px;padding:13px 12px 15px}.card-icon{width:76px;height:78px}.card-icon svg{width:74px;height:74px}.card-main h3{font-size:1.23rem}.card-main p{font-size:.78rem}.card-cta{padding:12px;font-size:.77rem}.card-cta>span:last-child{font-size:1.5rem}}
+@media(max-width:320px){.action-grid{grid-template-columns:1fr}.card-main{min-height:160px;align-items:center;text-align:center}.card-icon{margin-bottom:4px}.brand-description{display:none}.brand-separator{display:none}}
 @media(prefers-reduced-motion:reduce){.action-card,.sign-out{transition:none}.action-card:hover{transform:none}}

@@ -143,6 +143,16 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   }
 
 
+  /** Título breve en la barra de navegación de los agentes. */
+  tituloVistaAgente(): string {
+    const ruta = this.router.url.split(/[?#]/, 1)[0];
+    if (ruta.startsWith('/programacion/mi-horario')) return 'Mi horario';
+    if (ruta.startsWith('/inventario')) return 'Inventario';
+    if (ruta.startsWith('/relevos')) return 'Relevo';
+    if (ruta.startsWith('/incidencias')) return 'Incidentes';
+    return 'SIGO';
+  }
+
   inventarioSeccionActiva(seccion: 'stock' | 'movimientos'): boolean {
     const ruta = this.router.url.split(/[?#]/, 1)[0];
     return seccion === 'stock'

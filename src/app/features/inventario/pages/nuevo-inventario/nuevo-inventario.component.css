@@ -119,3 +119,11 @@ article {
   }
 
 }
+/* Solo OPERADOR: un bloque de inicio sin datos repetidos. */
+.agent-inventory-single {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.agent-inventory-action {
+  border: 0 !important;
+  background: #fff;
+}

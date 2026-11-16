@@ -170,8 +170,10 @@
 
         <div
           class="grid gap-0 lg:grid-cols-[1.4fr_.8fr]"
+          [class.agent-inventory-single]="auth.tieneRol('OPERADOR')"
         >
 
+          @if (!auth.tieneRol('OPERADOR')) {
           <!-- INFORMACIÓN -->
 
           <div
@@ -303,12 +305,14 @@
             </div>
 
           </div>
+          }
 
 
           <!-- ACCIÓN -->
 
           <div
             class="flex flex-col justify-center border-t border-slate-200 bg-slate-50 p-5 sm:p-6 lg:border-l lg:border-t-0 lg:p-8"
+            [class.agent-inventory-action]="auth.tieneRol('OPERADOR')"
           >
 
             <span

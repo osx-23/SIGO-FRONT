@@ -2014,3 +2014,84 @@ footer {
     padding-right: 8px;
   }
 }
+
+
+/* Barra única del agente: regresar | título centrado | plaza. */
+.agent-shell .content > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 72px;
+  padding: 11px clamp(12px, 2.6vw, 30px);
+}
+.agent-shell .agent-back-home {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  min-height: 46px;
+  padding: 0;
+  margin: 0;
+  border-radius: 14px;
+}
+.agent-shell .agent-back-home svg { width: 23px; height: 23px; }
+.agent-shell .agent-page-title {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  min-width: 0;
+  color: #fff;
+  font-size: clamp(1.06rem, 2.3vw, 1.65rem);
+  font-weight: 850;
+  line-height: 1.25;
+  letter-spacing: -.025em;
+  text-align: center;
+  white-space: nowrap;
+}
+.agent-shell .plaza-card {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  margin-left: 0;
+}
+@media (max-width: 640px) {
+  .agent-shell .content > header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: 5px;
+    min-height: 66px;
+    padding: 9px 10px;
+  }
+  .agent-shell .agent-back-home {
+    grid-column: 1;
+    grid-row: 1;
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+  }
+  .agent-shell .agent-page-title {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: clamp(.98rem, 4.5vw, 1.28rem);
+  }
+  .agent-shell .plaza-card {
+    grid-column: 3;
+    grid-row: 1;
+    gap: 5px;
+    min-height: 42px;
+    padding: 4px 9px 4px 4px;
+  }
+  .agent-shell .plaza-icon {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+    padding: 7px;
+  }
+  .agent-shell .plaza-card strong { font-size: .84rem; }
+}

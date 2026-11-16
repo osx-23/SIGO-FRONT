@@ -26,6 +26,7 @@ import {
 import {
   AuthService
 } from '../../../../core/auth/auth.service';
+import { turnoActualPorHora } from '../../../../core/utils/turno-operativo.util';
 
 import {
   Plaza,
@@ -1111,6 +1112,11 @@ cerrarConfirmacionesConEscape(event: Event): void {
           catalogos.turnos ??
           [];
 
+        if (this.auth.tieneRol('OPERADOR') && !this.form.controls.turnoId.value) {
+          const turno = turnoActualPorHora(this.turnos);
+          if (turno) this.form.controls.turnoId.setValue(turno.id);
+        }
+
 
         /* ====================================================
            ELEMENTOS
@@ -1815,7 +1821,9 @@ cerrarConfirmacionesConEscape(event: Event): void {
 
     this.form.patchValue({
 
-      turnoId: null,
+      turnoId: this.auth.tieneRol('OPERADOR')
+        ? turnoActualPorHora(this.turnos)?.id ?? null
+        : null,
 
       fecha:
         this.fechaHoy(),

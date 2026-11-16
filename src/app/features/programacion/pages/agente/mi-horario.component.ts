@@ -6,6 +6,7 @@ import {
   inject
 } from '@angular/core';
 import { finalize } from 'rxjs';
+import { AuthService } from '../../../../core/auth/auth.service';
 
 import {
   EstadoProgramacion,
@@ -24,6 +25,7 @@ import { ProgramacionApiService } from '../../data-access/programacion-api.servi
 })
 export class MiHorarioComponent implements OnInit {
 
+  readonly auth = inject(AuthService);
   private readonly api = inject(ProgramacionApiService);
   private readonly cdr = inject(ChangeDetectorRef);
 

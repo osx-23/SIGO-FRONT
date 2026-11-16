@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin, of, switchMap } from 'rxjs';
 
 import { AuthService } from '../../../../core/auth/auth.service';
+import { turnoActualPorHora } from '../../../../core/utils/turno-operativo.util';
 import { Plaza, Turno } from '../../../asistencia/models/asistencia.models';
 import { AsistenciaApiService } from '../../../asistencia/services/asistencia-api.service';
 import { ImageCropperModalComponent } from '../../../asistencia/shared/image-cropper-modal.component';
@@ -196,6 +197,11 @@ export class IncidenciaNuevaComponent implements OnInit, OnDestroy {
         this.turnos = turnos ?? [];
         this.tipos = tipos ?? [];
 
+        if (this.esOperador && !this.form.controls.turnoId.value) {
+          const turno = turnoActualPorHora(this.turnos);
+          if (turno) this.form.controls.turnoId.setValue(turno.id);
+        }
+
         const plazaId = this.esOperador ? usuario?.plazaId : this.form.controls.plazaId.value;
         if (plazaId) this.cargarVias(plazaId);
 
@@ -222,7 +228,7 @@ export class IncidenciaNuevaComponent implements OnInit, OnDestroy {
     const usuario = this.auth.usuario();
     this.form.reset({
       plazaId: this.esOperador ? usuario?.plazaId ?? null : null,
-      turnoId: null,
+      turnoId: this.esOperador ? turnoActualPorHora(this.turnos)?.id ?? null : null,
       tipoId: null,
       viaId: null,
       fecha: this.fechaHoy(),

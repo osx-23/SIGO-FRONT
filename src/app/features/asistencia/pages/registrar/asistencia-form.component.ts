@@ -800,11 +800,46 @@ export class AsistenciaFormComponent implements OnInit {
     return this.agentes();
   }
 
+  /**
+   * Buscador local sobre el catálogo ya cargado. No consulta programación
+   * y limita resultados para evitar listas enormes de personal.
+   */
   agentesParaAusencia(index: number): Trabajador[] {
-    const excepcion = Boolean(this.ausencias.at(index)?.get('excepcionPlaza')?.value);
-    return excepcion && this.agentesOtrasPlazasCargados()
+    const grupo = this.ausencias.at(index);
+    const excepcion = Boolean(grupo?.get('excepcionPlaza')?.value);
+    const agentes = excepcion && this.agentesOtrasPlazasCargados()
       ? this.agentesOtrasPlazas()
       : this.agentes();
+    const texto = String(grupo?.get('busquedaTrabajador')?.value ?? '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const coincidencias = texto
+      ? agentes.filter(a => {
+          const nombre = a.nombreCompleto
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          return String(a.codigo).includes(texto) || nombre.includes(texto);
+        })
+      : agentes;
+    const visibles = coincidencias.slice(0, 30);
+    const seleccionadoId = Number(grupo?.get('trabajadorId')?.value);
+    const seleccionado = agentes.find(a => a.id === seleccionadoId);
+    if (seleccionado && !visibles.some(a => a.id === seleccionadoId)) {
+      visibles.unshift(seleccionado);
+    }
+    return visibles;
+  }
+
+  contarAgentesParaAusencia(index: number): number {
+    const grupo = this.ausencias.at(index);
+    const excepcion = Boolean(grupo?.get('excepcionPlaza')?.value);
+    const agentes = excepcion && this.agentesOtrasPlazasCargados()
+      ? this.agentesOtrasPlazas()
+      : this.agentes();
+    const texto = String(grupo?.get('busquedaTrabajador')?.value ?? '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    if (!texto) return agentes.length;
+    return agentes.filter(a => String(a.codigo).includes(texto)
+      || a.nombreCompleto.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().includes(texto)).length;
   }
 
   cambiarExcepcionAusencia(index: number, event: Event): void {
@@ -2017,7 +2052,8 @@ export class AsistenciaFormComponent implements OnInit {
           ],
 
           observacion: [''],
-          excepcionPlaza: [false]
+          excepcionPlaza: [false],
+          busquedaTrabajador: ['']
 
         })
 
@@ -2052,6 +2088,7 @@ export class AsistenciaFormComponent implements OnInit {
         .get('trabajadorId')
         ?.setValue(null);
       group.get('excepcionPlaza')?.setValue(false);
+      group.get('busquedaTrabajador')?.setValue('');
 
     }
 

@@ -806,58 +806,16 @@
 
                 <div class="grid gap-4 md:grid-cols-2">
 
-                  <label class="space-y-2 text-sm font-medium text-slate-700">
-
-                    Trabajador *
-                    <span class="relative block">
-                      <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <circle cx="11" cy="11" r="7"></circle>
-                        <path d="m20 20-4-4"></path>
-                      </svg>
-                      <input type="search" formControlName="busquedaTrabajador"
-                        aria-label="Buscar agente ausente por código o nombre"
-                        placeholder="Buscar por código o nombre..."
-                        autocomplete="off"
-                        [disabled]="!!group.get('excepcionPlaza')?.value && !agentesOtrasPlazasCargados()"
-                        class="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
-                    </span>
-                    <span class="block text-xs font-normal text-slate-500">
-                      {{ contarAgentesParaAusencia($index) }} coincidencia(s).
-                      @if (contarAgentesParaAusencia($index) > 30) {
-                        Escribe más para acotar la búsqueda.
-                      }
-                    </span>
-
-
-                    <select
-                      class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5"
-                      formControlName="trabajadorId"
-                      [disabled]="group.get('excepcionPlaza')?.value && !agentesOtrasPlazasCargados()"
-                    >
-
-                      <option [ngValue]="null">
-                        Selecciona un trabajador
-                      </option>
-
-                      @if (contarAgentesParaAusencia($index) === 0) {
-                        <option [ngValue]="null" disabled>Sin coincidencias</option>
-                      }
-                      @for (a of agentesParaAusencia($index); track a.id) {
-
-                        <option [ngValue]="a.id">
-                          {{ a.codigo }} · {{ a.nombreCompleto }}
-                          @if (group.get('excepcionPlaza')?.value) {
-                            ({{ a.plaza?.codigo ?? 'Sin plaza' }})
-                          }
-                        </option>
-
-                      }
-
-                    </select>
-
-                  </label>
-
+                  <div class="space-y-2 text-sm font-medium text-slate-700">
+                    <span>Trabajador *</span>
+                    <app-agente-autocomplete formControlName="trabajadorId"
+                      [agentes]="group.get('excepcionPlaza')?.value ? agentesOtrasPlazas() : agentes()"
+                      [mostrarPlaza]="!!group.get('excepcionPlaza')?.value"
+                      [cargando]="!!group.get('excepcionPlaza')?.value && cargandoAgentesOtrasPlazas()"
+                      [disabled]="!!group.get('excepcionPlaza')?.value && !agentesOtrasPlazasCargados()">
+                    </app-agente-autocomplete>
+                    <p class="text-xs font-normal text-slate-500">Escribe y selecciona un agente de las sugerencias.</p>
+                  </div>
 
                   <label class="space-y-2 text-sm font-medium text-slate-700">
 

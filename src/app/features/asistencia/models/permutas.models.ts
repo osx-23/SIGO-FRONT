@@ -32,3 +32,17 @@ export interface ResumenPermutas {
   porPlaza: { plaza: string; total: number }[];
   topAgentes: { codigo: number; nombre: string; total: number }[];
 }
+
+/** Totales anuales por plaza, usando el mes y plaza originales del solicitante. */
+export interface ResumenAnualPermutas {
+  anio: number;
+  total: number;
+  plazas: string[];
+  meses: {
+    mes: number;
+    total: number;
+    porPlaza: { plaza: string; total: number }[];
+  }[];
+  totalesPorPlaza: { plaza: string; total: number }[];
+  topAgentes: { codigo: number; nombre: string; total: number }[];
+}

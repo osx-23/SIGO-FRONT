@@ -14,10 +14,21 @@ export const ASISTENCIA_ROUTES: Routes = [
   },
   {
     path: 'asistencia/permutas',
-    canActivate: [
-      moduleGuard('ASISTENCIA'),
-      roleGuard('SUPERVISOR', 'CONTROLADOR')
-    ],
+    pathMatch: 'full',
+    redirectTo: 'asistencia/permutas/graficos'
+  },
+  {
+    path: 'asistencia/permutas/graficos',
+    canActivate: [moduleGuard('ASISTENCIA'), roleGuard('SUPERVISOR', 'CONTROLADOR')],
+    data: { vista: 'graficos' },
+    loadComponent: () =>
+      import('./pages/permutas/permutas.component')
+        .then(m => m.PermutasComponent)
+  },
+  {
+    path: 'asistencia/permutas/historial',
+    canActivate: [moduleGuard('ASISTENCIA'), roleGuard('SUPERVISOR', 'CONTROLADOR')],
+    data: { vista: 'historial' },
     loadComponent: () =>
       import('./pages/permutas/permutas.component')
         .then(m => m.PermutasComponent)

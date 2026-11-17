@@ -8,6 +8,7 @@ import { Plaza, Turno } from '../../../asistencia/models/asistencia.models';
 import { IncidenciaApiService } from '../../services/incidencia-api.service';
 import { ViaIncidencia } from '../../models/incidencia.models';
 import { ControlOperativoDashboardComponent } from './control-operativo-dashboard.component';
+import { HistorialPaginacionComponent } from '../../../../shared/components/historial-paginacion.component';
 import {
   ControlOperativoApiService, ControlOperativoEvidencia, ControlOperativoInput,
   ControlOperativoReporte, ControlOperativoResponsable, TipoControlOperativo
@@ -23,7 +24,7 @@ interface FotoControlOperativo {
 @Component({
   selector: 'app-control-operativo',
   standalone: true,
-  imports: [CommonModule, FormsModule, ControlOperativoDashboardComponent],
+  imports: [CommonModule, FormsModule, ControlOperativoDashboardComponent, HistorialPaginacionComponent],
   template: `
     <main class="co">
       <header class="co-header">
@@ -366,6 +367,13 @@ interface FotoControlOperativo {
             </tbody>
           </table>
         </div>
+        <app-historial-paginacion
+          [pagina]="paginaActual" [tamano]="tamanoPagina"
+          [totalRegistros]="totalReportes" [totalPaginas]="paginasHistorial"
+          [cargando]="cargando"
+          (paginaChange)="cambiarPaginaHistorial($event)"
+          (tamanoChange)="cambiarTamanoHistorial($event)">
+        </app-historial-paginacion>
       </section>
 
       <app-control-operativo-dashboard *ngIf="vista==='dashboard'" [plazas]="plazas"></app-control-operativo-dashboard>
@@ -590,6 +598,10 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
   responsables: ControlOperativoResponsable[] = [];
   vias: ViaIncidencia[] = [];
   reportes: ControlOperativoReporte[] = [];
+  totalReportes = 0;
+  paginasHistorial = 0;
+  paginaActual = 1;
+  tamanoPagina = 10;
   modalAbierto = false;
   modalCargando = false;
   modalError = '';
@@ -749,26 +761,51 @@ export class ControlOperativoComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     }
   }
-  async cargarHistorial(): Promise<void> {
+  async cargarHistorial(restablecerPagina = true): Promise<void> {
+    if (restablecerPagina) this.paginaActual = 1;
     const solicitud = ++this.historialSolicitud;
     this.cargando = true;
     this.error = '';
     try {
-      const datos = await firstValueFrom(this.api.listar({
+      const datos = await firstValueFrom(this.api.listarPaginado({
         inicio: this.filtros.inicio, fin: this.filtros.fin,
         plazaId: this.filtros.plazaId
-      }));
-      // No sobrescribir un filtro nuevo con la respuesta de una petición anterior.
+      }, this.paginaActual - 1, this.tamanoPagina));
+      // Ignorar respuestas antiguas si cambiaron los filtros o la página.
       if (solicitud !== this.historialSolicitud) return;
-      this.reportes = datos;
+      this.reportes = datos.registros;
+      this.totalReportes = datos.total;
+      this.paginasHistorial = datos.totalPaginas;
       this.historialCargado = true;
+      if (datos.totalPaginas > 0 && this.paginaActual > datos.totalPaginas) {
+        this.paginaActual = datos.totalPaginas;
+        void this.cargarHistorial(false);
+      }
     } catch (e) {
-      if (solicitud === this.historialSolicitud) this.error = this.errorHttp(e);
+      if (solicitud === this.historialSolicitud) {
+        this.error = this.errorHttp(e);
+        this.reportes = [];
+        this.totalReportes = 0;
+        this.paginasHistorial = 0;
+      }
     } finally {
       if (solicitud === this.historialSolicitud) this.cargando = false;
       this.cdr.markForCheck();
     }
   }
+
+  cambiarPaginaHistorial(pagina: number): void {
+    if (pagina < 1 || pagina > this.paginasHistorial || pagina === this.paginaActual) return;
+    this.paginaActual = pagina;
+    void this.cargarHistorial(false);
+  }
+
+  cambiarTamanoHistorial(tamano: number): void {
+    if (![10, 25, 50].includes(tamano)) return;
+    this.tamanoPagina = tamano;
+    void this.cargarHistorial(true);
+  }
+
   activarZonaEvidencia(categoria: CategoriaEvidencia, elemento: HTMLElement): void {
     this.categoriaEvidenciaActiva = categoria;
     elemento.focus();

@@ -86,6 +86,24 @@ export class ControlOperativoApiService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiUrl + '/incidencias/control-operativo';
 
+  listarPaginado(
+    filtros: { plazaId?: number | null; tipo?: string; inicio?: string; fin?: string } = {},
+    pagina = 0, tamano = 10
+  ): Observable<{
+    registros: ControlOperativoReporte[]; total: number; pagina: number;
+    tamano: number; totalPaginas: number
+  }> {
+    let params = new HttpParams().set('pagina', pagina).set('tamano', tamano);
+    if (filtros.plazaId != null) params = params.set('plazaId', filtros.plazaId);
+    if (filtros.tipo) params = params.set('tipo', filtros.tipo);
+    if (filtros.inicio) params = params.set('inicio', filtros.inicio);
+    if (filtros.fin) params = params.set('fin', filtros.fin);
+    return this.http.get<{
+      registros: ControlOperativoReporte[]; total: number; pagina: number;
+      tamano: number; totalPaginas: number
+    }>(this.base + '/pagina', { params });
+  }
+
   listar(filtros: { plazaId?: number | null; tipo?: string; inicio?: string; fin?: string } = {})
       : Observable<ControlOperativoReporte[]> {
     let params = new HttpParams();

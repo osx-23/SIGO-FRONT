@@ -6,11 +6,12 @@ import { AsistenciaApiService } from '../../services/asistencia-api.service';
 import { PermutasApiService } from '../../services/permutas-api.service';
 import { Plaza, Turno } from '../../models/asistencia.models';
 import { PermutaDetalle, ResumenPermutas } from '../../models/permutas.models';
+import { HistorialPaginacionComponent } from '../../../../shared/components/historial-paginacion.component';
 
 @Component({
   selector: 'app-permutas',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HistorialPaginacionComponent],
   templateUrl: './permutas.component.html'
 })
 export class PermutasComponent implements OnInit {
@@ -20,6 +21,11 @@ export class PermutasComponent implements OnInit {
   readonly plazas = signal<Plaza[]>([]);
   readonly turnos = signal<Turno[]>([]);
   readonly registros = signal<PermutaDetalle[]>([]);
+  readonly totalRegistros = signal(0);
+  readonly totalPaginas = signal(0);
+  paginaActual = 1;
+  tamanoPagina = 10;
+  private solicitudHistorial = 0;
   readonly resumen = signal<ResumenPermutas | null>(null);
   readonly cargando = signal(false);
   readonly cargandoDashboard = signal(false);
@@ -61,17 +67,50 @@ export class PermutasComponent implements OnInit {
   }
 
   aplicarFiltros(): void {
+    this.paginaActual = 1;
+    this.cargarPaginaHistorial();
+  }
+
+  cambiarPaginaHistorial(pagina: number): void {
+    if (pagina < 1 || pagina > this.totalPaginas() || pagina === this.paginaActual) return;
+    this.paginaActual = pagina;
+    this.cargarPaginaHistorial();
+  }
+
+  cambiarTamanoHistorial(tamano: number): void {
+    if (![10, 25, 50].includes(tamano)) return;
+    this.tamanoPagina = tamano;
+    this.aplicarFiltros();
+  }
+
+  private cargarPaginaHistorial(): void {
+    if (this.inicio && this.fin && this.inicio > this.fin) {
+      this.error.set('La fecha inicial no puede superar la final.');
+      return;
+    }
+    const solicitud = ++this.solicitudHistorial;
     this.cargando.set(true);
     this.error.set('');
-    this.api.listar({
+    this.api.listarPaginado({
       inicio: this.inicio, fin: this.fin, plazaId: this.plazaId,
       turnoId: this.turnoId, codigo: this.codigo
-    }).subscribe({
+    }, this.paginaActual - 1, this.tamanoPagina).subscribe({
       next: data => {
-        this.registros.set(data);
+        if (solicitud !== this.solicitudHistorial) return;
+        this.registros.set(data.registros);
+        this.totalRegistros.set(data.total);
+        this.totalPaginas.set(data.totalPaginas);
         this.cargando.set(false);
+        if (data.totalPaginas > 0 && this.paginaActual > data.totalPaginas) {
+          this.paginaActual = data.totalPaginas;
+          this.cargarPaginaHistorial();
+        }
       },
       error: () => {
+        if (solicitud !== this.solicitudHistorial) return;
+        this.registros.set([]);
+        this.totalRegistros.set(0);
+        this.totalPaginas.set(0);
         this.cargando.set(false);
         this.error.set('No se pudo obtener el historial de permutas.');
       }

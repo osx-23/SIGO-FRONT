@@ -20,6 +20,22 @@ export class PermutasApiService {
     return this.http.get<PermutaDetalle[]>(this.base + '/turno', { params });
   }
 
+  listarPaginado(filtros: {
+    inicio?: string; fin?: string; plazaId?: number | null;
+    turnoId?: number | null; codigo?: number | null
+  }, pagina: number, tamano: number) {
+    let params = new HttpParams().set('pagina', pagina).set('tamano', tamano);
+    if (filtros.inicio) params = params.set('inicio', filtros.inicio);
+    if (filtros.fin) params = params.set('fin', filtros.fin);
+    if (filtros.plazaId != null) params = params.set('plazaId', filtros.plazaId);
+    if (filtros.turnoId != null) params = params.set('turnoId', filtros.turnoId);
+    if (filtros.codigo != null) params = params.set('codigo', filtros.codigo);
+    return this.http.get<{
+      registros: PermutaDetalle[]; total: number; pagina: number;
+      tamano: number; totalPaginas: number
+    }>(this.base + '/pagina', { params });
+  }
+
   listar(filtros: { inicio?: string; fin?: string; plazaId?: number | null;
                     turnoId?: number | null; codigo?: number | null }) {
     let params = new HttpParams();

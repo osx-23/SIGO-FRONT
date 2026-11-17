@@ -788,6 +788,22 @@
                 </div>
 
 
+                <label class="mb-4 flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-700">
+                  <input type="checkbox" class="mt-0.5 h-4 w-4 accent-amber-600"
+                    [checked]="!!group.get('excepcionPlaza')?.value"
+                    (change)="cambiarExcepcionAusencia($index, $event)" />
+                  <span>
+                    <strong class="block text-sm font-semibold text-slate-900">Excepción: agente de otra plaza</strong>
+                    <span class="mt-0.5 block text-xs leading-5 text-slate-500">
+                      Permite seleccionar un agente de recaudación activo de cualquier plaza.
+                      El registro quedará identificado como excepcional.
+                    </span>
+                  </span>
+                </label>
+                @if (group.get('excepcionPlaza')?.value && cargandoAgentesOtrasPlazas()) {
+                  <p class="mb-3 text-xs text-amber-700">Cargando agentes de todas las plazas...</p>
+                }
+
                 <div class="grid gap-4 md:grid-cols-2">
 
                   <label class="space-y-2 text-sm font-medium text-slate-700">
@@ -797,16 +813,20 @@
                     <select
                       class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5"
                       formControlName="trabajadorId"
+                      [disabled]="group.get('excepcionPlaza')?.value && !agentesOtrasPlazasCargados()"
                     >
 
                       <option [ngValue]="null">
                         Selecciona un trabajador
                       </option>
 
-                      @for (a of agentesFiltrados(); track a.id) {
+                      @for (a of agentesParaAusencia($index); track a.id) {
 
                         <option [ngValue]="a.id">
                           {{ a.codigo }} · {{ a.nombreCompleto }}
+                          @if (group.get('excepcionPlaza')?.value) {
+                            ({{ a.plaza?.codigo ?? 'Sin plaza' }})
+                          }
                         </option>
 
                       }

@@ -52,6 +52,7 @@ interface AusenciaFormValue {
   trabajadorId: number | null;
   motivoId: number | null;
   observacion: string | null;
+  excepcionPlaza: boolean | null;
 }
 
 
@@ -149,6 +150,10 @@ export class AsistenciaFormComponent implements OnInit {
 
   readonly agentes =
     signal<Trabajador[]>([]);
+
+  readonly agentesOtrasPlazas = signal<Trabajador[]>([]);
+  readonly agentesOtrasPlazasCargados = signal(false);
+  readonly cargandoAgentesOtrasPlazas = signal(false);
 
 
   /* ==========================================================================
@@ -580,6 +585,8 @@ export class AsistenciaFormComponent implements OnInit {
 
     this.agentes
       .set([]);
+    this.agentesOtrasPlazas.set([]);
+    this.agentesOtrasPlazasCargados.set(false);
 
     this.syncTurno();
 
@@ -790,11 +797,42 @@ export class AsistenciaFormComponent implements OnInit {
 
 
   agentesFiltrados(): Trabajador[] {
-
     return this.agentes();
-
   }
 
+  agentesParaAusencia(index: number): Trabajador[] {
+    const excepcion = Boolean(this.ausencias.at(index)?.get('excepcionPlaza')?.value);
+    return excepcion && this.agentesOtrasPlazasCargados()
+      ? this.agentesOtrasPlazas()
+      : this.agentes();
+  }
+
+  cambiarExcepcionAusencia(index: number, event: Event): void {
+    const grupo = this.ausencias.at(index);
+    if (!grupo) return;
+    const habilitada = (event.target as HTMLInputElement).checked;
+    grupo.get('excepcionPlaza')?.setValue(habilitada);
+    if (!habilitada) {
+      const id = Number(grupo.get('trabajadorId')?.value);
+      if (id && !this.agentes().some(a => a.id === id)) {
+        grupo.get('trabajadorId')?.setValue(null);
+      }
+      return;
+    }
+    if (this.agentesOtrasPlazasCargados() || this.cargandoAgentesOtrasPlazas()) return;
+    this.cargandoAgentesOtrasPlazas.set(true);
+    this.api.getAgentesPorPlaza(null).subscribe({
+      next: agentes => {
+        this.agentesOtrasPlazas.set(agentes ?? []);
+        this.agentesOtrasPlazasCargados.set(true);
+        this.cargandoAgentesOtrasPlazas.set(false);
+      },
+      error: err => {
+        this.cargandoAgentesOtrasPlazas.set(false);
+        this.error.set('No se pudo cargar el personal de otras plazas. ' + this.errorMessage(err));
+      }
+    });
+  }
 
   /* ==========================================================================
      ARCHIVOS
@@ -1375,6 +1413,12 @@ export class AsistenciaFormComponent implements OnInit {
     }
 
 
+    if (this.ausencias.controls.some(g => g.get('excepcionPlaza')?.value) &&
+        !this.agentesOtrasPlazasCargados()) {
+      this.error.set('No se pudo cargar el catálogo de agentes de otras plazas.');
+      return false;
+    }
+
     if (
       this.ausencias.invalid
     ) {
@@ -1573,8 +1617,9 @@ export class AsistenciaFormComponent implements OnInit {
 
             observacion:
               a.observacion
-                ?.trim() || null
+                ?.trim() || null,
 
+            excepcionPlaza: Boolean(a.excepcionPlaza)
           })
         ),
 
@@ -1971,7 +2016,8 @@ export class AsistenciaFormComponent implements OnInit {
             Validators.required
           ],
 
-          observacion: ['']
+          observacion: [''],
+          excepcionPlaza: [false]
 
         })
 
@@ -2005,6 +2051,7 @@ export class AsistenciaFormComponent implements OnInit {
       group
         .get('trabajadorId')
         ?.setValue(null);
+      group.get('excepcionPlaza')?.setValue(false);
 
     }
 

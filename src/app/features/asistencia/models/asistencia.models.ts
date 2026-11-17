@@ -53,6 +53,7 @@ export interface MotivoAusencia {
 }
 
 export interface AusenciaRequest {
+  excepcionPlaza?: boolean;
 
   trabajadorId: number;
 
@@ -147,6 +148,7 @@ export interface AsistenciaUpdateRequest {
 }
 
 export interface AusenciaResponse {
+  excepcionPlaza?: boolean;
 
   id: number;
 

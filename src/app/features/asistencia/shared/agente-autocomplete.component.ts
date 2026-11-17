@@ -98,8 +98,7 @@ export class AgenteAutocompleteComponent implements ControlValueAccessor, OnChan
   }
 
   private mostrar(agente: Trabajador): string {
-    return agente.codigo + ' · ' + agente.nombreCompleto +
-      (this.mostrarPlaza ? ' (' + (agente.plaza?.codigo ?? 'Sin plaza') + ')' : '');
+    return agente.codigo + ' · ' + agente.nombreCompleto;
   }
 
   private buscar(): Trabajador[] {

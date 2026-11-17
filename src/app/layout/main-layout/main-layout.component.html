@@ -201,6 +201,20 @@
 
 
               <a
+                routerLink="/asistencia/permutas"
+                routerLinkActive="active"
+                (click)="close()"
+                data-tooltip="Permutas y estadísticas"
+              >
+                <span class="nav-icon">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M7 7h14l-4-4m4 4-4 4M17 17H3l4-4m-4 4 4 4"/>
+                  </svg>
+                </span>
+                <span class="nav-label">Permutas y estadísticas</span>
+              </a>
+
+              <a
                 routerLink="/asistencia/historial"
                 routerLinkActive="active"
                 (click)="close()"

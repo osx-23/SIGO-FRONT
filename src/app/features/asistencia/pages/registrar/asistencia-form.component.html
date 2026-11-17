@@ -490,6 +490,221 @@
         </div>
 
 
+
+        <!-- Permutas: ingreso manual, sin datos de programación mensual -->
+        <div class="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 sm:p-5">
+          <label class="flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-900">
+            <input type="checkbox" class="h-5 w-5 accent-blue-600"
+              [checked]="hayPermutas()" (change)="cambiarHayPermutas($event)" />
+            ¿Hay permutas nuevas en este turno?
+          </label>
+          <p class="mt-2 text-xs leading-5 text-slate-600">
+            La fecha comienza en hoy y la plaza en la seleccionada para esta asistencia.
+            Indica el turno original y el turno a venir de cualquiera de los agentes:
+            SIGO completará los datos de jornada del otro agente en orden inverso.
+            El nombre se consulta automáticamente por código, sin usar la programación mensual.
+            Cada intercambio se guarda una sola vez.
+          </p>
+
+          @if (loadingPermutas()) {
+            <p class="mt-3 text-sm text-slate-500">Consultando permutas ya registradas...</p>
+          }
+          @if (permutasPrevias().length) {
+            <div class="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4" role="status">
+              <strong class="block text-sm text-blue-800">
+                Ya existen {{ permutasPrevias().length }} permuta(s) para este turno.
+              </strong>
+              <p class="mt-1 text-xs text-blue-700">
+                No vuelvas a registrarlas. Marca la casilla solo si hay una permuta adicional.
+              </p>
+              @for (p of permutasPrevias(); track p.id) {
+                <p class="mt-2 rounded-lg bg-white p-3 text-xs text-slate-700">
+                  <span class="font-semibold">{{ p.codigoSolicitante }} · {{ p.nombreSolicitante }}</span>
+                  ({{ p.plazaSolicitante }}, turno {{ p.turnoSolicitante }}, {{ p.fechaSolicitante }})
+                  <span class="mx-1 font-bold text-blue-700">⇄</span>
+                  <span class="font-semibold">{{ p.codigoAceptante }} · {{ p.nombreAceptante }}</span>
+                  ({{ p.plazaAceptante }}, turno {{ p.turnoAceptante }}, {{ p.fechaAceptante }})
+                </p>
+              }
+            </div>
+          }
+
+          @if (hayPermutas()) {
+            <div formArrayName="permutas" class="mt-4 space-y-4">
+              @for (item of permutas.controls; track item; let i = $index) {
+                <div [formGroupName]="i" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                  <div class="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <h3 class="text-sm font-bold text-slate-900">Permuta {{ i + 1 }}</h3>
+                      <p class="mt-1 text-xs text-slate-600">Jornadas manuales, intercambiadas automáticamente entre ambos</p>
+                    </div>
+                    <button type="button" (click)="quitarPermuta(i)"
+                      class="rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">
+                      Quitar
+                    </button>
+                  </div>
+                  <div class="grid gap-4 lg:grid-cols-2">
+
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <h4 class="mb-4 text-xs font-bold uppercase tracking-wide text-slate-700">Solicitante</h4>
+                      <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="text-xs font-semibold text-slate-700">Código de agente *
+                          <input type="number" min="1" formControlName="solicitanteCodigo"
+
+                            placeholder="Ingresa el código"
+                            class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" />
+                        </label>
+                        <div class="text-xs font-semibold text-slate-700">
+                          Nombre del agente
+                          <div class="mt-1.5 flex min-h-11 items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900">
+                            {{ item.get('solicitanteNombre')?.value || item.get('solicitanteEstadoNombre')?.value || 'Ingresa el código' }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <fieldset class="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+                        <legend class="px-1 text-xs font-bold text-slate-700">Turno original (manual)</legend>
+                        <div class="grid gap-3 sm:grid-cols-3">
+                          <label class="text-xs font-semibold text-slate-700">Turno *
+                            <select formControlName="solicitanteTurnoId"
+                              (change)="sincronizarJornadasPermuta(i, 'solicitante', 'original')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm">
+                              <option [ngValue]="null">Elegir</option>
+                              @for (t of turnos(); track t.id) { <option [ngValue]="t.id">{{ t.codigo }}</option> }
+                            </select>
+                          </label>
+                          <label class="text-xs font-semibold text-slate-700">Fecha *
+                            <input type="date" formControlName="solicitanteFecha"
+                              (change)="sincronizarJornadasPermuta(i, 'solicitante', 'original')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm" />
+                          </label>
+                          <label class="text-xs font-semibold text-slate-700">Plaza *
+                            <select formControlName="solicitantePlazaId"
+                              (change)="sincronizarJornadasPermuta(i, 'solicitante', 'original')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm">
+                              <option [ngValue]="null">Elegir</option>
+                              @for (pl of plazas(); track pl.id) { <option [ngValue]="pl.id">{{ pl.codigo }}</option> }
+                            </select>
+                          </label>
+                        </div>
+                      </fieldset>
+
+                      <fieldset class="mt-4 rounded-xl border border-blue-200 bg-blue-50/50 p-3">
+                        <legend class="px-1 text-xs font-bold text-blue-700">Turno a venir (manual)</legend>
+                        <div class="grid gap-3 sm:grid-cols-3">
+                          <label class="text-xs font-semibold text-slate-700">Turno *
+                            <select formControlName="solicitanteTurnoNuevoId"
+                              (change)="sincronizarJornadasPermuta(i, 'solicitante', 'nuevo')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm">
+                              <option [ngValue]="null">Elegir</option>
+                              @for (t of turnos(); track t.id) { <option [ngValue]="t.id">{{ t.codigo }}</option> }
+                            </select>
+                          </label>
+                          <label class="text-xs font-semibold text-slate-700">Fecha *
+                            <input type="date" formControlName="solicitanteFechaNueva"
+                              (change)="sincronizarJornadasPermuta(i, 'solicitante', 'original')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm" />
+                          </label>
+                          <label class="text-xs font-semibold text-slate-700">Plaza *
+                            <select formControlName="solicitantePlazaNuevaId"
+                              (change)="sincronizarJornadasPermuta(i, 'solicitante', 'nuevo')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm">
+                              <option [ngValue]="null">Elegir</option>
+                              @for (pl of plazas(); track pl.id) { <option [ngValue]="pl.id">{{ pl.codigo }}</option> }
+                            </select>
+                          </label>
+                        </div>
+                      </fieldset>
+                    </div>
+
+
+                    <div class="rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+                      <h4 class="mb-4 text-xs font-bold uppercase tracking-wide text-blue-700">Aceptante</h4>
+                      <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="text-xs font-semibold text-slate-700">Código de agente *
+                          <input type="number" min="1" formControlName="aceptanteCodigo"
+
+                            placeholder="Ingresa el código"
+                            class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" />
+                        </label>
+                        <div class="text-xs font-semibold text-slate-700">
+                          Nombre del agente
+                          <div class="mt-1.5 flex min-h-11 items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900">
+                            {{ item.get('aceptanteNombre')?.value || item.get('aceptanteEstadoNombre')?.value || 'Ingresa el código' }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <fieldset class="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+                        <legend class="px-1 text-xs font-bold text-blue-700">Turno original (manual)</legend>
+                        <div class="grid gap-3 sm:grid-cols-3">
+                          <label class="text-xs font-semibold text-slate-700">Turno *
+                            <select formControlName="aceptanteTurnoId"
+                              (change)="sincronizarJornadasPermuta(i, 'aceptante', 'original')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm">
+                              <option [ngValue]="null">Elegir</option>
+                              @for (t of turnos(); track t.id) { <option [ngValue]="t.id">{{ t.codigo }}</option> }
+                            </select>
+                          </label>
+                          <label class="text-xs font-semibold text-slate-700">Fecha *
+                            <input type="date" formControlName="aceptanteFecha"
+                              (change)="sincronizarJornadasPermuta(i, 'aceptante', 'original')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm" />
+                          </label>
+                          <label class="text-xs font-semibold text-slate-700">Plaza *
+                            <select formControlName="aceptantePlazaId"
+                              (change)="sincronizarJornadasPermuta(i, 'aceptante', 'original')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm">
+                              <option [ngValue]="null">Elegir</option>
+                              @for (pl of plazas(); track pl.id) { <option [ngValue]="pl.id">{{ pl.codigo }}</option> }
+                            </select>
+                          </label>
+                        </div>
+                      </fieldset>
+
+                      <fieldset class="mt-4 rounded-xl border border-blue-200 bg-blue-50/50 p-3">
+                        <legend class="px-1 text-xs font-bold text-blue-700">Turno a venir (manual)</legend>
+                        <div class="grid gap-3 sm:grid-cols-3">
+                          <label class="text-xs font-semibold text-slate-700">Turno *
+                            <select formControlName="aceptanteTurnoNuevoId"
+                              (change)="sincronizarJornadasPermuta(i, 'aceptante', 'nuevo')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm">
+                              <option [ngValue]="null">Elegir</option>
+                              @for (t of turnos(); track t.id) { <option [ngValue]="t.id">{{ t.codigo }}</option> }
+                            </select>
+                          </label>
+                          <label class="text-xs font-semibold text-slate-700">Fecha *
+                            <input type="date" formControlName="aceptanteFechaNueva"
+                              (change)="sincronizarJornadasPermuta(i, 'aceptante', 'original')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm" />
+                          </label>
+                          <label class="text-xs font-semibold text-slate-700">Plaza *
+                            <select formControlName="aceptantePlazaNuevaId"
+                              (change)="sincronizarJornadasPermuta(i, 'aceptante', 'nuevo')"
+                              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-2 py-2.5 text-sm">
+                              <option [ngValue]="null">Elegir</option>
+                              @for (pl of plazas(); track pl.id) { <option [ngValue]="pl.id">{{ pl.codigo }}</option> }
+                            </select>
+                          </label>
+                        </div>
+                      </fieldset>
+                    </div>
+
+                  </div>
+                  <p class="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-600">
+                    <strong>Comprobación:</strong> las jornadas se reflejan de forma inversa entre solicitante
+                    y aceptante. Puedes modificar cualquiera de los dos lados. SIGO evita duplicar permutas ya registradas.
+                  </p>
+                </div>
+              }
+            </div>
+            <button type="button" (click)="agregarPermuta()"
+              class="mt-4 inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-50">
+              <span class="text-lg leading-none">+</span> Agregar otra permuta
+            </button>
+          }
+        </div>
+
         @if ((form.controls.apoyoSolicitado.value ?? 0) > 0) {
 
           <label
@@ -573,33 +788,34 @@
                 </div>
 
 
+                <label class="mb-4 flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-700">
+                  <input type="checkbox" class="mt-0.5 h-4 w-4 accent-amber-600"
+                    [checked]="!!group.get('excepcionPlaza')?.value"
+                    (change)="cambiarExcepcionAusencia($index, $event)" />
+                  <span>
+                    <strong class="block text-sm font-semibold text-slate-900">Excepción: Listar todos los agentes</strong>
+                    <span class="mt-0.5 block text-xs leading-5 text-slate-500">
+                      Permite seleccionar un agente de recaudación activo de cualquier plaza.
+                      El registro quedará identificado como excepcional.
+                    </span>
+                  </span>
+                </label>
+                @if (group.get('excepcionPlaza')?.value && cargandoAgentesOtrasPlazas()) {
+                  <p class="mb-3 text-xs text-amber-700">Cargando agentes de todas las plazas...</p>
+                }
+
                 <div class="grid gap-4 md:grid-cols-2">
 
-                  <label class="space-y-2 text-sm font-medium text-slate-700">
-
-                    Trabajador *
-
-                    <select
-                      class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5"
-                      formControlName="trabajadorId"
-                    >
-
-                      <option [ngValue]="null">
-                        Selecciona un trabajador
-                      </option>
-
-                      @for (a of agentesFiltrados(); track a.id) {
-
-                        <option [ngValue]="a.id">
-                          {{ a.codigo }} · {{ a.nombreCompleto }}
-                        </option>
-
-                      }
-
-                    </select>
-
-                  </label>
-
+                  <div class="space-y-2 text-sm font-medium text-slate-700">
+                    <span>Trabajador *</span>
+                    <app-agente-autocomplete formControlName="trabajadorId"
+                      [agentes]="group.get('excepcionPlaza')?.value ? agentesOtrasPlazas() : agentes()"
+                      [mostrarPlaza]="!!group.get('excepcionPlaza')?.value"
+                      [cargando]="!!group.get('excepcionPlaza')?.value && cargandoAgentesOtrasPlazas()"
+                      [disabled]="!!group.get('excepcionPlaza')?.value && !agentesOtrasPlazasCargados()">
+                    </app-agente-autocomplete>
+                    <p class="text-xs font-normal text-slate-500">Escribe y selecciona un agente de las sugerencias.</p>
+                  </div>
 
                   <label class="space-y-2 text-sm font-medium text-slate-700">
 

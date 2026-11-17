@@ -115,12 +115,13 @@ export class AsistenciaApiService {
    */
 
   getAgentesPorPlaza(
-    plazaId: number
+    plazaId?: number | null
   ): Observable<Trabajador[]> {
 
-    const params =
-      new HttpParams()
-        .set('plazaId', plazaId.toString());
+    let params = new HttpParams();
+    if (plazaId !== null && plazaId !== undefined) {
+      params = params.set('plazaId', plazaId.toString());
+    }
 
     return this.http.get<Trabajador[]>(
       `${this.api}/trabajadores/agentes`,

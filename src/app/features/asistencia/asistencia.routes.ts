@@ -13,6 +13,16 @@ export const ASISTENCIA_ROUTES: Routes = [
         .then(m => m.AsistenciaFormComponent)
   },
   {
+    path: 'asistencia/permutas',
+    canActivate: [
+      moduleGuard('ASISTENCIA'),
+      roleGuard('SUPERVISOR', 'CONTROLADOR')
+    ],
+    loadComponent: () =>
+      import('./pages/permutas/permutas.component')
+        .then(m => m.PermutasComponent)
+  },
+  {
     path: 'asistencia/historial',
     canActivate: [
       moduleGuard('ASISTENCIA'),

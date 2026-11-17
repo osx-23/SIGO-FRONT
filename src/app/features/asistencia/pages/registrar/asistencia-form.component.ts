@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 
 import {
   Component,
+  DestroyRef,
   HostListener,
   OnInit,
   inject,
@@ -16,11 +17,14 @@ import {
   Validators
 } from '@angular/forms';
 
-import { forkJoin } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, forkJoin, of, switchMap, tap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { environment } from '../../../../../environments/environment';
 
 import { AsistenciaApiService } from '../../services/asistencia-api.service';
+import { PermutasApiService } from '../../services/permutas-api.service';
+import { PermutaDetalle, PermutaRequest } from '../../models/permutas.models';
 
 import {
   AsistenciaProgramacionService
@@ -38,6 +42,7 @@ import {
 import {
   ImageCropperModalComponent
 } from '../../shared/image-cropper-modal.component';
+import { AgenteAutocompleteComponent } from '../../shared/agente-autocomplete.component';
 
 
 /* ==========================================================================
@@ -48,6 +53,7 @@ interface AusenciaFormValue {
   trabajadorId: number | null;
   motivoId: number | null;
   observacion: string | null;
+  excepcionPlaza: boolean | null;
 }
 
 
@@ -65,7 +71,8 @@ type EvidenciaTipo =
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    ImageCropperModalComponent
+    ImageCropperModalComponent,
+    AgenteAutocompleteComponent
   ],
 
   templateUrl: './asistencia-form.component.html',
@@ -87,6 +94,9 @@ export class AsistenciaFormComponent implements OnInit {
 
   private readonly programacion =
     inject(AsistenciaProgramacionService);
+
+  private readonly permutasApi = inject(PermutasApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly http =
     inject(HttpClient);
@@ -117,6 +127,12 @@ export class AsistenciaFormComponent implements OnInit {
   readonly excepcionControlador =
     signal(false);
 
+  readonly hayPermutas = signal(false);
+  readonly permutasPrevias = signal<PermutaDetalle[]>([]);
+  readonly loadingPermutas = signal(false);
+  private ultimaConsultaPermutas = '';
+
+
 
   /* ==========================================================================
      CATÁLOGOS
@@ -136,6 +152,10 @@ export class AsistenciaFormComponent implements OnInit {
 
   readonly agentes =
     signal<Trabajador[]>([]);
+
+  readonly agentesOtrasPlazas = signal<Trabajador[]>([]);
+  readonly agentesOtrasPlazasCargados = signal(false);
+  readonly cargandoAgentesOtrasPlazas = signal(false);
 
 
   /* ==========================================================================
@@ -257,13 +277,19 @@ export class AsistenciaFormComponent implements OnInit {
     notas: [''],
 
     ausencias:
-      this.fb.array([])
+      this.fb.array([]),
+
+    permutas: this.fb.array([])
 
   });
 
 
   get ausencias(): FormArray {
     return this.form.controls.ausencias;
+  }
+
+  get permutas(): FormArray {
+    return this.form.controls.permutas;
   }
 
 
@@ -306,9 +332,130 @@ export class AsistenciaFormComponent implements OnInit {
         () =>
           this.syncAusencias()
       );
+    this.form.controls.plazaId.valueChanges.subscribe(() => this.cargarPermutasPrevias());
+    this.form.controls.turnoId.valueChanges.subscribe(() => this.cargarPermutasPrevias());
+    this.form.controls.fecha.valueChanges.subscribe(() => this.cargarPermutasPrevias());
 
   }
 
+
+
+  /* Edición manual: ninguna fecha/plaza/turno se toma de programación. */
+  cambiarHayPermutas(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.hayPermutas.set(checked);
+    if (checked && this.permutas.length === 0) this.agregarPermuta();
+    if (!checked) this.permutas.clear();
+  }
+
+  agregarPermuta(): void {
+    const hoy = this.today();
+    const plazaId = this.form.controls.plazaId.value ?? null;
+    const grupo = this.fb.group({
+      solicitanteCodigo: [null as number | null, [Validators.required, Validators.min(1)]],
+      solicitanteNombre: ['', Validators.required],
+      solicitanteEstadoNombre: [''],
+      solicitanteFecha: [hoy, Validators.required],
+      solicitanteTurnoId: [null as number | null, Validators.required],
+      solicitantePlazaId: [plazaId as number | null, Validators.required],
+      solicitanteTurnoNuevoId: [null as number | null, Validators.required],
+      solicitanteFechaNueva: [hoy, Validators.required],
+      solicitantePlazaNuevaId: [plazaId as number | null, Validators.required],
+
+      aceptanteCodigo: [null as number | null, [Validators.required, Validators.min(1)]],
+      aceptanteNombre: ['', Validators.required],
+      aceptanteEstadoNombre: [''],
+      aceptanteFecha: [hoy, Validators.required],
+      aceptanteTurnoId: [null as number | null, Validators.required],
+      aceptantePlazaId: [plazaId as number | null, Validators.required],
+      aceptanteTurnoNuevoId: [null as number | null, Validators.required],
+      aceptanteFechaNueva: [hoy, Validators.required],
+      aceptantePlazaNuevaId: [plazaId as number | null, Validators.required]
+    });
+    this.permutas.push(grupo);
+
+    // Consultar el nombre al dejar de escribir durante 350 ms;
+    // switchMap cancela búsquedas antiguas para evitar nombres erróneos.
+    for (const lado of ['solicitante', 'aceptante'] as const) {
+      grupo.get(lado + 'Codigo')?.valueChanges.pipe(
+        tap(() => {
+          grupo.get(lado + 'Nombre')?.setValue('');
+          grupo.get(lado + 'EstadoNombre')?.setValue('');
+        }),
+        debounceTime(350),
+        distinctUntilChanged(),
+        switchMap(value => {
+          const codigo = Number(value);
+          if (!Number.isInteger(codigo) || codigo <= 0) return of(null);
+          grupo.get(lado + 'EstadoNombre')?.setValue('Buscando nombre...');
+          return this.permutasApi.agente(codigo).pipe(catchError(() => of(null)));
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe(agente => {
+        if (!this.permutas.controls.includes(grupo)) return;
+        const codigo = Number(grupo.get(lado + 'Codigo')?.value);
+        grupo.get(lado + 'Nombre')?.setValue(agente?.nombre ?? '');
+        grupo.get(lado + 'EstadoNombre')?.setValue(
+          agente ? '' : (codigo > 0 ? 'Código inexistente o agente inactivo' : '')
+        );
+      });
+    }
+  }
+
+  quitarPermuta(index: number): void {
+    this.permutas.removeAt(index);
+    if (this.permutas.length === 0) this.hayPermutas.set(false);
+  }
+
+  private otroLado(lado: 'solicitante' | 'aceptante'): 'solicitante' | 'aceptante' {
+    return lado === 'solicitante' ? 'aceptante' : 'solicitante';
+  }
+
+  /**
+   * Una sola selección define ambas jornadas: si el solicitante tiene A
+   * como original y B como destino, el aceptante hereda B como original
+   * y A como destino. Se incluyen también fecha y plaza.
+   * Puede iniciarse la edición desde cualquiera de los dos agentes.
+   */
+  sincronizarJornadasPermuta(index: number, lado: 'solicitante' | 'aceptante',
+                            tipo: 'original' | 'nuevo'): void {
+    const grupo = this.permutas.at(index);
+    if (!grupo) return;
+    const contrario = this.otroLado(lado);
+    const campos = tipo === 'original'
+      ? [['TurnoId', 'TurnoNuevoId'], ['Fecha', 'FechaNueva'], ['PlazaId', 'PlazaNuevaId']]
+      : [['TurnoNuevoId', 'TurnoId'], ['FechaNueva', 'Fecha'], ['PlazaNuevaId', 'PlazaId']];
+    for (const [origen, destino] of campos) {
+      const valor = grupo.get(lado + origen)?.value;
+      grupo.get(contrario + destino)?.setValue(valor, { emitEvent: false });
+    }
+  }
+
+  private cargarPermutasPrevias(): void {
+    const plazaId = Number(this.form.controls.plazaId.value || 0);
+    const turnoId = Number(this.form.controls.turnoId.value || 0);
+    const fecha = this.form.controls.fecha.value || '';
+    const clave = plazaId + ':' + turnoId + ':' + fecha;
+    this.ultimaConsultaPermutas = clave;
+    this.permutasPrevias.set([]);
+    if (!plazaId || !turnoId || !fecha) {
+      this.loadingPermutas.set(false);
+      return;
+    }
+    this.loadingPermutas.set(true);
+    this.permutasApi.delTurno(plazaId, turnoId, fecha).subscribe({
+      next: data => {
+        if (this.ultimaConsultaPermutas !== clave) return;
+        this.permutasPrevias.set(data);
+        this.loadingPermutas.set(false);
+      },
+      error: err => {
+        if (this.ultimaConsultaPermutas !== clave) return;
+        this.loadingPermutas.set(false);
+        this.error.set('No se pudieron consultar las permutas del turno. ' + this.errorMessage(err));
+      }
+    });
+  }
 
   /* ==========================================================================
      PEGADO
@@ -440,6 +587,8 @@ export class AsistenciaFormComponent implements OnInit {
 
     this.agentes
       .set([]);
+    this.agentesOtrasPlazas.set([]);
+    this.agentesOtrasPlazasCargados.set(false);
 
     this.syncTurno();
 
@@ -649,12 +798,32 @@ export class AsistenciaFormComponent implements OnInit {
   }
 
 
-  agentesFiltrados(): Trabajador[] {
-
-    return this.agentes();
-
+  cambiarExcepcionAusencia(index: number, event: Event): void {
+    const grupo = this.ausencias.at(index);
+    if (!grupo) return;
+    const habilitada = (event.target as HTMLInputElement).checked;
+    grupo.get('excepcionPlaza')?.setValue(habilitada);
+    if (!habilitada) {
+      const id = Number(grupo.get('trabajadorId')?.value);
+      if (id && !this.agentes().some(a => a.id === id)) {
+        grupo.get('trabajadorId')?.setValue(null);
+      }
+      return;
+    }
+    if (this.agentesOtrasPlazasCargados() || this.cargandoAgentesOtrasPlazas()) return;
+    this.cargandoAgentesOtrasPlazas.set(true);
+    this.api.getAgentesPorPlaza(null).subscribe({
+      next: agentes => {
+        this.agentesOtrasPlazas.set(agentes ?? []);
+        this.agentesOtrasPlazasCargados.set(true);
+        this.cargandoAgentesOtrasPlazas.set(false);
+      },
+      error: err => {
+        this.cargandoAgentesOtrasPlazas.set(false);
+        this.error.set('No se pudo cargar el personal de otras plazas. ' + this.errorMessage(err));
+      }
+    });
   }
-
 
   /* ==========================================================================
      ARCHIVOS
@@ -1103,6 +1272,64 @@ export class AsistenciaFormComponent implements OnInit {
 
   private validarRegistro(): boolean {
 
+    if (this.loadingPermutas()) {
+      this.error.set('Espera a que termine la consulta de permutas anteriores.');
+      return false;
+    }
+    if (this.hayPermutas()) {
+      if (!this.permutas.length || this.permutas.invalid) {
+        this.error.set('Completa los códigos, las fechas y valida los turnos de todas las permutas.');
+        return false;
+      }
+      const participantes = new Set<string>();
+      for (const grupo of this.permutas.controls) {
+        // Las jornadas son manuales, pero el intercambio debe ser recíproco.
+        for (const lado of ['solicitante', 'aceptante'] as const) {
+          const otro = this.otroLado(lado);
+          if (Number(grupo.get(lado + 'TurnoNuevoId')?.value) !==
+                Number(grupo.get(otro + 'TurnoId')?.value) ||
+              String(grupo.get(lado + 'FechaNueva')?.value) !==
+                String(grupo.get(otro + 'Fecha')?.value) ||
+              Number(grupo.get(lado + 'PlazaNuevaId')?.value) !==
+                Number(grupo.get(otro + 'PlazaId')?.value)) {
+            this.error.set('El turno a venir debe coincidir con la jornada original ingresada para el compañero (plaza, fecha y turno).');
+            return false;
+          }
+        }
+        const mismoTurno =
+          Number(grupo.get('solicitantePlazaId')?.value) === Number(grupo.get('aceptantePlazaId')?.value) &&
+          Number(grupo.get('solicitanteTurnoId')?.value) === Number(grupo.get('aceptanteTurnoId')?.value) &&
+          String(grupo.get('solicitanteFecha')?.value) === String(grupo.get('aceptanteFecha')?.value);
+        if (mismoTurno) {
+          this.error.set('Las jornadas originales no pueden ser idénticas: no habría permuta.');
+          return false;
+        }
+        const a = Number(grupo.get('solicitanteCodigo')?.value);
+        const b = Number(grupo.get('aceptanteCodigo')?.value);
+        if (a === b) {
+          this.error.set('El solicitante y el aceptante no pueden ser la misma persona.');
+          return false;
+        }
+        for (const lado of ['solicitante', 'aceptante']) {
+          const clave = grupo.get(lado + 'Codigo')?.value + ':' + grupo.get(lado + 'Fecha')?.value;
+          if (participantes.has(clave)) {
+            this.error.set('No puedes incluir al mismo agente dos veces en la misma fecha.');
+            return false;
+          }
+          participantes.add(clave);
+        }
+        const coincide = ['solicitante', 'aceptante'].some(lado =>
+          Number(grupo.get(lado + 'PlazaId')?.value) === Number(this.form.controls.plazaId.value) &&
+          Number(grupo.get(lado + 'TurnoId')?.value) === Number(this.form.controls.turnoId.value) &&
+          grupo.get(lado + 'Fecha')?.value === this.form.controls.fecha.value
+        );
+        if (!coincide) {
+          this.error.set('Al menos una jornada original debe coincidir con la plaza, turno y fecha de la asistencia actual.');
+          return false;
+        }
+      }
+    }
+
     if (
       this.loadingProgramados()
     ) {
@@ -1176,6 +1403,12 @@ export class AsistenciaFormComponent implements OnInit {
 
     }
 
+
+    if (this.ausencias.controls.some(g => g.get('excepcionPlaza')?.value) &&
+        !this.agentesOtrasPlazasCargados()) {
+      this.error.set('No se pudo cargar el catálogo de agentes de otras plazas.');
+      return false;
+    }
 
     if (
       this.ausencias.invalid
@@ -1375,12 +1608,25 @@ export class AsistenciaFormComponent implements OnInit {
 
             observacion:
               a.observacion
-                ?.trim() || null
+                ?.trim() || null,
 
+            excepcionPlaza: Boolean(a.excepcionPlaza)
           })
         ),
 
-      evidencias: []
+      evidencias: [],
+      permutas: this.hayPermutas()
+        ? this.permutas.getRawValue().map((p: any): PermutaRequest => ({
+            codigoSolicitante: Number(p.solicitanteCodigo),
+            fechaSolicitante: String(p.solicitanteFecha),
+            turnoSolicitanteId: Number(p.solicitanteTurnoId),
+            plazaSolicitanteId: Number(p.solicitantePlazaId),
+            codigoAceptante: Number(p.aceptanteCodigo),
+            fechaAceptante: String(p.aceptanteFecha),
+            turnoAceptanteId: Number(p.aceptanteTurnoId),
+            plazaAceptanteId: Number(p.aceptantePlazaId)
+          }))
+        : []
 
     };
 
@@ -1761,7 +2007,8 @@ export class AsistenciaFormComponent implements OnInit {
             Validators.required
           ],
 
-          observacion: ['']
+          observacion: [''],
+          excepcionPlaza: [false]
 
         })
 
@@ -1795,6 +2042,7 @@ export class AsistenciaFormComponent implements OnInit {
       group
         .get('trabajadorId')
         ?.setValue(null);
+      group.get('excepcionPlaza')?.setValue(false);
 
     }
 
@@ -1876,6 +2124,9 @@ export class AsistenciaFormComponent implements OnInit {
 
     this.ausencias
       .clear();
+    this.permutas.clear();
+    this.hayPermutas.set(false);
+    this.permutasPrevias.set([]);
 
 
     this.agentes

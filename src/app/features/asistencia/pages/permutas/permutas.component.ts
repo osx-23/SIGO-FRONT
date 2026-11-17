@@ -207,7 +207,8 @@ export class PermutasComponent implements OnInit {
     return this.anual()?.totalesPorPlaza.find(p => p.plaza === plaza)?.total ?? 0;
   }
   nombrePlaza(plaza: string): string {
-    return plaza === 'P2' ? 'P2/P3' : plaza === 'P6' ? 'P6/P7' : plaza;
+    return plaza === 'P2' || plaza === 'P2 y P3' ? 'P2/P3'
+      : plaza === 'P6' || plaza === 'P6 y P7' ? 'P6/P7' : plaza;
   }
   plazasConPermutas(): number {
     return this.resumen()?.porPlaza.filter(p => p.total > 0).length ?? 0;

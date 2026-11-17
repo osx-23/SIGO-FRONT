@@ -40,11 +40,9 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
             <button type="button" (click)="ir(numero)" [disabled]="cargando"
                     [attr.aria-label]="'Ir a página ' + numero"
                     [attr.aria-current]="numero === pagina ? 'page' : null"
-                    [class.bg-blue-600]="numero === pagina"
-                    [class.text-white]="numero === pagina"
-                    [class.border-blue-600]="numero === pagina"
-                    class="min-w-9 rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs
-                           font-semibold text-slate-700 hover:bg-blue-50 disabled:opacity-50">
+                    [class]="numero === pagina
+                      ? 'min-w-9 rounded-lg border border-blue-600 bg-blue-600 px-2.5 py-2 text-xs font-semibold text-white disabled:opacity-50'
+                      : 'min-w-9 rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 disabled:opacity-50'">
               {{ numero }}
             </button>
           }

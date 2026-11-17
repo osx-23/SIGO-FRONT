@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../../../environments/environment';
-import { PermutaDetalle, ResumenPermutas } from '../models/permutas.models';
+import { PermutaDetalle, ResumenPermutas, ResumenAnualPermutas } from '../models/permutas.models';
 
 @Injectable({ providedIn: 'root' })
 export class PermutasApiService {
@@ -59,6 +59,12 @@ export class PermutasApiService {
     if (filtros.turnoId != null) params = params.set('turnoId', filtros.turnoId);
     if (filtros.codigo != null) params = params.set('codigo', filtros.codigo);
     return this.http.get(this.base + '/exportar', { params, responseType: 'blob' });
+  }
+
+  resumenAnual(anio: number) {
+    return this.http.get<ResumenAnualPermutas>(this.base + '/dashboard/anual', {
+      params: new HttpParams().set('anio', anio)
+    });
   }
 
   dashboard(mes: string) {

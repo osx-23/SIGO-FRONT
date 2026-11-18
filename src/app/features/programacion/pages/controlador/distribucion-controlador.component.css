@@ -4016,3 +4016,167 @@ th.sticky-name{
     font-size:.64rem;
   }
 }
+
+
+/* =========================================================
+   MATRIZ DE CONCENTRACIÓN · DÍAS VIGENTES Y ANCHO APROVECHADO
+   ========================================================= */
+.distribution-head-tools {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.page.modo-concentracion .agents-card .card-head {
+  gap:10px;
+  padding:6px 10px;
+}
+
+.focus-days-toggle {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border:1px solid #bfdbfe;
+  border-radius:10px;
+  background:#eff6ff;
+  color:#1d4ed8;
+  font-size:.72rem;
+  font-weight:800;
+  line-height:1.2;
+  cursor:pointer;
+  user-select:none;
+  white-space:nowrap;
+}
+.focus-days-toggle:hover {
+  border-color:#93c5fd;
+  background:#dbeafe;
+}
+.focus-days-toggle:focus-within {
+  outline:2px solid #2563eb;
+  outline-offset:2px;
+}
+.focus-days-toggle input {
+  width:16px;
+  height:16px;
+  margin:0;
+  flex:none;
+  accent-color:#2563eb;
+  cursor:pointer;
+}
+.focus-days-count {
+  color:#64748b;
+  font-size:.69rem;
+  font-weight:750;
+  white-space:nowrap;
+}
+.focus-no-days {
+  padding:24px 14px;
+  background:#f8fafc;
+  color:#475569;
+  text-align:center;
+  font-size:.8rem;
+  line-height:1.6;
+}
+
+/* Cada columna ocupa solo lo necesario. Los nombres largos
+   mantienen el título completo al pasar el cursor. */
+.page.modo-concentracion {
+  padding-inline:7px;
+}
+.page.modo-concentracion .distribution-table .sticky-code {
+  width:52px;
+  min-width:52px;
+  max-width:52px;
+}
+.page.modo-concentracion .distribution-table .sticky-name {
+  left:52px;
+  width:210px;
+  min-width:210px;
+  max-width:210px;
+}
+.page.modo-concentracion .distribution-table .day-column {
+  width:70px;
+  min-width:70px;
+  max-width:70px;
+}
+.page.modo-concentracion .distribution-table .agent-button {
+  max-width:100%;
+  font-size:.65rem;
+}
+.page.modo-concentracion .distribution-table .location-select {
+  font-size:.67rem;
+}
+.page.modo-concentracion .distribution-table .day-header strong {
+  font-size:.56rem;
+}
+.page.modo-concentracion .agents-scroll {
+  height:max(320px,calc(100dvh - 155px));
+}
+
+/* Al mostrar menos columnas, la cobertura continúa usando
+   exactamente el mismo rango de días que Distribución. */
+@media (max-width:1050px) {
+  .page.modo-concentracion .agents-scroll {
+    height:max(300px,calc(100dvh - 222px));
+  }
+}
+@media (max-width:800px) {
+  .page.modo-concentracion .distribution-table .sticky-code {
+    width:48px;
+    min-width:48px;
+    max-width:48px;
+  }
+  .page.modo-concentracion .distribution-table .sticky-name {
+    left:48px;
+    width:190px;
+    min-width:190px;
+    max-width:190px;
+  }
+  .page.modo-concentracion .distribution-table .day-column {
+    width:66px;
+    min-width:66px;
+    max-width:66px;
+  }
+  .page.modo-concentracion .agents-scroll {
+    height:max(280px,calc(100dvh - 245px));
+  }
+}
+@media (max-width:560px) {
+  .page.modo-concentracion {
+    padding-inline:5px;
+  }
+  .page.modo-concentracion .agents-card .card-head {
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .page.modo-concentracion .distribution-head-tools {
+    justify-content:space-between;
+    gap:7px;
+  }
+  .page.modo-concentracion .focus-days-toggle {
+    padding:6px 8px;
+    font-size:.68rem;
+  }
+  .page.modo-concentracion .distribution-table .sticky-code {
+    width:46px;
+    min-width:46px;
+    max-width:46px;
+  }
+  .page.modo-concentracion .distribution-table .sticky-name {
+    left:46px;
+    width:158px;
+    min-width:158px;
+    max-width:158px;
+  }
+  .page.modo-concentracion .distribution-table .day-column {
+    width:63px;
+    min-width:63px;
+    max-width:63px;
+  }
+  .page.modo-concentracion .agents-scroll {
+    height:max(270px,calc(100dvh - 300px));
+  }
+}

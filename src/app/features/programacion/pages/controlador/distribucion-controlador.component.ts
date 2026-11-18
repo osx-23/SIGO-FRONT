@@ -107,6 +107,9 @@ export class DistribucionControladorComponent
 
   readonly modoConcentracion = inject(ModoConcentracionService);
   mostrarCoberturaConcentracion = false;
+
+  /** Filtro opcional, únicamente en modo concentración. */
+  ocultarDiasPasadosConcentracion = false;
   private semanaAnteriorConcentracion: number | null = null;
   private busquedaAnteriorConcentracion: string | null = null;
 
@@ -1024,17 +1027,45 @@ export class DistribucionControladorComponent
 
   get diasVisibles(): number[] {
 
-    if (this.filtroSemana === 0) {
-      return this.dias;
+    const dias = this.filtroSemana === 0
+      ? this.dias
+      : this.dias.slice((this.filtroSemana - 1) * 7, this.filtroSemana * 7);
+
+    // La vista normal no se ve afectada por el filtro de concentración.
+    if (!this.modoConcentracion.activo() || !this.ocultarDiasPasadosConcentracion) {
+      return dias;
     }
 
-    const inicio =
-      (this.filtroSemana - 1) * 7;
+    // Se utiliza la fecha de Perú, incluso si el equipo está en otra zona horaria.
+    const hoy = this.fechaActualLima();
+    return dias.filter(dia => this.fecha(dia) >= hoy);
+  }
 
-    return this.dias.slice(
-      inicio,
-      inicio + 7
-    );
+  /** Formato YYYY-MM-DD, calculado con el calendario de Lima. */
+  private fechaActualLima(): string {
+    const partes = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Lima',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+
+    const valor = (tipo: 'year' | 'month' | 'day'): string =>
+      partes.find(parte => parte.type === tipo)?.value ?? '';
+
+    return `${valor('year')}-${valor('month')}-${valor('day')}`;
+  }
+
+  /** Muestra el primer día disponible al cambiar el filtro. */
+  alCambiarDiasPasados(): void {
+    queueMicrotask(() => {
+      if (this.tablaSuperior?.nativeElement) {
+        this.tablaSuperior.nativeElement.scrollLeft = 0;
+      }
+      if (this.tablaCasetas?.nativeElement) {
+        this.tablaCasetas.nativeElement.scrollLeft = 0;
+      }
+    });
   }
 
   get rangoSemanaTexto(): string {

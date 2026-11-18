@@ -581,14 +581,35 @@
         </p>
       </div>
 
-      <div class="table-head-meta">
-        <strong>{{ agentesFiltrados.length }}</strong>
-        <span>agentes encontrados</span>
+      <div class="distribution-head-tools">
+        @if (modoConcentracion.activo()) {
+          <label class="focus-days-toggle">
+            <input
+              type="checkbox"
+              [(ngModel)]="ocultarDiasPasadosConcentracion"
+              (ngModelChange)="alCambiarDiasPasados()"
+            >
+            <span>Ocultar días pasados</span>
+          </label>
+          <span class="focus-days-count" aria-live="polite">
+            {{ diasVisibles.length }} día(s) visibles
+          </span>
+        }
+        <div class="table-head-meta">
+          <strong>{{ agentesFiltrados.length }}</strong>
+          <span>agentes encontrados</span>
+        </div>
       </div>
     </div>
 
     @if(cargando){
       <div class="empty">Cargando distribución...</div>
+    }
+    @else if(modoConcentracion.activo() && ocultarDiasPasadosConcentracion && diasVisibles.length === 0){
+      <div class="focus-no-days" role="status">
+        No quedan días desde hoy en el mes seleccionado.
+        Desmarca «Ocultar días pasados» para consultar el mes completo.
+      </div>
     }
     @else if(agentesFiltrados.length === 0){
       <div class="empty">
@@ -803,6 +824,9 @@
 
     @if(cargandoCobertura){
       <div class="empty">Cargando cobertura...</div>
+    }
+    @else if(modoConcentracion.activo() && ocultarDiasPasadosConcentracion && diasVisibles.length === 0){
+      <div class="empty">No hay días vigentes para mostrar en este mes.</div>
     }
     @else if(ubicacionesCobertura.length === 0){
       <div class="empty">No existen casetas habilitadas para el turno seleccionado.</div>

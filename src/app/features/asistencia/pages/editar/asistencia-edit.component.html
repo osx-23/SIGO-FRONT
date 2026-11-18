@@ -41,7 +41,7 @@
           </h1>
 
           <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-            Modifica los datos del turno, las ausencias y las evidencias del registro.
+            Modifica los datos del turno, las ausencias, las evidencias y las permutas del registro.
           </p>
         </div>
       </div>
@@ -111,6 +111,18 @@
 
       <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700" (click)="volver()" [disabled]="saving()">Cancelar</button><button type="submit" class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60" [disabled]="saving() || uploading() || loadingProgramados()">@if (saving() || uploading()) { Guardando... } @else { Guardar cambios }</button></div>
     </form>
+    @if (asistenciaOriginal(); as original) {
+      <div class="mt-6">
+        <app-asistencia-permutas-editor
+          [asistenciaId]="original.id"
+          [plazaId]="original.plazaId"
+          [turnoId]="original.turnoId"
+          [fecha]="original.fecha"
+          [plazas]="plazas()"
+          [turnos]="turnos()"
+        />
+      </div>
+    }
   }
 </div>
 

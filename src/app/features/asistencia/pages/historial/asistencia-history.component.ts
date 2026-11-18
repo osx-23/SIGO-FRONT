@@ -177,7 +177,7 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
   }
 
   private fechaValida(valor: string | null): valor is string {
-    if (!valor || !/^\\d{4}-\\d{2}-\\d{2}$/.test(valor)) {
+    if (!valor || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
       return false;
     }
     const fecha = new Date(`${valor}T00:00:00Z`);

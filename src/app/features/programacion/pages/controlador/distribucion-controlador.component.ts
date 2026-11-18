@@ -5,6 +5,7 @@ import {
   ElementRef,
   HostListener,
   OnInit,
+  OnDestroy,
   ViewChild,
   inject
 } from '@angular/core';
@@ -18,6 +19,7 @@ import {
 import {
   AuthService
 } from '../../../../core/auth/auth.service';
+import { ModoConcentracionService } from '../../../../core/ui/modo-concentracion.service';
 
 import {
   CoberturaUbicacion,
@@ -95,13 +97,16 @@ interface GrupoConflictoCasetaExcel {
     './distribucion-controlador.component.css'
 })
 export class DistribucionControladorComponent
-  implements OnInit {
+  implements OnInit, OnDestroy {
 
   private readonly api =
     inject(ProgramacionApiService);
 
   readonly auth =
     inject(AuthService);
+
+  readonly modoConcentracion = inject(ModoConcentracionService);
+  mostrarCoberturaConcentracion = false;
 
   @ViewChild('tablaSuperior')
   private tablaSuperior?: ElementRef<HTMLDivElement>;
@@ -652,6 +657,47 @@ export class DistribucionControladorComponent
         '0'
       )}`
     );
+  }
+
+  /** Conserva la distribución y los cambios locales al ampliar el espacio de trabajo. */
+  activarModoConcentracion(): void {
+    this.mostrarCoberturaConcentracion = false;
+    this.modoConcentracion.activar();
+  }
+
+  salirModoConcentracion(): void {
+    this.modoConcentracion.desactivar();
+  }
+
+  alternarCoberturaConcentracion(): void {
+    this.mostrarCoberturaConcentracion = !this.mostrarCoberturaConcentracion;
+  }
+
+  get plazaTextoConcentracion(): string {
+    return this.plazas.find(plaza => plaza.id === this.plazaId)?.codigo
+      ?? this.auth.usuario()?.plaza
+      ?? 'Sin plaza';
+  }
+
+  @HostListener('document:keydown.escape', ['$event'])
+  cerrarConcentracionConEscape(event: KeyboardEvent): void {
+    if (!this.modoConcentracion.activo()) return;
+    // Escape no debe cerrar el área de trabajo cuando otro diálogo esté abierto.
+    if (this.conflictoVisible ||
+        this.modalDetalleAgenteAbierto ||
+        this.modalReportePdfAbierto ||
+        this.modalUbicacionesAbierto ||
+        this.modalRestriccionesAbierto ||
+        this.generadorAbierto ||
+        this.modalResultadoDistribucionAbierto ||
+        this.modalCambiosPendientesAbierto) return;
+
+    event.preventDefault();
+    this.salirModoConcentracion();
+  }
+
+  ngOnDestroy(): void {
+    this.modoConcentracion.desactivar();
   }
 
   ngOnInit(): void {

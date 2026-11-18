@@ -17,6 +17,19 @@
         <span class="focus-status" [class.tiene-pendientes]="cambios.size > 0" role="status">
           {{ cambios.size === 0 ? 'Sin cambios pendientes' : cambios.size + ' cambio(s) sin guardar' }}
         </span>
+        @if (puedeGenerarDistribucion) {
+          <button
+            type="button"
+            class="focus-action focus-action-generate"
+            (click)="abrirGeneradorConcentracion()"
+            [disabled]="cargando || guardando || generandoDistribucion || !plazaId || cambios.size > 0"
+            [title]="cambios.size > 0
+              ? 'Guarda primero los cambios pendientes'
+              : 'Elegir hasta qué fecha completar la distribución'"
+          >
+            Generar distribución
+          </button>
+        }
         <button
           type="button"
           class="focus-action focus-action-coverage"
@@ -1236,10 +1249,17 @@
         <div>
           <span class="eyebrow">GENERADOR AUTOMÁTICO</span>
           <h2 id="generator-title">Generar asignación de casetas</h2>
-          <p>
-            El sistema usará los turnos A, B y C ya programados por el Supervisor
-            para cargar automáticamente las casetas en esta misma tabla.
-          </p>
+          @if (generadorDesdeConcentracion) {
+            <p>
+              Elige hasta qué fecha completar las casetas pendientes. SIGO respetará las asignaciones
+              ya guardadas y no propondrá cambios fuera del período seleccionado.
+            </p>
+          } @else {
+            <p>
+              El sistema usará los turnos A, B y C ya programados por el Supervisor
+              para cargar automáticamente las casetas en esta misma tabla.
+            </p>
+          }
         </div>
 
         <button
@@ -1275,39 +1295,103 @@
         </div>
       </div>
 
-      <div class="generator-period">
-        <label>Periodo de generación</label>
+      @if (generadorDesdeConcentracion) {
+        <fieldset class="generator-focus-range">
+          <legend>¿Hasta qué fecha deseas generar la distribución?</legend>
 
-        <div class="segmented-generator">
-          <button
-            type="button"
-            [class.active]="generadorPeriodo === 'SEMANA'"
-            (click)="cambiarPeriodoGenerador('SEMANA')"
-          >
-            Semana
-          </button>
+          <p class="generator-focus-start">
+            Fecha de inicio: <strong>{{ generadorDesdeConcentracion }}</strong>
+            <span>· Solo se completarán días dentro de este mes.</span>
+          </p>
 
-          <button
-            type="button"
-            [class.active]="generadorPeriodo === 'MES'"
-            (click)="cambiarPeriodoGenerador('MES')"
-          >
-            Mes completo
-          </button>
+          <label class="generator-focus-choice"
+            [class.generator-focus-choice-selected]="generadorAlcanceConcentracion === 'FECHA'">
+            <input
+              type="radio"
+              name="generadorAlcance"
+              [(ngModel)]="generadorAlcanceConcentracion"
+              value="FECHA"
+            >
+            <span>
+              <strong>Hasta una fecha específica</strong>
+              <small>Generar desde la fecha de inicio hasta el día que elijas.</small>
+            </span>
+          </label>
+
+          @if (generadorAlcanceConcentracion === 'FECHA') {
+            <label class="generator-focus-date">
+              Fecha límite
+              <input
+                type="date"
+                [(ngModel)]="generadorHastaConcentracion"
+                [min]="generadorDesdeConcentracion"
+                [max]="generadorFinMesConcentracion"
+                [disabled]="generandoDistribucion"
+              >
+            </label>
+          }
+
+          <label class="generator-focus-choice"
+            [class.generator-focus-choice-selected]="generadorAlcanceConcentracion === 'FIN_MES'">
+            <input
+              type="radio"
+              name="generadorAlcance"
+              [(ngModel)]="generadorAlcanceConcentracion"
+              value="FIN_MES"
+            >
+            <span>
+              <strong>Completar hasta fin de mes</strong>
+              <small>Generar hasta el {{ generadorFinMesConcentracion }}.</small>
+            </span>
+          </label>
+
+          @if (!generadorRangoValidoConcentracion) {
+            <p class="generator-focus-invalid" role="alert">
+              Selecciona una fecha entre {{ generadorDesdeConcentracion }} y
+              {{ generadorFinMesConcentracion }}.
+            </p>
+          } @else {
+            <p class="generator-focus-summary" aria-live="polite">
+              Se generará del <strong>{{ generadorDesdeConcentracion }}</strong>
+              al <strong>{{ generadorHastaEfectivoConcentracion }}</strong>.
+            </p>
+          }
+        </fieldset>
+      } @else {
+        <div class="generator-period">
+          <label>Periodo de generación</label>
+
+          <div class="segmented-generator">
+            <button
+              type="button"
+              [class.active]="generadorPeriodo === 'SEMANA'"
+              (click)="cambiarPeriodoGenerador('SEMANA')"
+            >
+              Semana
+            </button>
+
+            <button
+              type="button"
+              [class.active]="generadorPeriodo === 'MES'"
+              (click)="cambiarPeriodoGenerador('MES')"
+            >
+              Mes completo
+            </button>
+          </div>
         </div>
-      </div>
 
-      @if(generadorPeriodo === 'SEMANA'){
-        <label class="generator-week">
-          Semana
-          <select [(ngModel)]="generadorSemana">
-            <option [ngValue]="1">Semana 1 · 01 al 07</option>
-            <option [ngValue]="2">Semana 2 · 08 al 14</option>
-            <option [ngValue]="3">Semana 3 · 15 al 21</option>
-            <option [ngValue]="4">Semana 4 · 22 al 28</option>
-            <option [ngValue]="5">Semana 5 · 29 al fin de mes</option>
-          </select>
-        </label>
+        @if(generadorPeriodo === 'SEMANA'){
+          <label class="generator-week">
+            Semana
+            <select [(ngModel)]="generadorSemana">
+              <option [ngValue]="1">Semana 1 · 01 al 07</option>
+              <option [ngValue]="2">Semana 2 · 08 al 14</option>
+              <option [ngValue]="3">Semana 3 · 15 al 21</option>
+              <option [ngValue]="4">Semana 4 · 22 al 28</option>
+              <option [ngValue]="5">Semana 5 · 29 al fin de mes</option>
+            </select>
+          </label>
+        }
       }
 
       <div class="generator-info">
@@ -1456,7 +1540,8 @@
           class="primary"
           type="button"
           (click)="generarYCargarDistribucion()"
-          [disabled]="generandoDistribucion || !plazaId"
+          [disabled]="generandoDistribucion || !plazaId ||
+            (generadorDesdeConcentracion !== null && (!generadorRangoValidoConcentracion || cambios.size > 0))"
         >
           {{
             generandoDistribucion

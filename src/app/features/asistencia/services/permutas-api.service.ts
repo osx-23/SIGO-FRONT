@@ -1,12 +1,33 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../../../environments/environment';
-import { PermutaDetalle, ResumenPermutas, ResumenAnualPermutas } from '../models/permutas.models';
+import { PermutaDetalle, PermutaRequest, ResumenPermutas, ResumenAnualPermutas } from '../models/permutas.models';
 
 @Injectable({ providedIn: 'root' })
 export class PermutasApiService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiUrl + '/permutas';
+
+  /** Incluye permutas vinculadas a la asistencia aunque se haya corregido su fecha. */
+  deAsistencia(asistenciaId: number) {
+    return this.http.get<PermutaDetalle[]>(
+      environment.apiUrl + '/asistencias/' + asistenciaId + '/permutas'
+    );
+  }
+
+  agregarEnAsistencia(asistenciaId: number, request: PermutaRequest) {
+    return this.http.post<void>(
+      environment.apiUrl + '/asistencias/' + asistenciaId + '/permutas', request
+    );
+  }
+
+  actualizar(permutaId: number, request: PermutaRequest) {
+    return this.http.put<void>(this.base + '/' + permutaId, request);
+  }
+
+  anular(permutaId: number) {
+    return this.http.delete<void>(this.base + '/' + permutaId);
+  }
 
   agente(codigo: number) {
     return this.http.get<{ codigo: number; nombre: string }>(this.base + '/agentes/' + codigo);

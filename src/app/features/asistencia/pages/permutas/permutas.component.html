@@ -282,12 +282,12 @@
       <table class="min-w-[1100px] w-full border-collapse text-left text-sm">
         <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
           <tr>
-            <th colspan="5" class="border-b border-slate-200 px-4 py-3">Solicitante · turno original</th>
-            <th colspan="5" class="border-b border-l border-slate-200 px-4 py-3">Aceptante · turno original</th>
+            <th colspan="5" class="border-b border-slate-200 px-4 py-3">Solicitante</th>
+            <th colspan="5" class="border-b border-l border-slate-200 px-4 py-3">Aceptante</th>
           </tr>
           <tr>
-            <th class="px-3 py-3">Plaza</th><th class="px-3 py-3">Código solicitante</th><th class="px-3 py-3">Nombre</th><th class="px-3 py-3">Turno</th><th class="px-3 py-3">Fecha</th>
-            <th class="border-l px-3 py-3">Plaza</th><th class="px-3 py-3">Código aceptante</th><th class="px-3 py-3">Nombre</th><th class="px-3 py-3">Turno</th><th class="px-3 py-3">Fecha</th>
+            <th class="px-3 py-3">Plaza</th><th class="px-3 py-3">Código</th><th class="px-3 py-3">Nombre</th><th class="px-3 py-3">Turno</th><th class="px-3 py-3">Fecha</th>
+            <th class="border-l px-3 py-3">Plaza</th><th class="px-3 py-3">Código</th><th class="px-3 py-3">Nombre</th><th class="px-3 py-3">Turno</th><th class="px-3 py-3">Fecha</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -297,12 +297,12 @@
               <td class="px-3 py-3">{{ p.codigoSolicitante }}</td>
               <td class="px-3 py-3">{{ p.nombreSolicitante }}</td>
               <td class="px-3 py-3"><span class="rounded-lg bg-slate-100 px-2 py-1 font-semibold">{{ p.turnoSolicitante }}</span></td>
-              <td class="px-3 py-3">{{ p.fechaSolicitante }}</td>
+              <td class="px-3 py-3">{{ p.fechaSolicitante | date:'dd/MM/yyyy' }}</td>
               <td class="border-l px-3 py-3 font-semibold">{{ p.plazaAceptante }}</td>
               <td class="px-3 py-3">{{ p.codigoAceptante }}</td>
               <td class="px-3 py-3">{{ p.nombreAceptante }}</td>
               <td class="px-3 py-3"><span class="rounded-lg bg-blue-50 px-2 py-1 font-semibold text-blue-700">{{ p.turnoAceptante }}</span></td>
-              <td class="px-3 py-3">{{ p.fechaAceptante }}</td>
+              <td class="px-3 py-3">{{ p.fechaAceptante | date:'dd/MM/yyyy' }}</td>
             </tr>
           } @empty {
             <tr><td colspan="10" class="px-5 py-10 text-center text-sm text-slate-500">

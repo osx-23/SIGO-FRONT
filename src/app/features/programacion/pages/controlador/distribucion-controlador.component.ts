@@ -680,7 +680,7 @@ export class DistribucionControladorComponent
   }
 
   @HostListener('document:keydown.escape', ['$event'])
-  cerrarConcentracionConEscape(event: KeyboardEvent): void {
+  cerrarConcentracionConEscape(event: Event): void {
     if (!this.modoConcentracion.activo()) return;
     // Escape no debe cerrar el área de trabajo cuando otro diálogo esté abierto.
     if (this.conflictoVisible ||

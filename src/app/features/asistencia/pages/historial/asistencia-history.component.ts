@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
 import {
   Component,
@@ -37,6 +37,9 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
 
   private readonly api =
     inject(AsistenciaApiService);
+
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   /*
    * =========================================================
@@ -95,11 +98,32 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
     const hoy =
       this.obtenerFechaHoy();
 
-    this.inicio = hoy;
-    this.fin = hoy;
+    const params = this.route.snapshot.queryParamMap;
+    const inicio = params.get('inicio');
+    const fin = params.get('fin');
+
+    this.inicio = this.fechaValida(inicio) ? inicio : hoy;
+    this.fin = this.fechaValida(fin) ? fin : hoy;
+
+    if (this.inicio > this.fin) {
+      this.inicio = hoy;
+      this.fin = hoy;
+    }
+
+    const plazaParam = params.get('plazaId');
+    const plaza = plazaParam === null ? NaN : Number(plazaParam);
+    this.plazaId = Number.isSafeInteger(plaza) && plaza > 0
+      ? plaza : null;
+
+    const turno = (params.get('turno') ?? '').toUpperCase();
+    this.turnoFiltro = ['A', 'B', 'C'].includes(turno) ? turno : '';
+
+    const pagina = Number(params.get('pagina'));
+    this.paginaActual = Number.isSafeInteger(pagina) && pagina > 0
+      ? pagina : 1;
 
     this.cargarPlazas();
-    this.cargar();
+    this.cargar(true);
 
     this.relojTimer =
       setInterval(
@@ -124,6 +148,41 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
       this.relojTimer =
         null;
     }
+  }
+
+  /** Mantiene la búsqueda y la página al abrir un registro para editarlo. */
+  filtrosParaNavegacion(): {
+    inicio: string;
+    fin: string;
+    plazaId: number | null;
+    turno: string;
+    pagina: number;
+  } {
+    return {
+      inicio: this.inicio,
+      fin: this.fin,
+      plazaId: this.plazaId,
+      turno: this.turnoFiltro,
+      pagina: this.paginaActual
+    };
+  }
+
+  /** Refleja la consulta aplicada en la URL para permitir volver y recargar. */
+  private actualizarUrlFiltros(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: this.filtrosParaNavegacion(),
+      replaceUrl: true
+    });
+  }
+
+  private fechaValida(valor: string | null): valor is string {
+    if (!valor || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+      return false;
+    }
+    const fecha = new Date(`${valor}T00:00:00Z`);
+    return !Number.isNaN(fecha.getTime()) &&
+      fecha.toISOString().slice(0, 10) === valor;
   }
 
   /*
@@ -169,7 +228,7 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
    * =========================================================
    */
 
-  cargar(): void {
+  cargar(restaurarPagina = false): void {
 
     this.error.set('');
 
@@ -186,6 +245,7 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const paginaSolicitada = this.paginaActual;
     this.loading.set(true);
 
     this.api
@@ -200,8 +260,11 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
 
           this.registros.set(items);
 
-          this.paginaActual = 1;
+          this.paginaActual = restaurarPagina
+            ? Math.min(paginaSolicitada, this.totalPaginas())
+            : 1;
           this.expandedId.set(null);
+          this.actualizarUrlFiltros();
 
           this.loading.set(false);
         },
@@ -227,6 +290,7 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
   cambiarTurno(): void {
 
     this.paginaActual = 1;
+    this.actualizarUrlFiltros();
   }
 
   /** Restablece la consulta inicial sin cambiar registros ni datos guardados. */
@@ -724,6 +788,7 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
 
     this.paginaActual = pagina;
     this.expandedId.set(null);
+    this.actualizarUrlFiltros();
   }
 
   primerRegistroPagina(): number {

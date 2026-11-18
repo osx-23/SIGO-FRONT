@@ -448,6 +448,7 @@
                     <a
                       class="inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
                       [routerLink]="['/asistencia/historial/editar', r.id]"
+                      [queryParams]="filtrosParaNavegacion()"
                     >
                       Editar
                     </a>
@@ -553,6 +554,7 @@
               <a
                 class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-center text-xs font-semibold text-blue-700"
                 [routerLink]="['/asistencia/historial/editar', r.id]"
+                      [queryParams]="filtrosParaNavegacion()"
               >
                 Editar
               </a>
@@ -881,6 +883,7 @@
           <a
             class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-center text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
             [routerLink]="['/asistencia/historial/editar', detalleSeleccionado()!.id]"
+            [queryParams]="filtrosParaNavegacion()"
             (click)="cerrarDetalle()"
           >
             Editar registro

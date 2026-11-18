@@ -337,6 +337,7 @@ export class DistribucionControladorComponent
   generadorDesdeConcentracion: string | null = null;
   generadorHastaConcentracion = '';
   generadorAlcanceConcentracion: 'FECHA' | 'FIN_MES' = 'FIN_MES';
+  private periodoAnteriorGeneradorConcentracion: TipoPeriodoCaseta | null = null;
 
   generandoDistribucion = false;
 
@@ -4465,6 +4466,7 @@ export class DistribucionControladorComponent
       hoy.startsWith(this.mesInput) ? hoy : inicioMes;
     this.generadorHastaConcentracion = this.generadorDesdeConcentracion;
     this.generadorAlcanceConcentracion = 'FIN_MES';
+    this.periodoAnteriorGeneradorConcentracion = this.generadorPeriodo;
     this.generadorPeriodo = 'MES';
     this.generadorSemana = 1;
     this.cdr.detectChanges();
@@ -4478,6 +4480,13 @@ export class DistribucionControladorComponent
     ) {
       return;
     }
+
+    // La apertura normal no debe heredar el rango de una generación en concentración.
+    if (this.periodoAnteriorGeneradorConcentracion !== null) {
+      this.generadorPeriodo = this.periodoAnteriorGeneradorConcentracion;
+      this.periodoAnteriorGeneradorConcentracion = null;
+    }
+    this.generadorDesdeConcentracion = null;
 
     this.generadorAbierto =
       true;

@@ -1,0 +1,187 @@
+<section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h2 class="text-lg font-semibold text-slate-950">Permutas del turno</h2>
+      <p class="mt-1 text-sm leading-6 text-slate-500">
+        Registra intercambios olvidados, corrige fechas o datos y anula permutas registradas por error.
+        Los cambios de esta sección se guardan por separado de la asistencia.
+      </p>
+    </div>
+    <button type="button" (click)="nueva()" [disabled]="guardando() || cargando()"
+      class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+      <span aria-hidden="true">+</span> Agregar permuta
+    </button>
+  </div>
+
+  @if (error()) {
+    <div role="alert" class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ error() }}</div>
+  }
+  @if (success()) {
+    <div role="status" class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ success() }}</div>
+  }
+
+  @if (cargando()) {
+    <p class="mt-5 rounded-2xl bg-slate-50 px-4 py-5 text-sm text-slate-500">Cargando las permutas del turno...</p>
+  } @else if (registros().length === 0) {
+    <div class="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
+      <p class="text-sm font-semibold text-slate-800">No hay permutas registradas para esta asistencia.</p>
+      <p class="mt-1 text-xs text-slate-500">Puedes agregar una permuta que se haya omitido al registrar el turno.</p>
+    </div>
+  } @else {
+    <div class="mt-5 space-y-3">
+      @for (registro of registros(); track registro.id) {
+        <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div class="grid min-w-0 flex-1 gap-3 md:grid-cols-[1fr_auto_1fr] md:items-center">
+              <div class="min-w-0 rounded-xl bg-white p-3">
+                <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Solicitante</span>
+                <p class="mt-1 text-sm font-semibold text-slate-900">{{ registro.codigoSolicitante }} · {{ registro.nombreSolicitante }}</p>
+                <p class="mt-1 text-xs text-slate-600">{{ registro.plazaSolicitante }} · Turno {{ registro.turnoSolicitante }} · {{ registro.fechaSolicitante | date:'dd/MM/yyyy' }}</p>
+              </div>
+              <span class="text-center text-lg font-bold text-blue-600" aria-label="Intercambia con">⇄</span>
+              <div class="min-w-0 rounded-xl bg-white p-3">
+                <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Aceptante</span>
+                <p class="mt-1 text-sm font-semibold text-slate-900">{{ registro.codigoAceptante }} · {{ registro.nombreAceptante }}</p>
+                <p class="mt-1 text-xs text-slate-600">{{ registro.plazaAceptante }} · Turno {{ registro.turnoAceptante }} · {{ registro.fechaAceptante | date:'dd/MM/yyyy' }}</p>
+              </div>
+            </div>
+            <div class="flex shrink-0 gap-2">
+              <button type="button" (click)="editar(registro)" [disabled]="guardando()"
+                class="rounded-xl border border-blue-200 bg-white px-3.5 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50">
+                Corregir
+              </button>
+              <button type="button" (click)="solicitarAnulacion(registro)" [disabled]="guardando()"
+                class="rounded-xl border border-red-200 bg-white px-3.5 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
+                Anular
+              </button>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+
+  @if (abierto()) {
+    <form (ngSubmit)="guardar()" class="mt-5 space-y-5 rounded-2xl border border-blue-200 bg-blue-50/40 p-4 sm:p-5" #formPermuta="ngForm">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h3 class="text-base font-semibold text-slate-950">{{ editarId === null ? 'Nueva permuta' : 'Corregir permuta' }}</h3>
+          <p class="mt-1 text-xs leading-5 text-slate-600">
+            Indica la jornada original de cada agente. Las fechas y plazas pueden ser diferentes.
+            @if (editarId !== null) { La modificación se conservará en el registro de auditoría. }
+          </p>
+        </div>
+        <button type="button" (click)="cancelar()" [disabled]="guardando()" class="text-sm font-semibold text-slate-500 hover:text-slate-800">Cerrar</button>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <fieldset class="rounded-2xl border border-slate-200 bg-white p-4">
+          <legend class="px-1 text-sm font-semibold text-slate-900">Solicitante</legend>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="text-xs font-medium text-slate-700">
+              Código de agente *
+              <input type="number" min="1" step="1" name="permutaSolicitanteCodigo"
+                [(ngModel)]="formulario.codigoSolicitante" (blur)="consultarNombre('solicitante')"
+                required [disabled]="guardando()"
+                class="mt-1 block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm" />
+            </label>
+            <div class="text-xs font-medium text-slate-700">
+              Nombre
+              <p class="mt-1 min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+                {{ nombreSolicitante || 'Se verifica por código' }}
+              </p>
+            </div>
+            <label class="text-xs font-medium text-slate-700">Plaza original *
+              <select name="permutaSolicitantePlaza" [(ngModel)]="formulario.plazaSolicitanteId" required
+                [disabled]="guardando()" class="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm">
+                <option [ngValue]="0" disabled>Selecciona una plaza</option>
+                @for (p of plazas; track p.id) { <option [ngValue]="p.id">{{ p.codigo }}</option> }
+              </select>
+            </label>
+            <label class="text-xs font-medium text-slate-700">Turno original *
+              <select name="permutaSolicitanteTurno" [(ngModel)]="formulario.turnoSolicitanteId" required
+                [disabled]="guardando()" class="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm">
+                <option [ngValue]="0" disabled>Selecciona un turno</option>
+                @for (t of turnos; track t.id) { <option [ngValue]="t.id">{{ t.codigo }}</option> }
+              </select>
+            </label>
+            <label class="text-xs font-medium text-slate-700 sm:col-span-2">Fecha original *
+              <input type="date" name="permutaSolicitanteFecha" [(ngModel)]="formulario.fechaSolicitante"
+                required [disabled]="guardando()" class="mt-1 block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm" />
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset class="rounded-2xl border border-blue-200 bg-white p-4">
+          <legend class="px-1 text-sm font-semibold text-blue-800">Aceptante</legend>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="text-xs font-medium text-slate-700">
+              Código de agente *
+              <input type="number" min="1" step="1" name="permutaAceptanteCodigo"
+                [(ngModel)]="formulario.codigoAceptante" (blur)="consultarNombre('aceptante')"
+                required [disabled]="guardando()"
+                class="mt-1 block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm" />
+            </label>
+            <div class="text-xs font-medium text-slate-700">
+              Nombre
+              <p class="mt-1 min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+                {{ nombreAceptante || 'Se verifica por código' }}
+              </p>
+            </div>
+            <label class="text-xs font-medium text-slate-700">Plaza original *
+              <select name="permutaAceptantePlaza" [(ngModel)]="formulario.plazaAceptanteId" required
+                [disabled]="guardando()" class="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm">
+                <option [ngValue]="0" disabled>Selecciona una plaza</option>
+                @for (p of plazas; track p.id) { <option [ngValue]="p.id">{{ p.codigo }}</option> }
+              </select>
+            </label>
+            <label class="text-xs font-medium text-slate-700">Turno original *
+              <select name="permutaAceptanteTurno" [(ngModel)]="formulario.turnoAceptanteId" required
+                [disabled]="guardando()" class="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm">
+                <option [ngValue]="0" disabled>Selecciona un turno</option>
+                @for (t of turnos; track t.id) { <option [ngValue]="t.id">{{ t.codigo }}</option> }
+              </select>
+            </label>
+            <label class="text-xs font-medium text-slate-700 sm:col-span-2">Fecha original *
+              <input type="date" name="permutaAceptanteFecha" [(ngModel)]="formulario.fechaAceptante"
+                required [disabled]="guardando()" class="mt-1 block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm" />
+            </label>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="flex flex-wrap justify-end gap-3">
+        <button type="button" (click)="cancelar()" [disabled]="guardando()"
+          class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">
+          Cancelar
+        </button>
+        <button type="submit" [disabled]="guardando() || !formPermuta.valid"
+          class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+          {{ guardando() ? 'Guardando...' : editarId === null ? 'Guardar permuta' : 'Guardar corrección' }}
+        </button>
+      </div>
+    </form>
+  }
+</section>
+
+@if (anulacionPendiente(); as pendiente) {
+  <div class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4" role="presentation">
+    <section role="alertdialog" aria-modal="true" aria-labelledby="anular-permuta-titulo"
+      class="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+      <h3 id="anular-permuta-titulo" class="text-lg font-semibold text-slate-950">¿Anular esta permuta?</h3>
+      <p class="mt-2 text-sm leading-6 text-slate-600">
+        {{ pendiente.codigoSolicitante }} ⇄ {{ pendiente.codigoAceptante }}.
+        Se quitará del historial operativo, los gráficos y las exportaciones.
+        El registro quedará preservado en la auditoría.
+      </p>
+      <div class="mt-5 flex justify-end gap-2">
+        <button type="button" (click)="cancelarAnulacion()" [disabled]="guardando()"
+          class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Cancelar</button>
+        <button type="button" (click)="confirmarAnulacion()" [disabled]="guardando()"
+          class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+          {{ guardando() ? 'Anulando...' : 'Confirmar anulación' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

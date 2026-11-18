@@ -21,6 +21,8 @@ import {
 import {
   AsistenciaApiService
 } from '../../services/asistencia-api.service';
+import { PermutasApiService } from '../../services/permutas-api.service';
+import { PermutaDetalle } from '../../models/permutas.models';
 
 @Component({
   selector: 'app-asistencia-history',
@@ -37,6 +39,7 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
 
   private readonly api =
     inject(AsistenciaApiService);
+  private readonly permutasApi = inject(PermutasApiService);
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -83,6 +86,11 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
 
   readonly detalleSeleccionado =
     signal<AsistenciaResponse | null>(null);
+
+  readonly permutasDetalle = signal<PermutaDetalle[]>([]);
+  readonly cargandoPermutasDetalle = signal(false);
+  readonly errorPermutasDetalle = signal('');
+  private solicitudPermutasDetalle = 0;
 
   inicio = '';
   fin = '';
@@ -137,6 +145,9 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
 
 
   ngOnDestroy(): void {
+
+    this.solicitudPermutasDetalle++;
+    document.body.style.overflow = '';
 
     if (
       this.relojTimer
@@ -819,19 +830,45 @@ export class AsistenciaHistoryComponent implements OnInit, OnDestroy {
     registro: AsistenciaResponse
   ): void {
 
-    this.detalleSeleccionado.set(
-      registro
-    );
+    this.detalleSeleccionado.set(registro);
+    this.cargarPermutasDetalle();
 
     document.body.style.overflow =
       'hidden';
   }
 
+  cargarPermutasDetalle(): void {
+    const registro = this.detalleSeleccionado();
+    if (!registro) return;
+
+    const solicitud = ++this.solicitudPermutasDetalle;
+    this.permutasDetalle.set([]);
+    this.cargandoPermutasDetalle.set(true);
+    this.errorPermutasDetalle.set('');
+
+    this.permutasApi.deAsistencia(registro.id).subscribe({
+      next: permutas => {
+        if (solicitud !== this.solicitudPermutasDetalle ||
+            this.detalleSeleccionado()?.id !== registro.id) return;
+        this.permutasDetalle.set(permutas ?? []);
+        this.cargandoPermutasDetalle.set(false);
+      },
+      error: () => {
+        if (solicitud !== this.solicitudPermutasDetalle ||
+            this.detalleSeleccionado()?.id !== registro.id) return;
+        this.errorPermutasDetalle.set('No se pudieron cargar las permutas de esta asistencia.');
+        this.cargandoPermutasDetalle.set(false);
+      }
+    });
+  }
+
   cerrarDetalle(): void {
 
-    this.detalleSeleccionado.set(
-      null
-    );
+    this.solicitudPermutasDetalle++;
+    this.detalleSeleccionado.set(null);
+    this.permutasDetalle.set([]);
+    this.cargandoPermutasDetalle.set(false);
+    this.errorPermutasDetalle.set('');
 
     document.body.style.overflow =
       '';

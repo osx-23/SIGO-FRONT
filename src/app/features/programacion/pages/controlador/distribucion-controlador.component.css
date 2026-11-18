@@ -4180,3 +4180,139 @@ th.sticky-name{
     height:max(270px,calc(100dvh - 300px));
   }
 }
+
+
+/* Generación automática en modo concentración. */
+.focus-action-generate {
+  border-color:rgba(147,197,253,.72);
+  background:rgba(37,99,235,.3);
+  color:#eff6ff;
+}
+.focus-action-generate:hover:not(:disabled) {
+  border-color:#bfdbfe;
+  background:rgba(37,99,235,.53);
+}
+
+.generator-focus-range {
+  min-width:0;
+  display:grid;
+  gap:11px;
+  margin:20px 22px 0;
+  padding:16px;
+  border:1px solid #bfdbfe;
+  border-radius:15px;
+  background:#f8fbff;
+}
+.generator-focus-range legend {
+  max-width:100%;
+  padding:0 8px;
+  color:#0f172a;
+  font-size:.91rem;
+  font-weight:850;
+  line-height:1.4;
+}
+.generator-focus-start {
+  margin:0;
+  color:#475569;
+  font-size:.75rem;
+  line-height:1.55;
+}
+.generator-focus-start strong {
+  color:#1d4ed8;
+}
+.generator-focus-start span {
+  color:#64748b;
+}
+.generator-focus-choice {
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:13px;
+  border:1px solid #dbe3ec;
+  border-radius:12px;
+  background:#fff;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease;
+}
+.generator-focus-choice:hover,
+.generator-focus-choice.generator-focus-choice-selected {
+  border-color:#60a5fa;
+  background:#eff6ff;
+}
+.generator-focus-choice:focus-within {
+  outline:2px solid #2563eb;
+  outline-offset:2px;
+}
+.generator-focus-choice > input {
+  width:18px;
+  height:18px;
+  margin:2px 0 0;
+  flex:none;
+  accent-color:#2563eb;
+  cursor:pointer;
+}
+.generator-focus-choice > span {
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+.generator-focus-choice strong {
+  color:#0f172a;
+  font-size:.81rem;
+}
+.generator-focus-choice small {
+  color:#64748b;
+  font-size:.72rem;
+  line-height:1.5;
+}
+.generator-focus-date {
+  display:grid;
+  gap:7px;
+  margin-left:30px;
+  color:#334155;
+  font-size:.73rem;
+  font-weight:800;
+}
+.generator-focus-date input {
+  width:min(290px,100%);
+  min-height:43px;
+  padding:8px 11px;
+  border:1px solid #cbd5e1;
+  border-radius:10px;
+  background:#fff;
+  color:#172033;
+  font-size:.84rem;
+  font-weight:700;
+}
+.generator-focus-date input:focus-visible {
+  outline:2px solid #2563eb;
+  outline-offset:2px;
+}
+.generator-focus-summary,
+.generator-focus-invalid {
+  margin:1px 0 0;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:.75rem;
+  line-height:1.5;
+}
+.generator-focus-summary {
+  background:#dbeafe;
+  color:#1e40af;
+}
+.generator-focus-invalid {
+  background:#fef2f2;
+  color:#b91c1c;
+}
+@media (max-width:560px) {
+  .generator-focus-range {
+    margin:16px 12px 0;
+    padding:12px;
+  }
+  .generator-focus-date {
+    margin-left:0;
+  }
+  .generator-focus-date input {
+    width:100%;
+  }
+}

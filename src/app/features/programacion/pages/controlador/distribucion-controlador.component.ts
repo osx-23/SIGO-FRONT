@@ -333,6 +333,11 @@ export class DistribucionControladorComponent
 
   generadorSemana = 1;
 
+  /** El diálogo de concentración propone solo fechas comprendidas en el mes visible. */
+  generadorDesdeConcentracion: string | null = null;
+  generadorHastaConcentracion = '';
+  generadorAlcanceConcentracion: 'FECHA' | 'FIN_MES' = 'FIN_MES';
+
   generandoDistribucion = false;
 
   errorGenerador = '';
@@ -4419,6 +4424,52 @@ export class DistribucionControladorComponent
   }
 
 
+  get generadorFinMesConcentracion(): string {
+    return this.fecha(new Date(this.anio, this.mes, 0).getDate());
+  }
+
+  get generadorHastaEfectivoConcentracion(): string {
+    return this.generadorAlcanceConcentracion === 'FIN_MES'
+      ? this.generadorFinMesConcentracion
+      : this.generadorHastaConcentracion;
+  }
+
+  get generadorRangoValidoConcentracion(): boolean {
+    if (!this.generadorDesdeConcentracion) return true;
+    const hasta = this.generadorHastaEfectivoConcentracion;
+    return /^\d{4}-\d{2}-\d{2}$/.test(hasta)
+      && hasta >= this.generadorDesdeConcentracion
+      && hasta <= this.generadorFinMesConcentracion;
+  }
+
+  /** Genera únicamente las casetas faltantes entre hoy y la fecha elegida. */
+  abrirGeneradorConcentracion(): void {
+    if (!this.modoConcentracion.activo() ||
+        !this.puedeGenerarDistribucion ||
+        !this.plazaId ||
+        this.cargando ||
+        this.guardando ||
+        this.generandoDistribucion) return;
+
+    if (this.cambios.size > 0) {
+      this.error = 'Guarda primero las asignaciones pendientes antes de generar otras.';
+      return;
+    }
+
+    this.abrirGeneradorDistribucion();
+    if (!this.generadorAbierto) return;
+
+    const hoy = this.fechaActualLima();
+    const inicioMes = this.fecha(1);
+    this.generadorDesdeConcentracion =
+      hoy.startsWith(this.mesInput) ? hoy : inicioMes;
+    this.generadorHastaConcentracion = this.generadorDesdeConcentracion;
+    this.generadorAlcanceConcentracion = 'FIN_MES';
+    this.generadorPeriodo = 'MES';
+    this.generadorSemana = 1;
+    this.cdr.detectChanges();
+  }
+
   abrirGeneradorDistribucion(): void {
 
     if (
@@ -4454,6 +4505,8 @@ export class DistribucionControladorComponent
 
     this.generadorAbierto =
       false;
+
+    this.generadorDesdeConcentracion = null;
 
     this.errorGenerador =
       '';
@@ -4495,6 +4548,20 @@ export class DistribucionControladorComponent
       !this.plazaId
     ) {
       return;
+    }
+
+    const rangoConcentracion = this.generadorDesdeConcentracion;
+    if (rangoConcentracion) {
+      if (this.cambios.size > 0) {
+        this.errorGenerador =
+          'Guarda primero los cambios de la distribución antes de generar más casetas.';
+        return;
+      }
+      if (!this.generadorRangoValidoConcentracion) {
+        this.errorGenerador =
+          'Selecciona una fecha límite válida dentro del mes y no anterior al inicio.';
+        return;
+      }
     }
 
     this.generandoDistribucion =
@@ -4542,13 +4609,19 @@ export class DistribucionControladorComponent
           this.mes,
 
         periodo:
-          this.generadorPeriodo,
+          rangoConcentracion ? 'MES' : this.generadorPeriodo,
 
         semana:
-          this.generadorPeriodo ===
-            'SEMANA'
+          rangoConcentracion
+            ? null
+            : this.generadorPeriodo === 'SEMANA'
               ? this.generadorSemana
-              : null
+              : null,
+
+        ...(rangoConcentracion ? {
+          desde: rangoConcentracion,
+          hasta: this.generadorHastaEfectivoConcentracion
+        } : {})
       })
       .pipe(
 

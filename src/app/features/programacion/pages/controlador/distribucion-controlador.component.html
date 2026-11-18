@@ -1,4 +1,52 @@
-<section class="page">
+<section class="page" [class.modo-concentracion]="modoConcentracion.activo()">
+
+  @if (modoConcentracion.activo()) {
+    <div class="focus-toolbar" role="region" aria-label="Modo concentración de distribución">
+      <div class="focus-toolbar-main">
+        <span class="focus-mark" aria-hidden="true">▦</span>
+        <div class="focus-heading">
+          <span class="focus-eyebrow">Modo concentración · Controlador</span>
+          <h1>Asignación diaria de casetas</h1>
+          <div class="focus-meta">
+            <span>{{ plazaTextoConcentracion }}</span>
+            <span>{{ mesInput }}</span>
+            <span>{{ rangoSemanaTexto }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="focus-toolbar-actions">
+        <span class="focus-status" [class.tiene-pendientes]="cambios.size > 0" role="status">
+          {{ cambios.size === 0 ? 'Sin cambios pendientes' : cambios.size + ' cambio(s) sin guardar' }}
+        </span>
+        <button
+          type="button"
+          class="focus-action focus-action-coverage"
+          [attr.aria-pressed]="mostrarCoberturaConcentracion"
+          (click)="alternarCoberturaConcentracion()"
+        >
+          {{ mostrarCoberturaConcentracion ? 'Ocultar cobertura' : 'Ver cobertura' }}
+        </button>
+        <button
+          type="button"
+          class="focus-action focus-action-save"
+          (click)="guardar()"
+          [disabled]="guardando || cambios.size === 0"
+        >
+          {{ guardando ? 'Guardando...' : 'Guardar cambios' }}
+          @if (cambios.size > 0) { <strong class="focus-save-count">{{ cambios.size }}</strong> }
+        </button>
+        <button
+          type="button"
+          class="focus-action focus-action-exit"
+          (click)="salirModoConcentracion()"
+          title="Volver a la vista normal (Esc)"
+          aria-label="Salir del modo concentración"
+        >
+          Salir <kbd>Esc</kbd>
+        </button>
+      </div>
+    </div>
+  }
 
   <header
     class="mb-4 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60 sm:p-8"
@@ -136,6 +184,20 @@
             ? 'Exportando...'
             : 'Exportar JSON'
         }}
+      </button>
+
+      <button
+        class="secondary focus-enter-button"
+        type="button"
+        (click)="activarModoConcentracion()"
+        title="Ampliar el espacio para asignar casetas"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+          width="18" height="18" aria-hidden="true">
+          <path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>
+        </svg>
+        Modo concentración
       </button>
 
       <button
@@ -678,7 +740,7 @@
   <!-- TABLA INFERIOR: COBERTURA -->
   <!-- ===================================================== -->
 
-  <section class="card coverage-card">
+  <section class="card coverage-card" [class.focus-coverage-visible]="mostrarCoberturaConcentracion">
 
     <div class="card-head table-card-head">
       <div>

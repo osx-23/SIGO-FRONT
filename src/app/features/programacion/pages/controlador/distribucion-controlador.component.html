@@ -10,7 +10,6 @@
           <div class="focus-meta">
             <span>{{ plazaTextoConcentracion }}</span>
             <span>{{ mesInput }}</span>
-            <span>{{ rangoSemanaTexto }}</span>
           </div>
         </div>
       </div>
@@ -647,6 +646,8 @@
 
                       <div
                         class="assignment-cell"
+                        [ngClass]="modoConcentracion.activo() ? claseEstado(p.estado) : null"
+                        [class.focus-operational]="modoConcentracion.activo() && esOperativo(p.estado)"
                         [class.assignment-observation]="tieneObservacion(p.programacionId)"
                         [title]="
                           tieneObservacion(p.programacionId)
@@ -661,7 +662,7 @@
                         </span>
 
                         @if(esOperativo(p.estado)){
-                          <div class="location-select-wrap">
+                          <div class="location-select-wrap" [class.has-observation]="tieneObservacion(p.programacionId)">
                             <select
                               class="location-select"
                               [class.location-select-observation]="tieneObservacion(p.programacionId)"
@@ -674,7 +675,7 @@
                                   : 'Asignar caseta · Turno ' + p.estado
                               "
                             >
-                              <option [ngValue]="null">Sin asignar</option>
+                              <option [ngValue]="null">{{ modoConcentracion.activo() ? p.estado : 'Sin asignar' }}</option>
 
                               @for(ubicacion of ubicacionesParaTurno(p.estado, p.programacionId); track ubicacion.id){
                                 <option

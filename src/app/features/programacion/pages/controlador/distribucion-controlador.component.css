@@ -3750,3 +3750,269 @@ th.sticky-name{
 @media (prefers-reduced-motion:reduce) {
   .focus-action {transition:none;}
 }
+
+
+/* =========================================================
+   CONCENTRACIÓN COMPACTA · MATRIZ MENSUAL DE AGENTES
+   =========================================================
+   La vista estándar mantiene sus filtros, filas y badges.
+   En concentración: un solo renglón para turno/caseta.
+*/
+.page.modo-concentracion .filters-card {
+  display:none !important;
+}
+
+.page.modo-concentracion .focus-toolbar {
+  margin-bottom:9px;
+  padding:10px 14px;
+  border-radius:14px;
+}
+.page.modo-concentracion .focus-mark {
+  width:36px;
+  height:36px;
+  flex-basis:36px;
+  font-size:1.2rem;
+}
+.page.modo-concentracion .focus-heading h1 {
+  font-size:clamp(.95rem,1.35vw,1.2rem);
+}
+.page.modo-concentracion .focus-meta span {
+  padding:2px 7px;
+}
+.page.modo-concentracion .agents-card .card-head {
+  align-items:center;
+  padding:7px 12px;
+}
+.page.modo-concentracion .agents-card .card-head h2 {
+  margin:1px 0;
+  font-size:.85rem;
+}
+.page.modo-concentracion .agents-card .eyebrow {
+  font-size:.55rem;
+}
+.page.modo-concentracion .agents-card .table-head-meta strong {
+  font-size:.9rem;
+}
+.page.modo-concentracion .agents-card .table-head-meta span {
+  font-size:.55rem;
+}
+
+/* La matriz crece para ocupar el espacio liberado por los filtros. */
+.page.modo-concentracion .agents-scroll {
+  height:max(320px,calc(100dvh - 162px));
+  max-height:none;
+}
+
+/* Menos separación entre agentes y más columnas de días visibles. */
+.page.modo-concentracion .distribution-table th,
+.page.modo-concentracion .distribution-table td {
+  height:37px;
+  padding:2px 3px;
+}
+.page.modo-concentracion .distribution-table thead th {
+  height:45px;
+  padding:4px 2px;
+}
+.page.modo-concentracion .distribution-table .sticky-code {
+  left:0;
+  width:58px;
+  min-width:58px;
+  max-width:58px;
+  font-size:.66rem;
+}
+.page.modo-concentracion .distribution-table .sticky-name {
+  left:58px;
+  width:235px;
+  min-width:235px;
+  max-width:235px;
+}
+.page.modo-concentracion .distribution-table .day-column {
+  width:78px;
+  min-width:78px;
+  max-width:78px;
+}
+.page.modo-concentracion .distribution-table .day-header {
+  gap:0;
+}
+.page.modo-concentracion .distribution-table .day-header strong {
+  font-size:.57rem;
+}
+.page.modo-concentracion .distribution-table .day-header span {
+  font-size:.65rem;
+}
+.page.modo-concentracion .distribution-table .agent-button {
+  padding:2px 4px;
+  font-size:.67rem;
+  line-height:1.2;
+}
+
+/* El turno operativo colorea toda la casilla. El único texto
+   de la casilla es A/B/C (sin caseta) o el código de caseta.
+   El select sigue siendo nativo y accesible por teclado. */
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational {
+  display:flex;
+  flex-direction:row;
+  align-items:stretch;
+  justify-content:center;
+  width:100%;
+  min-height:30px;
+  gap:0;
+  padding:1px;
+  border:1px solid transparent;
+  border-radius:6px;
+  box-shadow:inset 0 0 0 1px rgba(15,23,42,.035);
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational.estado-a {
+  border-color:#86efac !important;
+  background:#dcfce7 !important;
+  color:#166534;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational.estado-b {
+  border-color:#fcd34d !important;
+  background:#fef3c7 !important;
+  color:#92400e;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational.estado-c {
+  border-color:#e6b1af !important;
+  background:#f6dada !important;
+  color:#713f3d;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .shift-state {
+  display:none;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select-wrap {
+  position:relative;
+  display:flex;
+  width:100%;
+  min-width:0;
+  align-items:center;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select {
+  display:block;
+  width:100%;
+  min-width:0;
+  height:28px;
+  padding:1px 12px 1px 3px;
+  appearance:none;
+  border:0 !important;
+  border-radius:5px;
+  background:transparent !important;
+  box-shadow:none;
+  color:inherit;
+  font-size:.69rem;
+  font-weight:850;
+  text-align:center;
+  text-align-last:center;
+  cursor:pointer;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select-wrap::after {
+  content:'⌄';
+  position:absolute;
+  right:2px;
+  top:50%;
+  transform:translateY(-55%);
+  color:currentColor;
+  font-size:.8rem;
+  line-height:1;
+  opacity:.58;
+  pointer-events:none;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select option {
+  color:#172033;
+  background:#fff;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select:focus-visible {
+  outline:2px solid #2563eb;
+  outline-offset:0;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select:disabled {
+  cursor:wait;
+  opacity:.7;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational.assignment-observation {
+  margin:0;
+  padding:0;
+  border:2px solid #ef4444 !important;
+  box-shadow:0 0 0 1px rgba(239,68,68,.16);
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select-wrap.has-observation::after {
+  display:none;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .assignment-observation-badge {
+  right:2px;
+  width:15px;
+  height:15px;
+  font-size:.55rem;
+}
+
+/* Estados no operativos conservan la letra original, pero ocupan
+   menos altura que dos controles superpuestos. */
+.page.modo-concentracion .distribution-table .assignment-cell:not(.focus-operational) {
+  min-height:30px;
+  flex-direction:row;
+  align-items:center;
+  gap:3px;
+  padding:2px;
+}
+.page.modo-concentracion .distribution-table .assignment-cell:not(.focus-operational) .shift-state {
+  min-width:30px;
+  height:23px;
+  padding:0 4px;
+  font-size:.57rem;
+}
+.page.modo-concentracion .distribution-table .assignment-cell:not(.focus-operational) .blocked-location {
+  display:none;
+}
+
+/* El estilo responsive de la vista normal no debe ensanchar la matriz
+   compacta al reducir el ancho de pantalla. */
+@media (max-width:1050px) {
+  .page.modo-concentracion .agents-scroll {
+    height:max(300px,calc(100dvh - 230px));
+  }
+}
+@media (max-width:800px) {
+  .page.modo-concentracion .agents-scroll {
+    height:max(280px,calc(100dvh - 258px));
+  }
+  .page.modo-concentracion .distribution-table .sticky-code {
+    width:52px;
+    min-width:52px;
+    max-width:52px;
+  }
+  .page.modo-concentracion .distribution-table .sticky-name {
+    left:52px;
+    width:205px;
+    min-width:205px;
+    max-width:205px;
+  }
+  .page.modo-concentracion .distribution-table .day-column {
+    width:74px;
+    min-width:74px;
+    max-width:74px;
+  }
+}
+@media (max-width:560px) {
+  .page.modo-concentracion .agents-scroll {
+    height:max(260px,calc(100dvh - 287px));
+  }
+  .page.modo-concentracion .distribution-table .sticky-code {
+    width:48px;
+    min-width:48px;
+    max-width:48px;
+  }
+  .page.modo-concentracion .distribution-table .sticky-name {
+    left:48px;
+    width:170px;
+    min-width:170px;
+    max-width:170px;
+  }
+  .page.modo-concentracion .distribution-table .day-column {
+    width:69px;
+    min-width:69px;
+    max-width:69px;
+  }
+  .page.modo-concentracion .distribution-table .agent-button {
+    font-size:.64rem;
+  }
+}

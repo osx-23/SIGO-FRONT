@@ -2,6 +2,7 @@
   class="shell"
   [class.collapsed]="collapsed()"
   [class.agent-shell]="auth.tieneRol('OPERADOR')"
+  [class.modo-concentracion]="modoConcentracion.activo()"
 >
 
   @if (!auth.tieneRol('OPERADOR') && bienvenidaVisible()) {

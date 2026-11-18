@@ -108,6 +108,7 @@ export class DistribucionControladorComponent
   readonly modoConcentracion = inject(ModoConcentracionService);
   mostrarCoberturaConcentracion = false;
   private semanaAnteriorConcentracion: number | null = null;
+  private busquedaAnteriorConcentracion: string | null = null;
 
   @ViewChild('tablaSuperior')
   private tablaSuperior?: ElementRef<HTMLDivElement>;
@@ -664,6 +665,8 @@ export class DistribucionControladorComponent
   activarModoConcentracion(): void {
     if (this.modoConcentracion.activo()) return;
     this.semanaAnteriorConcentracion = this.filtroSemana;
+    this.busquedaAnteriorConcentracion = this.busqueda;
+    this.busqueda = '';
     this.mostrarCoberturaConcentracion = false;
     this.cambiarSemana(0);
     this.modoConcentracion.activar();
@@ -676,6 +679,10 @@ export class DistribucionControladorComponent
     if (this.semanaAnteriorConcentracion !== null) {
       this.cambiarSemana(this.semanaAnteriorConcentracion);
       this.semanaAnteriorConcentracion = null;
+    }
+    if (this.busquedaAnteriorConcentracion !== null) {
+      this.busqueda = this.busquedaAnteriorConcentracion;
+      this.busquedaAnteriorConcentracion = null;
     }
   }
 

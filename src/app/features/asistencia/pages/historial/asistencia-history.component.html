@@ -745,6 +745,70 @@
             </article>
           </section>
 
+          <section class="rounded-3xl border border-slate-200 bg-white p-5">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 class="font-semibold text-slate-950">Permutas del turno</h3>
+                <p class="mt-1 text-xs text-slate-500">
+                  Intercambios asociados a esta asistencia. Las correcciones se realizan desde Editar registro.
+                </p>
+              </div>
+              @if (!cargandoPermutasDetalle() && !errorPermutasDetalle()) {
+                <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                  {{ permutasDetalle().length }} permuta(s)
+                </span>
+              }
+            </div>
+
+            @if (cargandoPermutasDetalle()) {
+              <p role="status" class="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+                Cargando permutas del turno...
+              </p>
+            } @else if (errorPermutasDetalle()) {
+              <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+                <p role="alert" class="text-sm text-red-700">{{ errorPermutasDetalle() }}</p>
+                <button type="button" (click)="cargarPermutasDetalle()"
+                  class="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100">
+                  Reintentar
+                </button>
+              </div>
+            } @else if (permutasDetalle().length === 0) {
+              <p class="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+                No hay permutas registradas para esta asistencia.
+              </p>
+            } @else {
+              <div class="mt-4 space-y-3">
+                @for (permuta of permutasDetalle(); track permuta.id) {
+                  <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center">
+                      <div class="min-w-0 rounded-xl border border-slate-100 bg-white p-3">
+                        <span class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Solicitante</span>
+                        <p class="mt-1 break-words text-sm font-semibold text-slate-900">
+                          {{ permuta.codigoSolicitante }} · {{ permuta.nombreSolicitante }}
+                        </p>
+                        <p class="mt-1 text-xs text-slate-600">
+                          {{ permuta.plazaSolicitante }} · Turno {{ permuta.turnoSolicitante }}
+                          · {{ permuta.fechaSolicitante | date:'dd/MM/yyyy':'UTC' }}
+                        </p>
+                      </div>
+                      <span class="text-center text-lg font-bold text-blue-600" aria-label="Intercambio">⇄</span>
+                      <div class="min-w-0 rounded-xl border border-slate-100 bg-white p-3">
+                        <span class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Aceptante</span>
+                        <p class="mt-1 break-words text-sm font-semibold text-slate-900">
+                          {{ permuta.codigoAceptante }} · {{ permuta.nombreAceptante }}
+                        </p>
+                        <p class="mt-1 text-xs text-slate-600">
+                          {{ permuta.plazaAceptante }} · Turno {{ permuta.turnoAceptante }}
+                          · {{ permuta.fechaAceptante | date:'dd/MM/yyyy':'UTC' }}
+                        </p>
+                      </div>
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+
           <div class="grid gap-5 lg:grid-cols-2">
             <section class="rounded-3xl border border-slate-200 bg-white p-5">
               <div class="flex items-center justify-between gap-3">

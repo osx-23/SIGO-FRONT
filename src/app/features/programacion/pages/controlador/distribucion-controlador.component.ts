@@ -107,6 +107,7 @@ export class DistribucionControladorComponent
 
   readonly modoConcentracion = inject(ModoConcentracionService);
   mostrarCoberturaConcentracion = false;
+  private semanaAnteriorConcentracion: number | null = null;
 
   @ViewChild('tablaSuperior')
   private tablaSuperior?: ElementRef<HTMLDivElement>;
@@ -659,14 +660,23 @@ export class DistribucionControladorComponent
     );
   }
 
-  /** Conserva la distribución y los cambios locales al ampliar el espacio de trabajo. */
+  /** El modo concentración presenta todo el mes sin modificar las asignaciones pendientes. */
   activarModoConcentracion(): void {
+    if (this.modoConcentracion.activo()) return;
+    this.semanaAnteriorConcentracion = this.filtroSemana;
     this.mostrarCoberturaConcentracion = false;
+    this.cambiarSemana(0);
     this.modoConcentracion.activar();
   }
 
+  /** Al salir se recupera la semana previamente elegida en la vista normal. */
   salirModoConcentracion(): void {
+    if (!this.modoConcentracion.activo()) return;
     this.modoConcentracion.desactivar();
+    if (this.semanaAnteriorConcentracion !== null) {
+      this.cambiarSemana(this.semanaAnteriorConcentracion);
+      this.semanaAnteriorConcentracion = null;
+    }
   }
 
   alternarCoberturaConcentracion(): void {

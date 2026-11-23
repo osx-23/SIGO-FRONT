@@ -1,3 +1,11 @@
+export interface PersonalInvermetOpcion {
+  id: number;
+  codigo: number;
+  nombreCompleto: string;
+  puesto: string;
+  plazaCodigo: string | null;
+}
+
 export interface PreguntaInvermet {
   numero: number;
   pregunta: string;

@@ -153,7 +153,16 @@
             <div class="space-y-3">
               @for (q of form.preguntas; track q.numero) {
                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div class="mb-2 text-xs font-bold uppercase tracking-wider text-blue-600">Pregunta {{ q.numero }}</div>
+                  <div class="mb-2 flex items-center justify-between gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Pregunta {{ q.numero }}</span>
+                    @if (q.numero > 2) {
+                      <button type="button" (click)="quitarPregunta($index)" [disabled]="guardando()"
+                        [attr.aria-label]="'Quitar pregunta ' + q.numero"
+                        class="rounded-lg px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50">
+                        Quitar
+                      </button>
+                    }
+                  </div>
                   <label class="block space-y-1 text-xs font-semibold text-slate-600">
                     Pregunta
                     <input [name]="'pregunta-' + q.numero" [(ngModel)]="q.pregunta" maxlength="300"
@@ -175,6 +184,18 @@
                     </label>
                   </div>
                 </div>
+              }
+            </div>
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+              <span class="text-xs text-slate-500">{{ form.preguntas.length }} de 5 preguntas visibles</span>
+              @if (form.preguntas.length < 5) {
+                <button type="button" (click)="agregarPregunta()" [disabled]="guardando()"
+                  class="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50">
+                  <span aria-hidden="true" class="text-base leading-none">+</span>
+                  Agregar pregunta
+                </button>
+              } @else {
+                <span class="text-xs font-medium text-slate-500">Máximo de 5 preguntas</span>
               }
             </div>
           </fieldset>

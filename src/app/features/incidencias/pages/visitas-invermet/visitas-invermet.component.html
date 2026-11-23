@@ -65,18 +65,116 @@
               <input type="date" name="fecha" [(ngModel)]="form.fecha" required
                 class="w-full rounded-xl border border-slate-300 px-3 py-2.5 font-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
             </label>
-            <label class="block space-y-1.5 text-sm font-semibold text-slate-700">
-              Controlador <span class="text-red-600">*</span>
-              <input type="text" name="controlador" maxlength="150" [(ngModel)]="form.controlador" required
-                placeholder="Nombre del controlador"
-                class="w-full rounded-xl border border-slate-300 px-3 py-2.5 font-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
-            </label>
-            <label class="block space-y-1.5 text-sm font-semibold text-slate-700">
-              Supervisor <span class="text-red-600">*</span>
-              <input type="text" name="supervisor" maxlength="150" [(ngModel)]="form.supervisor" required
-                placeholder="Nombre del supervisor"
-                class="w-full rounded-xl border border-slate-300 px-3 py-2.5 font-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
-            </label>
+            <div class="min-w-0 space-y-1.5 text-sm font-semibold text-slate-700">
+              <label for="invermet-controlador">Controlador <span class="text-red-600">*</span></label>
+              <div class="relative" (focusout)="alSalirPersonal('controlador', $event)">
+                <input
+                  id="invermet-controlador"
+                  name="controlador"
+                  type="text"
+                  maxlength="150"
+                  required
+                  [ngModel]="form.controlador"
+                  (ngModelChange)="alEscribirPersonal('controlador', $event)"
+                  (focus)="alEnfocarPersonal('controlador')"
+                  (keydown)="teclaPersonal('controlador', $event)"
+                  placeholder="Busca por nombre o código"
+                  autocomplete="off"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-controls="sugerencias-invermet-controlador"
+                  [attr.aria-expanded]="campoPersonalAbierto() === 'controlador'"
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 font-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                >
+                @if (campoPersonalAbierto() === 'controlador' && form.controlador.trim().length >= 2) {
+                  <div id="sugerencias-invermet-controlador" role="listbox"
+                    class="absolute inset-x-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+                    @if (buscandoPersonal()) {
+                      <p class="px-3 py-3 text-xs font-normal text-slate-500">Buscando personal...</p>
+                    } @else if (errorPersonal()) {
+                      <p class="px-3 py-3 text-xs font-normal text-amber-700">
+                        No se pudieron cargar las sugerencias. Puedes escribir el nombre manualmente.
+                      </p>
+                    } @else if (!sugerenciasPersonal().length) {
+                      <p class="px-3 py-3 text-xs font-normal text-slate-500">
+                        Sin coincidencias. Puedes escribir el nombre manualmente.
+                      </p>
+                    } @else {
+                      @for (persona of sugerenciasPersonal(); track persona.id) {
+                        <button
+                          type="button"
+                          role="option"
+                          data-personal-opcion
+                          [attr.aria-selected]="form.controlador === persona.nombreCompleto"
+                          (click)="seleccionarPersonal('controlador', persona)"
+                          class="block w-full border-b border-slate-100 px-3 py-2.5 text-left transition last:border-b-0 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none">
+                          <span class="block text-sm font-semibold text-slate-900">{{ persona.nombreCompleto }}</span>
+                          <span class="mt-0.5 block text-xs font-normal text-slate-500">
+                            {{ persona.puesto }} · {{ persona.plazaCodigo || 'Sin plaza' }} · Código {{ persona.codigo }}
+                          </span>
+                        </button>
+                      }
+                    }
+                  </div>
+                }
+              </div>
+              <p class="text-[11px] font-normal text-slate-400">Se sugieren controladores activos al escribir al menos 2 caracteres.</p>
+            </div>
+            <div class="min-w-0 space-y-1.5 text-sm font-semibold text-slate-700">
+              <label for="invermet-supervisor">Supervisor <span class="text-red-600">*</span></label>
+              <div class="relative" (focusout)="alSalirPersonal('supervisor', $event)">
+                <input
+                  id="invermet-supervisor"
+                  name="supervisor"
+                  type="text"
+                  maxlength="150"
+                  required
+                  [ngModel]="form.supervisor"
+                  (ngModelChange)="alEscribirPersonal('supervisor', $event)"
+                  (focus)="alEnfocarPersonal('supervisor')"
+                  (keydown)="teclaPersonal('supervisor', $event)"
+                  placeholder="Busca por nombre o código"
+                  autocomplete="off"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-controls="sugerencias-invermet-supervisor"
+                  [attr.aria-expanded]="campoPersonalAbierto() === 'supervisor'"
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 font-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                >
+                @if (campoPersonalAbierto() === 'supervisor' && form.supervisor.trim().length >= 2) {
+                  <div id="sugerencias-invermet-supervisor" role="listbox"
+                    class="absolute inset-x-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+                    @if (buscandoPersonal()) {
+                      <p class="px-3 py-3 text-xs font-normal text-slate-500">Buscando personal...</p>
+                    } @else if (errorPersonal()) {
+                      <p class="px-3 py-3 text-xs font-normal text-amber-700">
+                        No se pudieron cargar las sugerencias. Puedes escribir el nombre manualmente.
+                      </p>
+                    } @else if (!sugerenciasPersonal().length) {
+                      <p class="px-3 py-3 text-xs font-normal text-slate-500">
+                        Sin coincidencias. Puedes escribir el nombre manualmente.
+                      </p>
+                    } @else {
+                      @for (persona of sugerenciasPersonal(); track persona.id) {
+                        <button
+                          type="button"
+                          role="option"
+                          data-personal-opcion
+                          [attr.aria-selected]="form.supervisor === persona.nombreCompleto"
+                          (click)="seleccionarPersonal('supervisor', persona)"
+                          class="block w-full border-b border-slate-100 px-3 py-2.5 text-left transition last:border-b-0 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none">
+                          <span class="block text-sm font-semibold text-slate-900">{{ persona.nombreCompleto }}</span>
+                          <span class="mt-0.5 block text-xs font-normal text-slate-500">
+                            {{ persona.puesto }} · {{ persona.plazaCodigo || 'Sin plaza' }} · Código {{ persona.codigo }}
+                          </span>
+                        </button>
+                      }
+                    }
+                  </div>
+                }
+              </div>
+              <p class="text-[11px] font-normal text-slate-400">Se sugieren supervisores y controladores activos.</p>
+            </div>
           </div>
 
           <fieldset class="mt-5 rounded-2xl border border-slate-200 px-4 pb-4 pt-3">

@@ -10,13 +10,13 @@
       </div>
       <div class="inline-flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
         <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold"
-          [class.bg-blue-600]="pestaña() === 'registro'" [class.text-white]="pestaña() === 'registro'"
-          [class.text-slate-600]="pestaña() !== 'registro'" (click)="cambiarPestaña('registro')">
+          [class.bg-blue-600]="pestana() === 'registro'" [class.text-white]="pestana() === 'registro'"
+          [class.text-slate-600]="pestana() !== 'registro'" (click)="cambiarPestana('registro')">
           Registrar visita
         </button>
         <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold"
-          [class.bg-blue-600]="pestaña() === 'historial'" [class.text-white]="pestaña() === 'historial'"
-          [class.text-slate-600]="pestaña() !== 'historial'" (click)="cambiarPestaña('historial')">
+          [class.bg-blue-600]="pestana() === 'historial'" [class.text-white]="pestana() === 'historial'"
+          [class.text-slate-600]="pestana() !== 'historial'" (click)="cambiarPestana('historial')">
           Historial
         </button>
       </div>
@@ -30,7 +30,7 @@
     <div role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{{ mensaje() }}</div>
   }
 
-  @if (pestaña() === 'registro') {
+  @if (pestana() === 'registro') {
     <form class="space-y-5" (ngSubmit)="registrar()">
       <div class="grid items-start gap-5 lg:grid-cols-2">
         <!-- Recuadro 1: Información operativa de la plaza -->

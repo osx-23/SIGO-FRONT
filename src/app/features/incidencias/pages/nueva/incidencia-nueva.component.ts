@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin, of, switchMap } from 'rxjs';
@@ -19,7 +20,7 @@ interface ArchivoPreview {
 @Component({
   selector: 'app-incidencia-nueva',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ImageCropperModalComponent],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, ImageCropperModalComponent],
   templateUrl: './incidencia-nueva.component.html'
 })
 export class IncidenciaNuevaComponent implements OnInit, OnDestroy {

@@ -1,0 +1,458 @@
+<div class="mx-auto w-full max-w-[1480px] space-y-5 px-3 py-5 sm:px-6 lg:px-8">
+  <header class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">SIGO · Incidencias</p>
+        <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900">Visitas de Invermet</h1>
+        <p class="mt-1 max-w-2xl text-sm text-slate-500">
+          Registra la fiscalización realizada en la plaza, las preguntas, las observaciones y hasta cuatro fotografías.
+        </p>
+      </div>
+      <div class="inline-flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+        <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold"
+          [class.bg-blue-600]="pestana() === 'registro'" [class.text-white]="pestana() === 'registro'"
+          [class.text-slate-600]="pestana() !== 'registro'" (click)="cambiarPestana('registro')">
+          Registrar visita
+        </button>
+        <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold"
+          [class.bg-blue-600]="pestana() === 'historial'" [class.text-white]="pestana() === 'historial'"
+          [class.text-slate-600]="pestana() !== 'historial'" (click)="cambiarPestana('historial')">
+          Historial
+        </button>
+      </div>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ error() }}</div>
+  }
+  @if (mensaje()) {
+    <div role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{{ mensaje() }}</div>
+  }
+
+  @if (pestana() === 'registro') {
+    <form class="space-y-5" (ngSubmit)="registrar()">
+      <div class="grid items-start gap-5 lg:grid-cols-2">
+        <!-- Recuadro 1: Información operativa de la plaza -->
+        <section class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <div class="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <div class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-lg">🏢</div>
+            <div>
+              <h2 class="text-base font-bold text-slate-900">1. Información de la plaza</h2>
+              <p class="text-xs text-slate-500">Personal responsable y condiciones al momento de la visita</p>
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block space-y-1.5 text-sm font-semibold text-slate-700">
+              Plaza <span class="text-red-600">*</span>
+              @if (esOperador) {
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium">
+                  Plaza asignada (ID {{ form.plazaId }})
+                </div>
+              } @else {
+                <select name="plaza" [(ngModel)]="form.plazaId" required
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 font-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                  <option [ngValue]="0">Elegir plaza</option>
+                  @for (plaza of plazas; track plaza.id) {
+                    <option [ngValue]="plaza.id">{{ plaza.codigo }}{{ plaza.descripcion ? ' · ' + plaza.descripcion : '' }}</option>
+                  }
+                </select>
+              }
+            </label>
+            <label class="block space-y-1.5 text-sm font-semibold text-slate-700">
+              Fecha <span class="text-red-600">*</span>
+              <input type="date" name="fecha" [(ngModel)]="form.fecha" required
+                class="w-full rounded-xl border border-slate-300 px-3 py-2.5 font-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+            </label>
+            <div class="min-w-0 space-y-1.5 text-sm font-semibold text-slate-700">
+              <label for="invermet-controlador">Controlador <span class="text-red-600">*</span></label>
+              <div class="relative" (focusout)="alSalirPersonal('controlador', $event)">
+                <input
+                  id="invermet-controlador"
+                  name="controlador"
+                  type="text"
+                  maxlength="150"
+                  required
+                  [ngModel]="form.controlador"
+                  (ngModelChange)="alEscribirPersonal('controlador', $event)"
+                  (focus)="alEnfocarPersonal('controlador')"
+                  (keydown)="teclaPersonal('controlador', $event)"
+                  placeholder="Busca por nombre o código"
+                  autocomplete="off"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-controls="sugerencias-invermet-controlador"
+                  [attr.aria-expanded]="campoPersonalAbierto() === 'controlador'"
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 font-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                >
+                @if (campoPersonalAbierto() === 'controlador' && form.controlador.trim().length >= 2) {
+                  <div id="sugerencias-invermet-controlador" role="listbox"
+                    class="absolute inset-x-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+                    @if (buscandoPersonal()) {
+                      <p class="px-3 py-3 text-xs font-normal text-slate-500">Buscando personal...</p>
+                    } @else if (errorPersonal()) {
+                      <p class="px-3 py-3 text-xs font-normal text-amber-700">
+                        No se pudieron cargar las sugerencias. Puedes escribir el nombre manualmente.
+                      </p>
+                    } @else if (!sugerenciasPersonal().length) {
+                      <p class="px-3 py-3 text-xs font-normal text-slate-500">
+                        Sin coincidencias. Puedes escribir el nombre manualmente.
+                      </p>
+                    } @else {
+                      @for (persona of sugerenciasPersonal(); track persona.id) {
+                        <button
+                          type="button"
+                          role="option"
+                          data-personal-opcion
+                          [attr.aria-selected]="form.controlador === persona.nombreCompleto"
+                          (click)="seleccionarPersonal('controlador', persona)"
+                          class="block w-full border-b border-slate-100 px-3 py-2.5 text-left transition last:border-b-0 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none">
+                          <span class="block text-sm font-semibold text-slate-900">{{ persona.nombreCompleto }}</span>
+                          <span class="mt-0.5 block text-xs font-normal text-slate-500">
+                            {{ persona.puesto }} · {{ persona.plazaCodigo || 'Sin plaza' }} · Código {{ persona.codigo }}
+                          </span>
+                        </button>
+                      }
+                    }
+                  </div>
+                }
+              </div>
+              <p class="text-[11px] font-normal text-slate-400">Se sugieren controladores activos al escribir al menos 2 caracteres.</p>
+            </div>
+            <div class="min-w-0 space-y-1.5 text-sm font-semibold text-slate-700">
+              <label for="invermet-supervisor">Supervisor <span class="text-red-600">*</span></label>
+              <div class="relative" (focusout)="alSalirPersonal('supervisor', $event)">
+                <input
+                  id="invermet-supervisor"
+                  name="supervisor"
+                  type="text"
+                  maxlength="150"
+                  required
+                  [ngModel]="form.supervisor"
+                  (ngModelChange)="alEscribirPersonal('supervisor', $event)"
+                  (focus)="alEnfocarPersonal('supervisor')"
+                  (keydown)="teclaPersonal('supervisor', $event)"
+                  placeholder="Busca por nombre o código"
+                  autocomplete="off"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-controls="sugerencias-invermet-supervisor"
+                  [attr.aria-expanded]="campoPersonalAbierto() === 'supervisor'"
+                  class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 font-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                >
+                @if (campoPersonalAbierto() === 'supervisor' && form.supervisor.trim().length >= 2) {
+                  <div id="sugerencias-invermet-supervisor" role="listbox"
+                    class="absolute inset-x-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+                    @if (buscandoPersonal()) {
+                      <p class="px-3 py-3 text-xs font-normal text-slate-500">Buscando personal...</p>
+                    } @else if (errorPersonal()) {
+                      <p class="px-3 py-3 text-xs font-normal text-amber-700">
+                        No se pudieron cargar las sugerencias. Puedes escribir el nombre manualmente.
+                      </p>
+                    } @else if (!sugerenciasPersonal().length) {
+                      <p class="px-3 py-3 text-xs font-normal text-slate-500">
+                        Sin coincidencias. Puedes escribir el nombre manualmente.
+                      </p>
+                    } @else {
+                      @for (persona of sugerenciasPersonal(); track persona.id) {
+                        <button
+                          type="button"
+                          role="option"
+                          data-personal-opcion
+                          [attr.aria-selected]="form.supervisor === persona.nombreCompleto"
+                          (click)="seleccionarPersonal('supervisor', persona)"
+                          class="block w-full border-b border-slate-100 px-3 py-2.5 text-left transition last:border-b-0 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none">
+                          <span class="block text-sm font-semibold text-slate-900">{{ persona.nombreCompleto }}</span>
+                          <span class="mt-0.5 block text-xs font-normal text-slate-500">
+                            {{ persona.puesto }} · {{ persona.plazaCodigo || 'Sin plaza' }} · Código {{ persona.codigo }}
+                          </span>
+                        </button>
+                      }
+                    }
+                  </div>
+                }
+              </div>
+              <p class="text-[11px] font-normal text-slate-400">Se sugieren supervisores y controladores activos.</p>
+            </div>
+          </div>
+
+          <fieldset class="mt-5 rounded-2xl border border-slate-200 px-4 pb-4 pt-3">
+            <legend class="px-2 text-sm font-bold text-slate-800">Horario de la visita</legend>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="space-y-1.5 text-xs font-semibold text-slate-600">
+                Hora de inicio <span class="text-red-600">*</span>
+                <input type="time" name="inicio" [(ngModel)]="form.horaInicio" required
+                  class="block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-normal">
+              </label>
+              <label class="space-y-1.5 text-xs font-semibold text-slate-600">
+                Hora final <span class="text-red-600">*</span>
+                <input type="time" name="final" [(ngModel)]="form.horaFinal" required
+                  class="block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-normal">
+              </label>
+            </div>
+            <div class="mt-4 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+              <span class="text-sm font-semibold text-blue-800">Tiempo de la visita</span>
+              <span class="text-lg font-bold tabular-nums text-blue-900">{{ duracion }} <span class="text-xs font-normal">hh:mm</span></span>
+            </div>
+          </fieldset>
+
+          <fieldset class="mt-5 rounded-2xl border border-slate-200 px-4 pb-4 pt-3">
+            <legend class="px-2 text-sm font-bold text-slate-800">Estado de las casetas</legend>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="space-y-1.5 text-xs font-semibold text-slate-600">
+                Casetas en plaza
+                <input type="number" name="casetasPlaza" min="0" max="200" step="1"
+                  [(ngModel)]="form.casetasEnPlaza"
+                  class="block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-normal">
+              </label>
+              <label class="space-y-1.5 text-xs font-semibold text-slate-600">
+                Casetas abiertas
+                <input type="number" name="casetasAbiertas" min="0" [max]="form.casetasEnPlaza" step="1"
+                  [(ngModel)]="form.casetasAbiertas"
+                  class="block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-normal">
+              </label>
+            </div>
+            @if (form.casetasAbiertas > form.casetasEnPlaza) {
+              <p class="mt-2 text-xs font-medium text-red-600">Las casetas abiertas no pueden superar el total.</p>
+            }
+          </fieldset>
+        </section>
+
+        <!-- Recuadro 2: Información recogida por INVERMET -->
+        <section class="rounded-3xl border border-blue-100 bg-white p-4 shadow-sm sm:p-6">
+          <div class="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <div class="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-lg">📋</div>
+            <div>
+              <h2 class="text-base font-bold text-blue-900">2. Visita de Invermet</h2>
+              <p class="text-xs text-slate-500">Datos levantados por los inspectores y preguntas realizadas</p>
+            </div>
+          </div>
+          <fieldset class="rounded-2xl border border-slate-200 px-4 pb-4 pt-3">
+            <legend class="px-2 text-sm font-semibold text-slate-800">Datos de la visita</legend>
+            <div class="grid gap-3">
+              <label class="space-y-1.5 text-xs font-semibold text-slate-600">
+                Dato 1
+                <input name="dato1" [(ngModel)]="form.datoVisita1" maxlength="300"
+                  placeholder="Información proporcionada durante la visita"
+                  class="block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-normal">
+              </label>
+              <label class="space-y-1.5 text-xs font-semibold text-slate-600">
+                Dato 2
+                <input name="dato2" [(ngModel)]="form.datoVisita2" maxlength="300"
+                  placeholder="Información adicional (opcional)"
+                  class="block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-normal">
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="mt-5 rounded-2xl border border-slate-200 px-3 pb-4 pt-3 sm:px-4">
+            <legend class="px-2 text-sm font-semibold text-slate-800">Preguntas de la visita <span class="font-normal text-slate-400">(hasta 5)</span></legend>
+            <div class="space-y-3">
+              @for (q of form.preguntas; track q.numero) {
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div class="mb-2 flex items-center justify-between gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Pregunta {{ q.numero }}</span>
+                    @if (q.numero > 2) {
+                      <button type="button" (click)="quitarPregunta($index)" [disabled]="guardando()"
+                        [attr.aria-label]="'Quitar pregunta ' + q.numero"
+                        class="rounded-lg px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50">
+                        Quitar
+                      </button>
+                    }
+                  </div>
+                  <label class="block space-y-1 text-xs font-semibold text-slate-600">
+                    Pregunta
+                    <input [name]="'pregunta-' + q.numero" [(ngModel)]="q.pregunta" maxlength="300"
+                      placeholder="¿Qué preguntó Invermet?"
+                      class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal">
+                  </label>
+                  <div class="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+                    <label class="block space-y-1 text-xs font-semibold text-slate-600">
+                      Quién respondió
+                      <input [name]="'quien-' + q.numero" [(ngModel)]="q.quienRespondio" maxlength="150"
+                        placeholder="Ej. Controlador"
+                        class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal">
+                    </label>
+                    <label class="block space-y-1 text-xs font-semibold text-slate-600">
+                      Respuesta
+                      <textarea [name]="'respuesta-' + q.numero" [(ngModel)]="q.respuesta" maxlength="1000" rows="2"
+                        placeholder="Respuesta que se brindó"
+                        class="block w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal"></textarea>
+                    </label>
+                  </div>
+                </div>
+              }
+            </div>
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+              <span class="text-xs text-slate-500">{{ form.preguntas.length }} de 5 preguntas visibles</span>
+              @if (form.preguntas.length < 5) {
+                <button type="button" (click)="agregarPregunta()" [disabled]="guardando()"
+                  class="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50">
+                  <span aria-hidden="true" class="text-base leading-none">+</span>
+                  Agregar pregunta
+                </button>
+              } @else {
+                <span class="text-xs font-medium text-slate-500">Máximo de 5 preguntas</span>
+              }
+            </div>
+          </fieldset>
+
+          <label class="mt-5 block space-y-2 text-sm font-semibold text-slate-700">
+            Observaciones
+            <textarea name="observaciones" [(ngModel)]="form.observaciones" rows="4" maxlength="2000"
+              placeholder="Describe lo ocurrido durante la fiscalización, las observaciones de los inspectores y cualquier acuerdo..."
+              class="block w-full resize-y rounded-xl border border-slate-300 px-3 py-3 font-normal"></textarea>
+          </label>
+
+          <div class="mt-5 rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-bold text-slate-800">Evidencia fotográfica</p>
+                <p class="text-xs text-slate-500">{{ fotos.length }} de 4 fotografías · JPG, PNG o WEBP · 10 MB máximo por foto</p>
+              </div>
+              <label class="cursor-pointer rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700"
+                [class.pointer-events-none]="fotos.length >= 4 || guardando()"
+                [class.opacity-50]="fotos.length >= 4 || guardando()">
+                + Adjuntar fotos
+                <input type="file" accept="image/jpeg,image/png,image/webp" multiple class="hidden"
+                  [disabled]="fotos.length >= 4 || guardando()" (change)="agregarFotos($event)">
+              </label>
+            </div>
+            @if (fotos.length) {
+              <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                @for (foto of fotos; track foto.url; let i = $index) {
+                  <div class="relative overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <img [src]="foto.url" [alt]="'Fotografía ' + (i + 1)" class="h-24 w-full object-cover">
+                    <button type="button" (click)="quitarFoto(i)" [disabled]="guardando()"
+                      [attr.aria-label]="'Quitar fotografía ' + (i + 1)"
+                      class="absolute right-1 top-1 rounded-full bg-slate-900/80 px-2 py-1 text-xs font-bold text-white disabled:opacity-50">×</button>
+                    <p class="truncate px-2 py-1 text-[10px] text-slate-500">{{ foto.file.name }}</p>
+                  </div>
+                }
+              </div>
+            } @else {
+              <p class="mt-3 rounded-xl bg-white/75 px-3 py-5 text-center text-xs text-slate-400">Aún no has adjuntado fotos. Puedes registrar la visita sin imágenes.</p>
+            }
+          </div>
+        </section>
+      </div>
+      <div class="flex flex-wrap items-center justify-end gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+        <span class="mr-auto text-xs text-slate-500">Los campos marcados con * son obligatorios.</span>
+        <button type="submit" [disabled]="guardando()"
+          class="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60">
+          {{ guardando() ? 'Guardando visita...' : 'Guardar visita Invermet' }}
+        </button>
+      </div>
+    </form>
+  } @else {
+    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Historial de visitas</h2>
+          <p class="text-xs text-slate-500">Selecciona los filtros, abre una visita o descarga su acta en Excel.</p>
+        </div>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <label class="space-y-1 text-xs font-semibold text-slate-600">
+          Desde
+          <input type="date" [(ngModel)]="filtroInicio" class="block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm">
+        </label>
+        <label class="space-y-1 text-xs font-semibold text-slate-600">
+          Hasta
+          <input type="date" [(ngModel)]="filtroFin" class="block w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm">
+        </label>
+        @if (!esOperador) {
+          <label class="space-y-1 text-xs font-semibold text-slate-600">
+            Plaza
+            <select [(ngModel)]="filtroPlaza" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm">
+              <option [ngValue]="null">Todas las plazas</option>
+              @for (plaza of plazas; track plaza.id) { <option [ngValue]="plaza.id">{{ plaza.codigo }}</option> }
+            </select>
+          </label>
+        }
+        <button type="button" (click)="cargarHistorial()" [disabled]="cargando()"
+          class="self-end rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+          {{ cargando() ? 'Buscando...' : 'Buscar visitas' }}
+        </button>
+      </div>
+    </section>
+    @if (cargando()) {
+      <div class="h-24 animate-pulse rounded-2xl bg-slate-100"></div>
+    } @else if (!visitasFiltradas.length) {
+      <div class="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+        No se encontraron visitas de Invermet en el periodo seleccionado.
+      </div>
+    } @else {
+      <div class="space-y-3">
+        @for (v of visitasFiltradas; track v.id) {
+          <article class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wider text-blue-600">Visita #{{ v.id }} · {{ v.plazaCodigo }}</p>
+              <h3 class="mt-1 font-semibold text-slate-900">{{ v.fecha }} · {{ v.horaInicio.slice(0,5) }} a {{ v.horaFinal.slice(0,5) }}</h3>
+              <p class="mt-1 text-xs text-slate-500">
+                Controlador: {{ v.controlador }} · Supervisor: {{ v.supervisor }}
+              </p>
+              <p class="mt-1 text-xs text-slate-400">{{ formatoMinutos(v.duracionMinutos) }} h · {{ v.fotos.length }} fotos</p>
+            </div>
+            <div class="flex shrink-0 flex-wrap gap-2">
+              <button type="button" (click)="verDetalle(v)" class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700">Ver detalle</button>
+              <button type="button" (click)="descargarExcel(v)" [disabled]="exportandoId() !== null"
+                class="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                {{ exportandoId() === v.id ? 'Exportando...' : 'Exportar Excel' }}
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  }
+</div>
+
+@if (detalle(); as v) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3" (click)="detalle.set(null)">
+    <section role="dialog" aria-modal="true" aria-labelledby="titulo-visita"
+      class="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-7"
+      (click)="$event.stopPropagation()">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-xs font-semibold uppercase text-blue-600">Invermet · Plaza {{ v.plazaCodigo }}</p>
+          <h2 id="titulo-visita" class="mt-1 text-xl font-bold text-slate-900">Visita #{{ v.id }}</h2>
+          <p class="mt-1 text-sm text-slate-500">{{ v.fecha }} · {{ v.horaInicio }} - {{ v.horaFinal }} ({{ formatoMinutos(v.duracionMinutos) }} h)</p>
+        </div>
+        <button type="button" (click)="detalle.set(null)" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">Cerrar</button>
+      </div>
+      <div class="mt-5 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-xl bg-slate-50 p-4 text-sm"><strong class="block text-xs text-slate-500">Controlador</strong>{{ v.controlador }}</div>
+        <div class="rounded-xl bg-slate-50 p-4 text-sm"><strong class="block text-xs text-slate-500">Supervisor</strong>{{ v.supervisor }}</div>
+        <div class="rounded-xl bg-slate-50 p-4 text-sm"><strong class="block text-xs text-slate-500">Casetas</strong>{{ v.casetasAbiertas }} abiertas de {{ v.casetasEnPlaza }}</div>
+        <div class="rounded-xl bg-slate-50 p-4 text-sm"><strong class="block text-xs text-slate-500">Datos de la visita</strong>{{ v.datoVisita1 || 'Sin datos' }} · {{ v.datoVisita2 || 'Sin datos' }}</div>
+      </div>
+      <h3 class="mt-5 text-sm font-bold text-slate-900">Preguntas y respuestas</h3>
+      @if (!v.preguntas.length) {
+        <p class="mt-2 text-sm text-slate-500">No se registraron preguntas.</p>
+      }
+      @for (q of v.preguntas; track q.numero) {
+        <div class="mt-2 rounded-xl border border-slate-200 p-3 text-sm">
+          <p class="font-semibold text-slate-900">{{ q.numero }}. {{ q.pregunta }}</p>
+          <p class="mt-1 text-xs text-slate-500">Respondió: {{ q.quienRespondio || 'No consignado' }}</p>
+          <p class="mt-1 whitespace-pre-line text-slate-700">{{ q.respuesta || 'Sin respuesta registrada' }}</p>
+        </div>
+      }
+      <h3 class="mt-5 text-sm font-bold text-slate-900">Observaciones</h3>
+      <p class="mt-1 whitespace-pre-line rounded-xl bg-slate-50 p-4 text-sm text-slate-700">{{ v.observaciones || 'Sin observaciones' }}</p>
+      <h3 class="mt-5 text-sm font-bold text-slate-900">Fotografías ({{ v.fotos.length }}/4)</h3>
+      <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        @for (foto of v.fotos; track foto.id) {
+          <a [href]="foto.urlArchivo" target="_blank" rel="noopener noreferrer" class="overflow-hidden rounded-xl border border-slate-200">
+            <img [src]="foto.urlArchivo" [alt]="'Evidencia ' + foto.id" class="h-32 w-full object-cover">
+          </a>
+        }
+      </div>
+      <div class="mt-6 flex justify-end">
+        <button type="button" (click)="descargarExcel(v)" [disabled]="exportandoId() !== null"
+          class="rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">Exportar ficha Excel</button>
+      </div>
+    </section>
+  </div>
+}

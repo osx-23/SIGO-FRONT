@@ -5,6 +5,7 @@ import {
   ElementRef,
   HostListener,
   OnInit,
+  OnDestroy,
   ViewChild,
   inject
 } from '@angular/core';
@@ -18,6 +19,7 @@ import {
 import {
   AuthService
 } from '../../../../core/auth/auth.service';
+import { ModoConcentracionService } from '../../../../core/ui/modo-concentracion.service';
 
 import {
   CoberturaUbicacion,
@@ -95,13 +97,21 @@ interface GrupoConflictoCasetaExcel {
     './distribucion-controlador.component.css'
 })
 export class DistribucionControladorComponent
-  implements OnInit {
+  implements OnInit, OnDestroy {
 
   private readonly api =
     inject(ProgramacionApiService);
 
   readonly auth =
     inject(AuthService);
+
+  readonly modoConcentracion = inject(ModoConcentracionService);
+  mostrarCoberturaConcentracion = false;
+
+  /** Filtro opcional, únicamente en modo concentración. */
+  ocultarDiasPasadosConcentracion = false;
+  private semanaAnteriorConcentracion: number | null = null;
+  private busquedaAnteriorConcentracion: string | null = null;
 
   @ViewChild('tablaSuperior')
   private tablaSuperior?: ElementRef<HTMLDivElement>;
@@ -322,6 +332,12 @@ export class DistribucionControladorComponent
     'SEMANA';
 
   generadorSemana = 1;
+
+  /** El diálogo de concentración propone solo fechas comprendidas en el mes visible. */
+  generadorDesdeConcentracion: string | null = null;
+  generadorHastaConcentracion = '';
+  generadorAlcanceConcentracion: 'FECHA' | 'FIN_MES' = 'FIN_MES';
+  private periodoAnteriorGeneradorConcentracion: TipoPeriodoCaseta | null = null;
 
   generandoDistribucion = false;
 
@@ -654,6 +670,62 @@ export class DistribucionControladorComponent
     );
   }
 
+  /** El modo concentración presenta todo el mes sin modificar las asignaciones pendientes. */
+  activarModoConcentracion(): void {
+    if (this.modoConcentracion.activo()) return;
+    this.semanaAnteriorConcentracion = this.filtroSemana;
+    this.busquedaAnteriorConcentracion = this.busqueda;
+    this.busqueda = '';
+    this.mostrarCoberturaConcentracion = false;
+    this.cambiarSemana(0);
+    this.modoConcentracion.activar();
+  }
+
+  /** Al salir se recupera la semana previamente elegida en la vista normal. */
+  salirModoConcentracion(): void {
+    if (!this.modoConcentracion.activo()) return;
+    this.modoConcentracion.desactivar();
+    if (this.semanaAnteriorConcentracion !== null) {
+      this.cambiarSemana(this.semanaAnteriorConcentracion);
+      this.semanaAnteriorConcentracion = null;
+    }
+    if (this.busquedaAnteriorConcentracion !== null) {
+      this.busqueda = this.busquedaAnteriorConcentracion;
+      this.busquedaAnteriorConcentracion = null;
+    }
+  }
+
+  alternarCoberturaConcentracion(): void {
+    this.mostrarCoberturaConcentracion = !this.mostrarCoberturaConcentracion;
+  }
+
+  get plazaTextoConcentracion(): string {
+    return this.plazas.find(plaza => plaza.id === this.plazaId)?.codigo
+      ?? this.auth.usuario()?.plaza
+      ?? 'Sin plaza';
+  }
+
+  @HostListener('document:keydown.escape', ['$event'])
+  cerrarConcentracionConEscape(event: Event): void {
+    if (!this.modoConcentracion.activo()) return;
+    // Escape no debe cerrar el área de trabajo cuando otro diálogo esté abierto.
+    if (this.conflictoVisible ||
+        this.modalDetalleAgenteAbierto ||
+        this.modalReportePdfAbierto ||
+        this.modalUbicacionesAbierto ||
+        this.modalRestriccionesAbierto ||
+        this.generadorAbierto ||
+        this.modalResultadoDistribucionAbierto ||
+        this.modalCambiosPendientesAbierto) return;
+
+    event.preventDefault();
+    this.salirModoConcentracion();
+  }
+
+  ngOnDestroy(): void {
+    this.modoConcentracion.desactivar();
+  }
+
   ngOnInit(): void {
 
     if (
@@ -961,17 +1033,45 @@ export class DistribucionControladorComponent
 
   get diasVisibles(): number[] {
 
-    if (this.filtroSemana === 0) {
-      return this.dias;
+    const dias = this.filtroSemana === 0
+      ? this.dias
+      : this.dias.slice((this.filtroSemana - 1) * 7, this.filtroSemana * 7);
+
+    // La vista normal no se ve afectada por el filtro de concentración.
+    if (!this.modoConcentracion.activo() || !this.ocultarDiasPasadosConcentracion) {
+      return dias;
     }
 
-    const inicio =
-      (this.filtroSemana - 1) * 7;
+    // Se utiliza la fecha de Perú, incluso si el equipo está en otra zona horaria.
+    const hoy = this.fechaActualLima();
+    return dias.filter(dia => this.fecha(dia) >= hoy);
+  }
 
-    return this.dias.slice(
-      inicio,
-      inicio + 7
-    );
+  /** Formato YYYY-MM-DD, calculado con el calendario de Lima. */
+  private fechaActualLima(): string {
+    const partes = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Lima',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(new Date());
+
+    const valor = (tipo: 'year' | 'month' | 'day'): string =>
+      partes.find(parte => parte.type === tipo)?.value ?? '';
+
+    return `${valor('year')}-${valor('month')}-${valor('day')}`;
+  }
+
+  /** Muestra el primer día disponible al cambiar el filtro. */
+  alCambiarDiasPasados(): void {
+    queueMicrotask(() => {
+      if (this.tablaSuperior?.nativeElement) {
+        this.tablaSuperior.nativeElement.scrollLeft = 0;
+      }
+      if (this.tablaCasetas?.nativeElement) {
+        this.tablaCasetas.nativeElement.scrollLeft = 0;
+      }
+    });
   }
 
   get rangoSemanaTexto(): string {
@@ -4325,6 +4425,53 @@ export class DistribucionControladorComponent
   }
 
 
+  get generadorFinMesConcentracion(): string {
+    return this.fecha(new Date(this.anio, this.mes, 0).getDate());
+  }
+
+  get generadorHastaEfectivoConcentracion(): string {
+    return this.generadorAlcanceConcentracion === 'FIN_MES'
+      ? this.generadorFinMesConcentracion
+      : this.generadorHastaConcentracion;
+  }
+
+  get generadorRangoValidoConcentracion(): boolean {
+    if (!this.generadorDesdeConcentracion) return true;
+    const hasta = this.generadorHastaEfectivoConcentracion;
+    return /^\d{4}-\d{2}-\d{2}$/.test(hasta)
+      && hasta >= this.generadorDesdeConcentracion
+      && hasta <= this.generadorFinMesConcentracion;
+  }
+
+  /** Genera únicamente las casetas faltantes entre hoy y la fecha elegida. */
+  abrirGeneradorConcentracion(): void {
+    if (!this.modoConcentracion.activo() ||
+        !this.puedeGenerarDistribucion ||
+        !this.plazaId ||
+        this.cargando ||
+        this.guardando ||
+        this.generandoDistribucion) return;
+
+    if (this.cambios.size > 0) {
+      this.error = 'Guarda primero las asignaciones pendientes antes de generar otras.';
+      return;
+    }
+
+    this.abrirGeneradorDistribucion();
+    if (!this.generadorAbierto) return;
+
+    const hoy = this.fechaActualLima();
+    const inicioMes = this.fecha(1);
+    this.generadorDesdeConcentracion =
+      hoy.startsWith(this.mesInput) ? hoy : inicioMes;
+    this.generadorHastaConcentracion = this.generadorDesdeConcentracion;
+    this.generadorAlcanceConcentracion = 'FIN_MES';
+    this.periodoAnteriorGeneradorConcentracion = this.generadorPeriodo;
+    this.generadorPeriodo = 'MES';
+    this.generadorSemana = 1;
+    this.cdr.detectChanges();
+  }
+
   abrirGeneradorDistribucion(): void {
 
     if (
@@ -4333,6 +4480,13 @@ export class DistribucionControladorComponent
     ) {
       return;
     }
+
+    // La apertura normal no debe heredar el rango de una generación en concentración.
+    if (this.periodoAnteriorGeneradorConcentracion !== null) {
+      this.generadorPeriodo = this.periodoAnteriorGeneradorConcentracion;
+      this.periodoAnteriorGeneradorConcentracion = null;
+    }
+    this.generadorDesdeConcentracion = null;
 
     this.generadorAbierto =
       true;
@@ -4360,6 +4514,8 @@ export class DistribucionControladorComponent
 
     this.generadorAbierto =
       false;
+
+    this.generadorDesdeConcentracion = null;
 
     this.errorGenerador =
       '';
@@ -4401,6 +4557,20 @@ export class DistribucionControladorComponent
       !this.plazaId
     ) {
       return;
+    }
+
+    const rangoConcentracion = this.generadorDesdeConcentracion;
+    if (rangoConcentracion) {
+      if (this.cambios.size > 0) {
+        this.errorGenerador =
+          'Guarda primero los cambios de la distribución antes de generar más casetas.';
+        return;
+      }
+      if (!this.generadorRangoValidoConcentracion) {
+        this.errorGenerador =
+          'Selecciona una fecha límite válida dentro del mes y no anterior al inicio.';
+        return;
+      }
     }
 
     this.generandoDistribucion =
@@ -4448,13 +4618,19 @@ export class DistribucionControladorComponent
           this.mes,
 
         periodo:
-          this.generadorPeriodo,
+          rangoConcentracion ? 'MES' : this.generadorPeriodo,
 
         semana:
-          this.generadorPeriodo ===
-            'SEMANA'
+          rangoConcentracion
+            ? null
+            : this.generadorPeriodo === 'SEMANA'
               ? this.generadorSemana
-              : null
+              : null,
+
+        ...(rangoConcentracion ? {
+          desde: rangoConcentracion,
+          hasta: this.generadorHastaEfectivoConcentracion
+        } : {})
       })
       .pipe(
 

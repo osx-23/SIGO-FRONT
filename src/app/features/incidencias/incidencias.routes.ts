@@ -23,6 +23,13 @@ export const INCIDENCIAS_ROUTES: Routes = [
         .then(m => m.ControlOperativoComponent)
   },
   {
+    path: 'incidencias/visitas-invermet',
+    canActivate: [moduleGuard('INCIDENCIAS'), roleGuard('SUPERVISOR', 'CONTROLADOR', 'OPERADOR')],
+    loadComponent: () =>
+      import('./pages/visitas-invermet/visitas-invermet.component')
+        .then(m => m.VisitasInvermetComponent)
+  },
+  {
     path: 'incidencias/historial',
     canActivate: [
       moduleGuard('INCIDENCIAS'),

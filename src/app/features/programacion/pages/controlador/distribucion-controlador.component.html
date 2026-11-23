@@ -1,4 +1,64 @@
-<section class="page">
+<section class="page" [class.modo-concentracion]="modoConcentracion.activo()">
+
+  @if (modoConcentracion.activo()) {
+    <div class="focus-toolbar" role="region" aria-label="Modo concentración de distribución">
+      <div class="focus-toolbar-main">
+        <span class="focus-mark" aria-hidden="true">▦</span>
+        <div class="focus-heading">
+          <span class="focus-eyebrow">Modo concentración · Controlador</span>
+          <h1>Asignación diaria de casetas</h1>
+          <div class="focus-meta">
+            <span>{{ plazaTextoConcentracion }}</span>
+            <span>{{ mesInput }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="focus-toolbar-actions">
+        <span class="focus-status" [class.tiene-pendientes]="cambios.size > 0" role="status">
+          {{ cambios.size === 0 ? 'Sin cambios pendientes' : cambios.size + ' cambio(s) sin guardar' }}
+        </span>
+        @if (puedeGenerarDistribucion) {
+          <button
+            type="button"
+            class="focus-action focus-action-generate"
+            (click)="abrirGeneradorConcentracion()"
+            [disabled]="cargando || guardando || generandoDistribucion || !plazaId || cambios.size > 0"
+            [title]="cambios.size > 0
+              ? 'Guarda primero los cambios pendientes'
+              : 'Elegir hasta qué fecha completar la distribución'"
+          >
+            Generar distribución
+          </button>
+        }
+        <button
+          type="button"
+          class="focus-action focus-action-coverage"
+          [attr.aria-pressed]="mostrarCoberturaConcentracion"
+          (click)="alternarCoberturaConcentracion()"
+        >
+          {{ mostrarCoberturaConcentracion ? 'Ocultar cobertura' : 'Ver cobertura' }}
+        </button>
+        <button
+          type="button"
+          class="focus-action focus-action-save"
+          (click)="guardar()"
+          [disabled]="guardando || cambios.size === 0"
+        >
+          {{ guardando ? 'Guardando...' : 'Guardar cambios' }}
+          @if (cambios.size > 0) { <strong class="focus-save-count">{{ cambios.size }}</strong> }
+        </button>
+        <button
+          type="button"
+          class="focus-action focus-action-exit"
+          (click)="salirModoConcentracion()"
+          title="Volver a la vista normal (Esc)"
+          aria-label="Salir del modo concentración"
+        >
+          Salir <kbd>Esc</kbd>
+        </button>
+      </div>
+    </div>
+  }
 
   <header
     class="mb-4 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60 sm:p-8"
@@ -136,6 +196,20 @@
             ? 'Exportando...'
             : 'Exportar JSON'
         }}
+      </button>
+
+      <button
+        class="secondary focus-enter-button"
+        type="button"
+        (click)="activarModoConcentracion()"
+        title="Ampliar el espacio para asignar casetas"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+          width="18" height="18" aria-hidden="true">
+          <path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>
+        </svg>
+        Modo concentración
       </button>
 
       <button
@@ -520,14 +594,35 @@
         </p>
       </div>
 
-      <div class="table-head-meta">
-        <strong>{{ agentesFiltrados.length }}</strong>
-        <span>agentes encontrados</span>
+      <div class="distribution-head-tools">
+        @if (modoConcentracion.activo()) {
+          <label class="focus-days-toggle">
+            <input
+              type="checkbox"
+              [(ngModel)]="ocultarDiasPasadosConcentracion"
+              (ngModelChange)="alCambiarDiasPasados()"
+            >
+            <span>Ocultar días pasados</span>
+          </label>
+          <span class="focus-days-count" aria-live="polite">
+            {{ diasVisibles.length }} día(s) visibles
+          </span>
+        }
+        <div class="table-head-meta">
+          <strong>{{ agentesFiltrados.length }}</strong>
+          <span>agentes encontrados</span>
+        </div>
       </div>
     </div>
 
     @if(cargando){
       <div class="empty">Cargando distribución...</div>
+    }
+    @else if(modoConcentracion.activo() && ocultarDiasPasadosConcentracion && diasVisibles.length === 0){
+      <div class="focus-no-days" role="status">
+        No quedan días desde hoy en el mes seleccionado.
+        Desmarca «Ocultar días pasados» para consultar el mes completo.
+      </div>
     }
     @else if(agentesFiltrados.length === 0){
       <div class="empty">
@@ -585,6 +680,8 @@
 
                       <div
                         class="assignment-cell"
+                        [ngClass]="modoConcentracion.activo() ? claseEstado(p.estado) : null"
+                        [class.focus-operational]="modoConcentracion.activo() && esOperativo(p.estado)"
                         [class.assignment-observation]="tieneObservacion(p.programacionId)"
                         [title]="
                           tieneObservacion(p.programacionId)
@@ -599,7 +696,7 @@
                         </span>
 
                         @if(esOperativo(p.estado)){
-                          <div class="location-select-wrap">
+                          <div class="location-select-wrap" [class.has-observation]="tieneObservacion(p.programacionId)">
                             <select
                               class="location-select"
                               [class.location-select-observation]="tieneObservacion(p.programacionId)"
@@ -612,7 +709,7 @@
                                   : 'Asignar caseta · Turno ' + p.estado
                               "
                             >
-                              <option [ngValue]="null">Sin asignar</option>
+                              <option [ngValue]="null">{{ modoConcentracion.activo() ? p.estado : 'Sin asignar' }}</option>
 
                               @for(ubicacion of ubicacionesParaTurno(p.estado, p.programacionId); track ubicacion.id){
                                 <option
@@ -678,7 +775,7 @@
   <!-- TABLA INFERIOR: COBERTURA -->
   <!-- ===================================================== -->
 
-  <section class="card coverage-card">
+  <section class="card coverage-card" [class.focus-coverage-visible]="mostrarCoberturaConcentracion">
 
     <div class="card-head table-card-head">
       <div>
@@ -740,6 +837,9 @@
 
     @if(cargandoCobertura){
       <div class="empty">Cargando cobertura...</div>
+    }
+    @else if(modoConcentracion.activo() && ocultarDiasPasadosConcentracion && diasVisibles.length === 0){
+      <div class="empty">No hay días vigentes para mostrar en este mes.</div>
     }
     @else if(ubicacionesCobertura.length === 0){
       <div class="empty">No existen casetas habilitadas para el turno seleccionado.</div>
@@ -1149,10 +1249,17 @@
         <div>
           <span class="eyebrow">GENERADOR AUTOMÁTICO</span>
           <h2 id="generator-title">Generar asignación de casetas</h2>
-          <p>
-            El sistema usará los turnos A, B y C ya programados por el Supervisor
-            para cargar automáticamente las casetas en esta misma tabla.
-          </p>
+          @if (generadorDesdeConcentracion) {
+            <p>
+              Elige hasta qué fecha completar las casetas pendientes. SIGO respetará las asignaciones
+              ya guardadas y no propondrá cambios fuera del período seleccionado.
+            </p>
+          } @else {
+            <p>
+              El sistema usará los turnos A, B y C ya programados por el Supervisor
+              para cargar automáticamente las casetas en esta misma tabla.
+            </p>
+          }
         </div>
 
         <button
@@ -1188,39 +1295,103 @@
         </div>
       </div>
 
-      <div class="generator-period">
-        <label>Periodo de generación</label>
+      @if (generadorDesdeConcentracion) {
+        <fieldset class="generator-focus-range">
+          <legend>¿Hasta qué fecha deseas generar la distribución?</legend>
 
-        <div class="segmented-generator">
-          <button
-            type="button"
-            [class.active]="generadorPeriodo === 'SEMANA'"
-            (click)="cambiarPeriodoGenerador('SEMANA')"
-          >
-            Semana
-          </button>
+          <p class="generator-focus-start">
+            Fecha de inicio: <strong>{{ generadorDesdeConcentracion }}</strong>
+            <span>· Solo se completarán días dentro de este mes.</span>
+          </p>
 
-          <button
-            type="button"
-            [class.active]="generadorPeriodo === 'MES'"
-            (click)="cambiarPeriodoGenerador('MES')"
-          >
-            Mes completo
-          </button>
+          <label class="generator-focus-choice"
+            [class.generator-focus-choice-selected]="generadorAlcanceConcentracion === 'FECHA'">
+            <input
+              type="radio"
+              name="generadorAlcance"
+              [(ngModel)]="generadorAlcanceConcentracion"
+              value="FECHA"
+            >
+            <span>
+              <strong>Hasta una fecha específica</strong>
+              <small>Generar desde la fecha de inicio hasta el día que elijas.</small>
+            </span>
+          </label>
+
+          @if (generadorAlcanceConcentracion === 'FECHA') {
+            <label class="generator-focus-date">
+              Fecha límite
+              <input
+                type="date"
+                [(ngModel)]="generadorHastaConcentracion"
+                [min]="generadorDesdeConcentracion"
+                [max]="generadorFinMesConcentracion"
+                [disabled]="generandoDistribucion"
+              >
+            </label>
+          }
+
+          <label class="generator-focus-choice"
+            [class.generator-focus-choice-selected]="generadorAlcanceConcentracion === 'FIN_MES'">
+            <input
+              type="radio"
+              name="generadorAlcance"
+              [(ngModel)]="generadorAlcanceConcentracion"
+              value="FIN_MES"
+            >
+            <span>
+              <strong>Completar hasta fin de mes</strong>
+              <small>Generar hasta el {{ generadorFinMesConcentracion }}.</small>
+            </span>
+          </label>
+
+          @if (!generadorRangoValidoConcentracion) {
+            <p class="generator-focus-invalid" role="alert">
+              Selecciona una fecha entre {{ generadorDesdeConcentracion }} y
+              {{ generadorFinMesConcentracion }}.
+            </p>
+          } @else {
+            <p class="generator-focus-summary" aria-live="polite">
+              Se generará del <strong>{{ generadorDesdeConcentracion }}</strong>
+              al <strong>{{ generadorHastaEfectivoConcentracion }}</strong>.
+            </p>
+          }
+        </fieldset>
+      } @else {
+        <div class="generator-period">
+          <label>Periodo de generación</label>
+
+          <div class="segmented-generator">
+            <button
+              type="button"
+              [class.active]="generadorPeriodo === 'SEMANA'"
+              (click)="cambiarPeriodoGenerador('SEMANA')"
+            >
+              Semana
+            </button>
+
+            <button
+              type="button"
+              [class.active]="generadorPeriodo === 'MES'"
+              (click)="cambiarPeriodoGenerador('MES')"
+            >
+              Mes completo
+            </button>
+          </div>
         </div>
-      </div>
 
-      @if(generadorPeriodo === 'SEMANA'){
-        <label class="generator-week">
-          Semana
-          <select [(ngModel)]="generadorSemana">
-            <option [ngValue]="1">Semana 1 · 01 al 07</option>
-            <option [ngValue]="2">Semana 2 · 08 al 14</option>
-            <option [ngValue]="3">Semana 3 · 15 al 21</option>
-            <option [ngValue]="4">Semana 4 · 22 al 28</option>
-            <option [ngValue]="5">Semana 5 · 29 al fin de mes</option>
-          </select>
-        </label>
+        @if(generadorPeriodo === 'SEMANA'){
+          <label class="generator-week">
+            Semana
+            <select [(ngModel)]="generadorSemana">
+              <option [ngValue]="1">Semana 1 · 01 al 07</option>
+              <option [ngValue]="2">Semana 2 · 08 al 14</option>
+              <option [ngValue]="3">Semana 3 · 15 al 21</option>
+              <option [ngValue]="4">Semana 4 · 22 al 28</option>
+              <option [ngValue]="5">Semana 5 · 29 al fin de mes</option>
+            </select>
+          </label>
+        }
       }
 
       <div class="generator-info">
@@ -1369,7 +1540,8 @@
           class="primary"
           type="button"
           (click)="generarYCargarDistribucion()"
-          [disabled]="generandoDistribucion || !plazaId"
+          [disabled]="generandoDistribucion || !plazaId ||
+            (generadorDesdeConcentracion !== null && (!generadorRangoValidoConcentracion || cambios.size > 0))"
         >
           {{
             generandoDistribucion

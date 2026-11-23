@@ -2095,3 +2095,38 @@ footer {
   }
   .agent-shell .plaza-card strong { font-size: .84rem; }
 }
+
+
+/* =========================================================
+   MODO CONCENTRACIÓN · DISTRIBUCIÓN
+   =========================================================
+   La pantalla operativa conserva su componente y estado.
+   Solo se ocultan las distracciones del layout general.
+*/
+.shell.modo-concentracion,
+.shell.modo-concentracion.collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.shell.modo-concentracion > aside,
+.shell.modo-concentracion > .overlay,
+.shell.modo-concentracion > .welcome-screen,
+.shell.modo-concentracion .content > header,
+.shell.modo-concentracion .content > footer,
+.shell.modo-concentracion > .chat-launcher,
+.shell.modo-concentracion > .chat-popup {
+  display: none !important;
+}
+
+.shell.modo-concentracion .content {
+  grid-column: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 100dvh;
+}
+
+.shell.modo-concentracion .content > main {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+}

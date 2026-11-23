@@ -17,6 +17,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ModuloSigo } from '../../core/auth/auth.models';
 import { ChatComponent } from '../../features/chat/chat.component';
 import { IncidenciaApiService } from '../../features/incidencias/services/incidencia-api.service';
+import { ModoConcentracionService } from '../../core/ui/modo-concentracion.service';
 
 type GrupoMenu =
   | 'PROGRAMACION'
@@ -69,7 +70,8 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   constructor(
     public auth: AuthService,
     private router: Router,
-    private incidenciasApi: IncidenciaApiService
+    private incidenciasApi: IncidenciaApiService,
+    public readonly modoConcentracion: ModoConcentracionService
   ) {}
 
 

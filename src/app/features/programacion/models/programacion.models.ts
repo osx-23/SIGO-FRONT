@@ -181,6 +181,9 @@ export interface GenerarCasetasRequest {
   mes: number;
   periodo: TipoPeriodoCaseta;
   semana: number | null;
+  /** Rango opcional dentro del mes. Se omite en la generación clásica. */
+  desde?: string;
+  hasta?: string;
 }
 
 export interface AsignacionCasetaPropuesta {

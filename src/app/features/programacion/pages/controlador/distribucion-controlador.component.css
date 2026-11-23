@@ -3491,3 +3491,828 @@ th.sticky-name{
 .assignment-cell.assignment-observation .shift-state{
   box-shadow:0 0 0 1px rgba(220,38,38,.18);
 }
+
+
+/* =========================================================
+   MODO CONCENTRACIÓN · ESPACIO OPERATIVO
+   ========================================================= */
+.page.modo-concentracion {
+  width:100%;
+  min-height:100dvh;
+  padding:clamp(8px,1.2vw,18px);
+  background:#eef3fa;
+}
+
+.page.modo-concentracion > header:not(.focus-toolbar) {
+  display:none;
+}
+
+.focus-toolbar {
+  position:sticky;
+  top:0;
+  z-index:40;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  margin-bottom:12px;
+  padding:13px 18px;
+  border:1px solid #1e3a5f;
+  border-radius:18px;
+  background:linear-gradient(112deg,#0b2446,#123c72);
+  color:#fff;
+  box-shadow:0 12px 28px rgba(11,36,70,.17);
+}
+
+.focus-toolbar-main {
+  display:flex;
+  align-items:center;
+  gap:13px;
+  min-width:0;
+}
+
+.focus-mark {
+  flex:0 0 43px;
+  display:grid;
+  place-items:center;
+  width:43px;
+  height:43px;
+  border:1px solid rgba(191,219,254,.25);
+  border-radius:12px;
+  background:rgba(255,255,255,.10);
+  color:#bfdbfe;
+  font-size:1.55rem;
+}
+
+.focus-heading {min-width:0;}
+.focus-eyebrow {
+  display:block;
+  color:#93c5fd;
+  font-size:.62rem;
+  font-weight:800;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+}
+.focus-heading h1 {
+  margin:3px 0 4px;
+  color:#fff;
+  font-size:clamp(1rem,1.65vw,1.35rem);
+  font-weight:850;
+  line-height:1.2;
+  letter-spacing:-.02em;
+}
+.focus-meta {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.focus-meta span {
+  padding:3px 8px;
+  border:1px solid rgba(191,219,254,.18);
+  border-radius:7px;
+  background:rgba(255,255,255,.08);
+  color:#dbeafe;
+  font-size:.68rem;
+  font-weight:650;
+}
+.focus-toolbar-actions {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+}
+.focus-status {
+  padding:8px 10px;
+  border-radius:9px;
+  background:rgba(255,255,255,.1);
+  color:#cbd5e1;
+  font-size:.72rem;
+  font-weight:750;
+  white-space:nowrap;
+}
+.focus-status.tiene-pendientes {
+  background:rgba(245,158,11,.16);
+  color:#fcd34d;
+}
+.focus-action {
+  display:inline-flex;
+  min-height:40px;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:9px 13px;
+  border:1px solid rgba(191,219,254,.35);
+  border-radius:10px;
+  background:rgba(255,255,255,.1);
+  color:#fff;
+  font-size:.73rem;
+  font-weight:800;
+  white-space:nowrap;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease;
+}
+.focus-action:hover:not(:disabled) {
+  background:rgba(255,255,255,.19);
+  border-color:rgba(219,234,254,.65);
+}
+.focus-action:focus-visible {
+  outline:3px solid #93c5fd;
+  outline-offset:2px;
+}
+.focus-action:disabled {opacity:.45;cursor:not-allowed;}
+.focus-action-save {
+  border-color:#60a5fa;
+  background:#2563eb;
+}
+.focus-action-save:hover:not(:disabled) {background:#1d4ed8;}
+.focus-save-count {
+  display:grid;
+  min-width:22px;
+  height:22px;
+  place-items:center;
+  padding:0 5px;
+  border-radius:99px;
+  background:#fff;
+  color:#1d4ed8;
+  font-size:.7rem;
+}
+.focus-action-exit {
+  background:#fff;
+  border-color:#fff;
+  color:#0f2747;
+}
+.focus-action-exit:hover:not(:disabled) {
+  background:#dbeafe;
+  border-color:#dbeafe;
+}
+.focus-action kbd {
+  padding:2px 5px;
+  border:1px solid #cbd5e1;
+  border-radius:5px;
+  background:#f1f5f9;
+  color:#475569;
+  font:inherit;
+  font-size:.64rem;
+}
+.focus-enter-button svg {flex:none;}
+
+.page.modo-concentracion .summary-grid,
+.page.modo-concentracion .status-help,
+.page.modo-concentracion .sync-message {
+  display:none;
+}
+.page.modo-concentracion .filters-card {
+  margin-bottom:12px;
+  border-radius:14px;
+}
+.page.modo-concentracion .filters-grid {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  padding:10px 12px;
+}
+.page.modo-concentracion .week-row {
+  padding:8px 12px 10px;
+}
+.page.modo-concentracion .card {
+  border-radius:14px;
+}
+.page.modo-concentracion .card-head {
+  padding:10px 14px;
+}
+.page.modo-concentracion .agents-card .card-head p {
+  display:none;
+}
+.page.modo-concentracion .agents-scroll {
+  height:clamp(300px,calc(100dvh - 327px),900px);
+  max-height:none;
+}
+.page.modo-concentracion .coverage-card:not(.focus-coverage-visible) {
+  display:none;
+}
+.page.modo-concentracion .coverage-card.focus-coverage-visible {
+  margin-top:12px;
+}
+.page.modo-concentracion .coverage-scroll {
+  max-height:280px;
+}
+
+@media (max-width:1050px) {
+  .focus-toolbar {
+    align-items:stretch;
+    flex-direction:column;
+    gap:12px;
+  }
+  .focus-toolbar-actions {justify-content:flex-start;}
+  .page.modo-concentracion .agents-scroll {
+    height:clamp(300px,calc(100dvh - 375px),740px);
+  }
+}
+
+@media (max-width:800px) {
+  .page.modo-concentracion .filters-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .page.modo-concentracion .filters-grid .search-field {
+    grid-column:1 / -1;
+  }
+  .page.modo-concentracion .agents-scroll {
+    height:clamp(300px,calc(100dvh - 445px),650px);
+  }
+}
+
+@media (max-width:560px) {
+  .page.modo-concentracion {padding:8px;}
+  .focus-toolbar {padding:12px;}
+  .focus-mark {display:none;}
+  .focus-toolbar-actions {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    width:100%;
+  }
+  .focus-status {
+    grid-column:1 / -1;
+    white-space:normal;
+  }
+  .focus-action {min-width:0;white-space:normal;}
+  .focus-action-exit {grid-column:2;}
+  .page.modo-concentracion .filters-grid {
+    grid-template-columns:1fr;
+  }
+  .page.modo-concentracion .filters-grid .search-field {
+    grid-column:auto;
+  }
+  .page.modo-concentracion .agents-scroll {
+    height:clamp(290px,calc(100dvh - 515px),550px);
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .focus-action {transition:none;}
+}
+
+
+/* =========================================================
+   CONCENTRACIÓN COMPACTA · MATRIZ MENSUAL DE AGENTES
+   =========================================================
+   La vista estándar mantiene sus filtros, filas y badges.
+   En concentración: un solo renglón para turno/caseta.
+*/
+.page.modo-concentracion .filters-card {
+  display:none !important;
+}
+
+.page.modo-concentracion .focus-toolbar {
+  margin-bottom:9px;
+  padding:10px 14px;
+  border-radius:14px;
+}
+.page.modo-concentracion .focus-mark {
+  width:36px;
+  height:36px;
+  flex-basis:36px;
+  font-size:1.2rem;
+}
+.page.modo-concentracion .focus-heading h1 {
+  font-size:clamp(.95rem,1.35vw,1.2rem);
+}
+.page.modo-concentracion .focus-meta span {
+  padding:2px 7px;
+}
+.page.modo-concentracion .agents-card .card-head {
+  align-items:center;
+  padding:7px 12px;
+}
+.page.modo-concentracion .agents-card .card-head h2 {
+  margin:1px 0;
+  font-size:.85rem;
+}
+.page.modo-concentracion .agents-card .eyebrow {
+  font-size:.55rem;
+}
+.page.modo-concentracion .agents-card .table-head-meta strong {
+  font-size:.9rem;
+}
+.page.modo-concentracion .agents-card .table-head-meta span {
+  font-size:.55rem;
+}
+
+/* La matriz crece para ocupar el espacio liberado por los filtros. */
+.page.modo-concentracion .agents-scroll {
+  height:max(320px,calc(100dvh - 162px));
+  max-height:none;
+}
+
+/* Menos separación entre agentes y más columnas de días visibles. */
+.page.modo-concentracion .distribution-table th,
+.page.modo-concentracion .distribution-table td {
+  height:37px;
+  padding:2px 3px;
+}
+.page.modo-concentracion .distribution-table thead th {
+  height:45px;
+  padding:4px 2px;
+}
+.page.modo-concentracion .distribution-table .sticky-code {
+  left:0;
+  width:58px;
+  min-width:58px;
+  max-width:58px;
+  font-size:.66rem;
+}
+.page.modo-concentracion .distribution-table .sticky-name {
+  left:58px;
+  width:235px;
+  min-width:235px;
+  max-width:235px;
+}
+.page.modo-concentracion .distribution-table .day-column {
+  width:78px;
+  min-width:78px;
+  max-width:78px;
+}
+.page.modo-concentracion .distribution-table .day-header {
+  gap:0;
+}
+.page.modo-concentracion .distribution-table .day-header strong {
+  font-size:.57rem;
+}
+.page.modo-concentracion .distribution-table .day-header span {
+  font-size:.65rem;
+}
+.page.modo-concentracion .distribution-table .agent-button {
+  padding:2px 4px;
+  font-size:.67rem;
+  line-height:1.2;
+}
+
+/* El turno operativo colorea toda la casilla. El único texto
+   de la casilla es A/B/C (sin caseta) o el código de caseta.
+   El select sigue siendo nativo y accesible por teclado. */
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational {
+  display:flex;
+  flex-direction:row;
+  align-items:stretch;
+  justify-content:center;
+  width:100%;
+  min-height:30px;
+  gap:0;
+  padding:1px;
+  border:1px solid transparent;
+  border-radius:6px;
+  box-shadow:inset 0 0 0 1px rgba(15,23,42,.035);
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational.estado-a {
+  border-color:#86efac !important;
+  background:#dcfce7 !important;
+  color:#166534;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational.estado-b {
+  border-color:#fcd34d !important;
+  background:#fef3c7 !important;
+  color:#92400e;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational.estado-c {
+  border-color:#e6b1af !important;
+  background:#f6dada !important;
+  color:#713f3d;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .shift-state {
+  display:none;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select-wrap {
+  position:relative;
+  display:flex;
+  width:100%;
+  min-width:0;
+  align-items:center;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select {
+  display:block;
+  width:100%;
+  min-width:0;
+  height:28px;
+  padding:1px 12px 1px 3px;
+  appearance:none;
+  border:0 !important;
+  border-radius:5px;
+  background:transparent !important;
+  box-shadow:none;
+  color:inherit;
+  font-size:.69rem;
+  font-weight:850;
+  text-align:center;
+  text-align-last:center;
+  cursor:pointer;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select-wrap::after {
+  content:'⌄';
+  position:absolute;
+  right:2px;
+  top:50%;
+  transform:translateY(-55%);
+  color:currentColor;
+  font-size:.8rem;
+  line-height:1;
+  opacity:.58;
+  pointer-events:none;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select option {
+  color:#172033;
+  background:#fff;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select:focus-visible {
+  outline:2px solid #2563eb;
+  outline-offset:0;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select:disabled {
+  cursor:wait;
+  opacity:.7;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational.assignment-observation {
+  margin:0;
+  padding:0;
+  border:2px solid #ef4444 !important;
+  box-shadow:0 0 0 1px rgba(239,68,68,.16);
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .location-select-wrap.has-observation::after {
+  display:none;
+}
+.page.modo-concentracion .distribution-table .assignment-cell.focus-operational .assignment-observation-badge {
+  right:2px;
+  width:15px;
+  height:15px;
+  font-size:.55rem;
+}
+
+/* Estados no operativos conservan la letra original, pero ocupan
+   menos altura que dos controles superpuestos. */
+.page.modo-concentracion .distribution-table .assignment-cell:not(.focus-operational) {
+  min-height:30px;
+  flex-direction:row;
+  align-items:center;
+  gap:3px;
+  padding:2px;
+}
+.page.modo-concentracion .distribution-table .assignment-cell:not(.focus-operational) .shift-state {
+  min-width:30px;
+  height:23px;
+  padding:0 4px;
+  font-size:.57rem;
+}
+.page.modo-concentracion .distribution-table .assignment-cell:not(.focus-operational) .blocked-location {
+  display:none;
+}
+
+/* El estilo responsive de la vista normal no debe ensanchar la matriz
+   compacta al reducir el ancho de pantalla. */
+@media (max-width:1050px) {
+  .page.modo-concentracion .agents-scroll {
+    height:max(300px,calc(100dvh - 230px));
+  }
+}
+@media (max-width:800px) {
+  .page.modo-concentracion .agents-scroll {
+    height:max(280px,calc(100dvh - 258px));
+  }
+  .page.modo-concentracion .distribution-table .sticky-code {
+    width:52px;
+    min-width:52px;
+    max-width:52px;
+  }
+  .page.modo-concentracion .distribution-table .sticky-name {
+    left:52px;
+    width:205px;
+    min-width:205px;
+    max-width:205px;
+  }
+  .page.modo-concentracion .distribution-table .day-column {
+    width:74px;
+    min-width:74px;
+    max-width:74px;
+  }
+}
+@media (max-width:560px) {
+  .page.modo-concentracion .agents-scroll {
+    height:max(260px,calc(100dvh - 287px));
+  }
+  .page.modo-concentracion .distribution-table .sticky-code {
+    width:48px;
+    min-width:48px;
+    max-width:48px;
+  }
+  .page.modo-concentracion .distribution-table .sticky-name {
+    left:48px;
+    width:170px;
+    min-width:170px;
+    max-width:170px;
+  }
+  .page.modo-concentracion .distribution-table .day-column {
+    width:69px;
+    min-width:69px;
+    max-width:69px;
+  }
+  .page.modo-concentracion .distribution-table .agent-button {
+    font-size:.64rem;
+  }
+}
+
+
+/* =========================================================
+   MATRIZ DE CONCENTRACIÓN · DÍAS VIGENTES Y ANCHO APROVECHADO
+   ========================================================= */
+.distribution-head-tools {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.page.modo-concentracion .agents-card .card-head {
+  gap:10px;
+  padding:6px 10px;
+}
+
+.focus-days-toggle {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border:1px solid #bfdbfe;
+  border-radius:10px;
+  background:#eff6ff;
+  color:#1d4ed8;
+  font-size:.72rem;
+  font-weight:800;
+  line-height:1.2;
+  cursor:pointer;
+  user-select:none;
+  white-space:nowrap;
+}
+.focus-days-toggle:hover {
+  border-color:#93c5fd;
+  background:#dbeafe;
+}
+.focus-days-toggle:focus-within {
+  outline:2px solid #2563eb;
+  outline-offset:2px;
+}
+.focus-days-toggle input {
+  width:16px;
+  height:16px;
+  margin:0;
+  flex:none;
+  accent-color:#2563eb;
+  cursor:pointer;
+}
+.focus-days-count {
+  color:#64748b;
+  font-size:.69rem;
+  font-weight:750;
+  white-space:nowrap;
+}
+.focus-no-days {
+  padding:24px 14px;
+  background:#f8fafc;
+  color:#475569;
+  text-align:center;
+  font-size:.8rem;
+  line-height:1.6;
+}
+
+/* Cada columna ocupa solo lo necesario. Los nombres largos
+   mantienen el título completo al pasar el cursor. */
+.page.modo-concentracion {
+  padding-inline:7px;
+}
+.page.modo-concentracion .distribution-table .sticky-code {
+  width:52px;
+  min-width:52px;
+  max-width:52px;
+}
+.page.modo-concentracion .distribution-table .sticky-name {
+  left:52px;
+  width:210px;
+  min-width:210px;
+  max-width:210px;
+}
+.page.modo-concentracion .distribution-table .day-column {
+  width:70px;
+  min-width:70px;
+  max-width:70px;
+}
+.page.modo-concentracion .distribution-table .agent-button {
+  max-width:100%;
+  font-size:.65rem;
+}
+.page.modo-concentracion .distribution-table .location-select {
+  font-size:.67rem;
+}
+.page.modo-concentracion .distribution-table .day-header strong {
+  font-size:.56rem;
+}
+.page.modo-concentracion .agents-scroll {
+  height:max(320px,calc(100dvh - 155px));
+}
+
+/* Al mostrar menos columnas, la cobertura continúa usando
+   exactamente el mismo rango de días que Distribución. */
+@media (max-width:1050px) {
+  .page.modo-concentracion .agents-scroll {
+    height:max(300px,calc(100dvh - 222px));
+  }
+}
+@media (max-width:800px) {
+  .page.modo-concentracion .distribution-table .sticky-code {
+    width:48px;
+    min-width:48px;
+    max-width:48px;
+  }
+  .page.modo-concentracion .distribution-table .sticky-name {
+    left:48px;
+    width:190px;
+    min-width:190px;
+    max-width:190px;
+  }
+  .page.modo-concentracion .distribution-table .day-column {
+    width:66px;
+    min-width:66px;
+    max-width:66px;
+  }
+  .page.modo-concentracion .agents-scroll {
+    height:max(280px,calc(100dvh - 245px));
+  }
+}
+@media (max-width:560px) {
+  .page.modo-concentracion {
+    padding-inline:5px;
+  }
+  .page.modo-concentracion .agents-card .card-head {
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .page.modo-concentracion .distribution-head-tools {
+    justify-content:space-between;
+    gap:7px;
+  }
+  .page.modo-concentracion .focus-days-toggle {
+    padding:6px 8px;
+    font-size:.68rem;
+  }
+  .page.modo-concentracion .distribution-table .sticky-code {
+    width:46px;
+    min-width:46px;
+    max-width:46px;
+  }
+  .page.modo-concentracion .distribution-table .sticky-name {
+    left:46px;
+    width:158px;
+    min-width:158px;
+    max-width:158px;
+  }
+  .page.modo-concentracion .distribution-table .day-column {
+    width:63px;
+    min-width:63px;
+    max-width:63px;
+  }
+  .page.modo-concentracion .agents-scroll {
+    height:max(270px,calc(100dvh - 300px));
+  }
+}
+
+
+/* Generación automática en modo concentración. */
+.focus-action-generate {
+  border-color:rgba(147,197,253,.72);
+  background:rgba(37,99,235,.3);
+  color:#eff6ff;
+}
+.focus-action-generate:hover:not(:disabled) {
+  border-color:#bfdbfe;
+  background:rgba(37,99,235,.53);
+}
+
+.generator-focus-range {
+  min-width:0;
+  display:grid;
+  gap:11px;
+  margin:20px 22px 0;
+  padding:16px;
+  border:1px solid #bfdbfe;
+  border-radius:15px;
+  background:#f8fbff;
+}
+.generator-focus-range legend {
+  max-width:100%;
+  padding:0 8px;
+  color:#0f172a;
+  font-size:.91rem;
+  font-weight:850;
+  line-height:1.4;
+}
+.generator-focus-start {
+  margin:0;
+  color:#475569;
+  font-size:.75rem;
+  line-height:1.55;
+}
+.generator-focus-start strong {
+  color:#1d4ed8;
+}
+.generator-focus-start span {
+  color:#64748b;
+}
+.generator-focus-choice {
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:13px;
+  border:1px solid #dbe3ec;
+  border-radius:12px;
+  background:#fff;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease;
+}
+.generator-focus-choice:hover,
+.generator-focus-choice.generator-focus-choice-selected {
+  border-color:#60a5fa;
+  background:#eff6ff;
+}
+.generator-focus-choice:focus-within {
+  outline:2px solid #2563eb;
+  outline-offset:2px;
+}
+.generator-focus-choice > input {
+  width:18px;
+  height:18px;
+  margin:2px 0 0;
+  flex:none;
+  accent-color:#2563eb;
+  cursor:pointer;
+}
+.generator-focus-choice > span {
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+.generator-focus-choice strong {
+  color:#0f172a;
+  font-size:.81rem;
+}
+.generator-focus-choice small {
+  color:#64748b;
+  font-size:.72rem;
+  line-height:1.5;
+}
+.generator-focus-date {
+  display:grid;
+  gap:7px;
+  margin-left:30px;
+  color:#334155;
+  font-size:.73rem;
+  font-weight:800;
+}
+.generator-focus-date input {
+  width:min(290px,100%);
+  min-height:43px;
+  padding:8px 11px;
+  border:1px solid #cbd5e1;
+  border-radius:10px;
+  background:#fff;
+  color:#172033;
+  font-size:.84rem;
+  font-weight:700;
+}
+.generator-focus-date input:focus-visible {
+  outline:2px solid #2563eb;
+  outline-offset:2px;
+}
+.generator-focus-summary,
+.generator-focus-invalid {
+  margin:1px 0 0;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:.75rem;
+  line-height:1.5;
+}
+.generator-focus-summary {
+  background:#dbeafe;
+  color:#1e40af;
+}
+.generator-focus-invalid {
+  background:#fef2f2;
+  color:#b91c1c;
+}
+@media (max-width:560px) {
+  .generator-focus-range {
+    margin:16px 12px 0;
+    padding:12px;
+  }
+  .generator-focus-date {
+    margin-left:0;
+  }
+  .generator-focus-date input {
+    width:100%;
+  }
+}

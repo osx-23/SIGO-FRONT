@@ -519,6 +519,9 @@ export class ProgramacionSupervisorComponent
           if (solicitud !== this.secuenciaExcelTurnos || !this.esContextoExcelActual()) return;
           this.vistaExcelTurnos = previa;
           this.omitidosExcelAgrupados = this.agruparOmisionesExcel(previa.omitidos ?? []);
+          for (const persona of previa.personalPendiente ?? []) {
+            if (persona.registrable) this.datosAltaExcel[persona.codigo] = { puestoId: 0, passwordInicial: '' };
+          }
           if ((previa.personalPendiente ?? []).some(persona => persona.registrable)) {
             this.apiExcelTurnos.getPuestosImportacionExcel().subscribe({
               next: puestos => {

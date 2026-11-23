@@ -206,12 +206,34 @@ export interface CambioTextoTurnoExcel {
   anterior: EstadoProgramacion | null;
   nuevo: EstadoProgramacion | null;
 }
+export interface PersonalPendienteImportacionExcel {
+  codigo: number;
+  nombre: string;
+  celdas: number;
+  registrable: boolean;
+  motivo: string;
+}
+
+export interface PuestoImportacionExcel {
+  id: number;
+  nombre: string;
+}
+
+export interface CrearPersonalImportacionExcel {
+  codigo: number;
+  nombreCompleto: string;
+  puestoId: number;
+  plazaId: number;
+  passwordInicial: string;
+}
+
 export interface VistaPreviaTurnosTextoExcel {
   leidos: number;
   coinciden: number;
   cambios: CambioTextoTurnoExcel[];
   errores: string[];
   omitidos: string[];
+  personalPendiente: PersonalPendienteImportacionExcel[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -290,6 +312,14 @@ export class ProgramacionApiService {
       `${this.api}/programacion/turnos/importar-excel/vista-previa`,
       data
     );
+  }
+
+  getPuestosImportacionExcel(): Observable<PuestoImportacionExcel[]> {
+    return this.http.get<PuestoImportacionExcel[]>(`${this.api}/trabajadores/admin/puestos`);
+  }
+
+  crearPersonalImportacionExcel(datos: CrearPersonalImportacionExcel): Observable<unknown> {
+    return this.http.post(`${this.api}/trabajadores/admin`, datos);
   }
 
   guardarTurnos(request: GuardarProgramacionRequest): Observable<ProgramacionDia[]> {

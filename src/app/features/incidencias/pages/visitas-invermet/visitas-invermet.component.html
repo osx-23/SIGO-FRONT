@@ -45,19 +45,13 @@
           <div class="grid gap-4 sm:grid-cols-2">
             <label class="block space-y-1.5 text-sm font-semibold text-slate-700">
               Plaza <span class="text-red-600">*</span>
-              @if (esOperador) {
-                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium">
-                  Plaza asignada (ID {{ form.plazaId }})
-                </div>
-              } @else {
-                <select name="plaza" [(ngModel)]="form.plazaId" required
-                  class="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 font-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                  <option [ngValue]="0">Elegir plaza</option>
-                  @for (plaza of plazas; track plaza.id) {
-                    <option [ngValue]="plaza.id">{{ plaza.codigo }}{{ plaza.descripcion ? ' · ' + plaza.descripcion : '' }}</option>
-                  }
-                </select>
-              }
+              <select name="plaza" [(ngModel)]="form.plazaId" required [disabled]="guardando()"
+                class="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 font-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-60">
+                <option [ngValue]="0">Elegir plaza</option>
+                @for (plaza of plazas; track plaza.id) {
+                  <option [ngValue]="plaza.id">{{ plaza.codigo }}{{ plaza.descripcion ? ' · ' + plaza.descripcion : '' }}</option>
+                }
+              </select>
             </label>
             <label class="block space-y-1.5 text-sm font-semibold text-slate-700">
               Fecha <span class="text-red-600">*</span>

@@ -1,17 +1,26 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { concatMap, from, map, of, switchMap, tap, toArray } from 'rxjs';
+import { Subject, Subscription, catchError, concatMap, debounceTime, from, map, of, switchMap, tap, toArray } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { Plaza } from '../../../asistencia/models/asistencia.models';
 import { AsistenciaApiService } from '../../../asistencia/services/asistencia-api.service';
-import { PreguntaInvermet, VisitaInvermet, VisitaInvermetRequest } from '../../models/visita-invermet.models';
+import { PersonalInvermetOpcion, PreguntaInvermet, VisitaInvermet, VisitaInvermetRequest } from '../../models/visita-invermet.models';
 import { VisitaInvermetApiService } from '../../services/visita-invermet-api.service';
 
 interface FotoLocal {
   file: File;
   url: string;
 }
+
+type CampoPersonal = 'controlador' | 'supervisor';
+
+interface BusquedaPersonal {
+  campo: CampoPersonal;
+  texto: string;
+  plazaId: number;
+}
+
 
 @Component({
   selector: 'app-visitas-invermet',
@@ -23,6 +32,13 @@ export class VisitasInvermetComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly api = inject(VisitaInvermetApiService);
   private readonly catalogos = inject(AsistenciaApiService);
+  private readonly busquedaPersonal$ = new Subject<BusquedaPersonal>();
+  private readonly suscripciones = new Subscription();
+
+  readonly campoPersonalAbierto = signal<CampoPersonal | null>(null);
+  readonly buscandoPersonal = signal(false);
+  readonly errorPersonal = signal(false);
+  readonly sugerenciasPersonal = signal<PersonalInvermetOpcion[]>([]);
 
   readonly pestana = signal<'registro' | 'historial'>('registro');
   readonly guardando = signal(false);
@@ -56,6 +72,25 @@ export class VisitasInvermetComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.suscripciones.add(
+      this.busquedaPersonal$.pipe(
+        debounceTime(220),
+        switchMap(({ campo, texto, plazaId }) =>
+          this.api.buscarPersonal(campo === 'controlador' ? 'CONTROLADOR' : 'SUPERVISOR', texto, plazaId)
+            .pipe(
+              map(resultados => ({ campo, texto, resultados, fallo: false })),
+              catchError(() => of({ campo, texto, resultados: [] as PersonalInvermetOpcion[], fallo: true }))
+            )
+        )
+      ).subscribe(({ campo, texto, resultados, fallo }) => {
+        // Evitar mostrar resultados de una búsqueda anterior.
+        if (this.campoPersonalAbierto() !== campo || this.form[campo].trim() !== texto) return;
+        this.sugerenciasPersonal.set(resultados);
+        this.errorPersonal.set(fallo);
+        this.buscandoPersonal.set(false);
+      })
+    );
+
     if (!this.esOperador) {
       this.catalogos.getPlazas().subscribe({
         next: plazas => this.plazas = (plazas ?? []).filter(p => p.activo !== false),
@@ -65,8 +100,62 @@ export class VisitasInvermetComponent implements OnInit, OnDestroy {
     this.cargarHistorial();
   }
   ngOnDestroy(): void {
+    this.suscripciones.unsubscribe();
     this.fotos.forEach(f => URL.revokeObjectURL(f.url));
   }
+
+  alEscribirPersonal(campo: CampoPersonal, valor: string): void {
+    this.form[campo] = valor;
+    this.errorPersonal.set(false);
+    this.sugerenciasPersonal.set([]);
+    const texto = valor.trim();
+    if (texto.length < 2) {
+      this.campoPersonalAbierto.set(null);
+      this.buscandoPersonal.set(false);
+      // Cancelar cualquier búsqueda en curso al recibir menos de dos caracteres.
+      this.busquedaPersonal$.next({ campo, texto, plazaId: this.form.plazaId });
+      return;
+    }
+    this.campoPersonalAbierto.set(campo);
+    this.buscandoPersonal.set(true);
+    this.busquedaPersonal$.next({ campo, texto, plazaId: this.form.plazaId });
+  }
+
+  alEnfocarPersonal(campo: CampoPersonal): void {
+    this.alEscribirPersonal(campo, this.form[campo]);
+  }
+
+  alSalirPersonal(campo: CampoPersonal, event: FocusEvent): void {
+    const contenedor = event.currentTarget as HTMLElement;
+    if (event.relatedTarget && contenedor.contains(event.relatedTarget as Node)) return;
+    if (this.campoPersonalAbierto() === campo) this.campoPersonalAbierto.set(null);
+  }
+
+  seleccionarPersonal(campo: CampoPersonal, persona: PersonalInvermetOpcion): void {
+    this.form[campo] = persona.nombreCompleto;
+    this.campoPersonalAbierto.set(null);
+    this.buscandoPersonal.set(false);
+    this.sugerenciasPersonal.set([]);
+  }
+
+  teclaPersonal(campo: CampoPersonal, event: KeyboardEvent): void {
+    if (this.campoPersonalAbierto() !== campo) return;
+    if (event.key === 'Escape') {
+      this.campoPersonalAbierto.set(null);
+      return;
+    }
+    const resultados = this.sugerenciasPersonal();
+    if (!resultados.length) return;
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.seleccionarPersonal(campo, resultados[0]);
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      const contenedor = (event.target as HTMLElement).parentElement;
+      contenedor?.querySelector<HTMLButtonElement>('[data-personal-opcion]')?.focus();
+    }
+  }
+
   cambiarPestana(p: 'registro' | 'historial'): void {
     this.pestana.set(p);
     this.error.set('');
@@ -173,6 +262,8 @@ export class VisitasInvermetComponent implements OnInit, OnDestroy {
         this.guardando.set(false);
         this.visitaPendienteId = null;
         this.form = this.formularioVacio();
+        this.campoPersonalAbierto.set(null);
+        this.sugerenciasPersonal.set([]);
         this.mensaje.set('Visita Invermet #' + v.id + ' registrada correctamente. Puedes exportarla desde el historial.');
         this.cargarHistorial();
       },

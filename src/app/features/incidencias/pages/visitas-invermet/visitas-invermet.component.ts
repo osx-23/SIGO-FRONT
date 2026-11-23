@@ -24,7 +24,7 @@ export class VisitasInvermetComponent implements OnInit, OnDestroy {
   private readonly api = inject(VisitaInvermetApiService);
   private readonly catalogos = inject(AsistenciaApiService);
 
-  readonly pestaña = signal<'registro' | 'historial'>('registro');
+  readonly pestana = signal<'registro' | 'historial'>('registro');
   readonly guardando = signal(false);
   readonly cargando = signal(false);
   readonly exportandoId = signal<number | null>(null);
@@ -67,8 +67,8 @@ export class VisitasInvermetComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.fotos.forEach(f => URL.revokeObjectURL(f.url));
   }
-  cambiarPestaña(p: 'registro' | 'historial'): void {
-    this.pestaña.set(p);
+  cambiarPestana(p: 'registro' | 'historial'): void {
+    this.pestana.set(p);
     this.error.set('');
     this.mensaje.set('');
     if (p === 'historial') this.cargarHistorial();

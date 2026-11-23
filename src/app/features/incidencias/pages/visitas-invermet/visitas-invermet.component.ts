@@ -97,6 +97,22 @@ export class VisitasInvermetComponent implements OnInit, OnDestroy {
     const [f] = this.fotos.splice(index, 1);
     if (f) URL.revokeObjectURL(f.url);
   }
+  agregarPregunta(): void {
+    if (this.guardando() || this.form.preguntas.length >= 5) return;
+    this.form.preguntas.push({
+      numero: this.form.preguntas.length + 1,
+      pregunta: '',
+      quienRespondio: '',
+      respuesta: ''
+    });
+  }
+
+  quitarPregunta(index: number): void {
+    if (this.guardando() || index < 2 || index >= this.form.preguntas.length) return;
+    this.form.preguntas.splice(index, 1);
+    this.form.preguntas.forEach((pregunta, i) => pregunta.numero = i + 1);
+  }
+
   registrar(): void {
     if (this.guardando()) return;
     this.error.set('');
@@ -230,7 +246,7 @@ export class VisitasInvermetComponent implements OnInit, OnDestroy {
       datoVisita1: '',
       datoVisita2: '',
       observaciones: '',
-      preguntas: Array.from({length: 5}, (_, i): PreguntaInvermet => ({
+      preguntas: Array.from({length: 2}, (_, i): PreguntaInvermet => ({
         numero: i + 1, pregunta: '', quienRespondio: '', respuesta: ''
       }))
     };

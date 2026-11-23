@@ -2,12 +2,18 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { FotoInvermet, VisitaInvermet, VisitaInvermetRequest } from '../models/visita-invermet.models';
+import { FotoInvermet, PersonalInvermetOpcion, VisitaInvermet, VisitaInvermetRequest } from '../models/visita-invermet.models';
 
 @Injectable({ providedIn: 'root' })
 export class VisitaInvermetApiService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiUrl + '/incidencias/visitas-invermet';
+
+  buscarPersonal(tipo: 'CONTROLADOR' | 'SUPERVISOR', q: string, plazaId?: number | null): Observable<PersonalInvermetOpcion[]> {
+    let params = new HttpParams().set('tipo', tipo).set('q', q);
+    if (plazaId != null && plazaId > 0) params = params.set('plazaId', plazaId);
+    return this.http.get<PersonalInvermetOpcion[]>(this.base + '/personal', { params });
+  }
 
   registrar(data: VisitaInvermetRequest): Observable<VisitaInvermet> {
     return this.http.post<VisitaInvermet>(this.base, data);

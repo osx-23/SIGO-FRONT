@@ -86,7 +86,12 @@ import {
 } from '../../state/programacion-lider.facade';
 
 
-import { ProgramacionApiService, VistaPreviaTurnosTextoExcel } from '../../data-access/programacion-api.service';
+import {
+  PersonalPendienteImportacionExcel,
+  PuestoImportacionExcel,
+  ProgramacionApiService,
+  VistaPreviaTurnosTextoExcel
+} from '../../data-access/programacion-api.service';
 
 /** Agrupa las filas omitidas sin eliminar el mensaje técnico original del backend. */
 interface OmisionTurnoExcelAgrupada {
@@ -259,6 +264,9 @@ export class ProgramacionSupervisorComponent
   vistaExcelTurnos: VistaPreviaTurnosTextoExcel | null = null;
   archivoExcelTurnos = '';
   omitidosExcelAgrupados: OmisionTurnoExcelAgrupada[] = [];
+  puestosImportacionExcel: PuestoImportacionExcel[] = [];
+  datosAltaExcel: Record<number, { puestoId: number; passwordInicial: string }> = {};
+  registrandoCodigoExcel: number | null = null;
   confirmacionExcelTurnosAbierta = false;
   excelTurnosEliminaciones = 0;
   excelTurnosNoRecomendados = 0;
@@ -511,6 +519,20 @@ export class ProgramacionSupervisorComponent
           if (solicitud !== this.secuenciaExcelTurnos || !this.esContextoExcelActual()) return;
           this.vistaExcelTurnos = previa;
           this.omitidosExcelAgrupados = this.agruparOmisionesExcel(previa.omitidos ?? []);
+          if ((previa.personalPendiente ?? []).some(persona => persona.registrable)) {
+            this.apiExcelTurnos.getPuestosImportacionExcel().subscribe({
+              next: puestos => {
+                if (solicitud !== this.secuenciaExcelTurnos || !this.esContextoExcelActual()) return;
+                this.puestosImportacionExcel = puestos ?? [];
+                this.cdr.detectChanges();
+              },
+              error: () => {
+                if (solicitud !== this.secuenciaExcelTurnos) return;
+                this.error = 'No se pudo cargar el catálogo de puestos. Puedes revisar los códigos, pero no registrar nuevo personal todavía.';
+                this.cdr.detectChanges();
+              }
+            });
+          }
           this.cdr.detectChanges();
         },
         error: e => {
@@ -519,6 +541,50 @@ export class ProgramacionSupervisorComponent
           this.cdr.detectChanges();
         }
       });
+  }
+
+  registrarPersonalPendienteExcel(persona: PersonalPendienteImportacionExcel): void {
+    if (!persona.registrable || !this.vistaExcelTurnos || !this.esContextoExcelActual() ||
+        this.registrandoCodigoExcel !== null || this.cambios.size > 0 || !this.plazaId) return;
+    const alta = this.datosAltaExcel[persona.codigo];
+    if (!alta || !alta.puestoId || !alta.passwordInicial?.trim() ||
+        alta.passwordInicial.trim().length < 5) {
+      this.error = 'Selecciona el cargo y escribe una contraseña inicial de al menos 5 caracteres.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (!this.puestosImportacionExcel.some(puesto => puesto.id === Number(alta.puestoId))) {
+      this.error = 'El cargo seleccionado no figura en el catálogo de SIGO.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (!window.confirm(
+      `¿Registrar en SIGO a ${persona.nombre} (código ${persona.codigo}) en la plaza seleccionada? Esta operación crea un usuario real. Verifica su identidad antes de confirmar.`
+    )) return;
+    const plazaId = this.plazaId;
+    this.error = '';
+    this.registrandoCodigoExcel = persona.codigo;
+    this.apiExcelTurnos.crearPersonalImportacionExcel({
+      codigo: persona.codigo,
+      nombreCompleto: persona.nombre.trim(),
+      puestoId: Number(alta.puestoId),
+      plazaId,
+      passwordInicial: alta.passwordInicial
+    }).pipe(finalize(() => {
+      this.registrandoCodigoExcel = null;
+      this.cdr.detectChanges();
+    })).subscribe({
+      next: () => {
+        // Recarga el personal real antes de admitir los turnos de la nueva persona.
+        this.cargar();
+        this.mensaje = `Código ${persona.codigo} registrado en SIGO. Vuelve a importar el mismo Excel para incluir sus turnos y evitar usar una vista previa antigua.`;
+        this.cdr.detectChanges();
+      },
+      error: e => {
+        this.error = this.mensajeError(e, 'No se pudo registrar el trabajador. Comprueba el código y los permisos.');
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   cancelarExcelTurnos(): void {
@@ -530,6 +596,8 @@ export class ProgramacionSupervisorComponent
     this.vistaExcelTurnos = null;
     this.archivoExcelTurnos = '';
     this.omitidosExcelAgrupados = [];
+    this.puestosImportacionExcel = [];
+    this.datosAltaExcel = {};
     this.confirmacionExcelTurnosAbierta = false;
     this.excelTurnosEliminaciones = 0;
     this.excelTurnosNoRecomendados = 0;

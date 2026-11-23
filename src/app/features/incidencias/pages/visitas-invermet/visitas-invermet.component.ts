@@ -91,12 +91,14 @@ export class VisitasInvermetComponent implements OnInit, OnDestroy {
       })
     );
 
-    if (!this.esOperador) {
-      this.catalogos.getPlazas().subscribe({
-        next: plazas => this.plazas = (plazas ?? []).filter(p => p.activo !== false),
-        error: () => this.error.set('No se pudo cargar el catálogo de plazas.')
-      });
+    // La plaza del perfil se preselecciona, pero todos los roles pueden cambiarla.
+    if (!this.form.plazaId) {
+      this.form.plazaId = this.auth.usuario()?.plazaId ?? 0;
     }
+    this.catalogos.getPlazas().subscribe({
+      next: plazas => this.plazas = (plazas ?? []).filter(p => p.activo !== false),
+      error: () => this.error.set('No se pudo cargar el catálogo de plazas.')
+    });
     this.cargarHistorial();
   }
   ngOnDestroy(): void {

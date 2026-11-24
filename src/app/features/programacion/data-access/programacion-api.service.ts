@@ -272,6 +272,10 @@ export interface ResultadoRolExcel {
   mensaje: string;
 }
 
+export interface FormatoExcelDetectado {
+  formato: 'ROL_OPERATIVO' | 'TURNOS';
+}
+
 export interface VistaPreviaTurnosTextoExcel {
   leidos: number;
   coinciden: number;
@@ -365,6 +369,15 @@ export class ProgramacionApiService {
 
   crearPersonalImportacionExcel(datos: CrearPersonalImportacionExcel): Observable<unknown> {
     return this.http.post(`${this.api}/trabajadores/admin`, datos);
+  }
+
+  /** Identifica el formato antes de elegir la vista previa; sirve para cualquier plaza. */
+  detectarFormatoExcel(archivo: File): Observable<FormatoExcelDetectado> {
+    const datos = new FormData();
+    datos.append('archivo', archivo, archivo.name);
+    return this.http.post<FormatoExcelDetectado>(
+      `${this.api}/programacion/turnos/importar-excel/detectar-formato`, datos
+    );
   }
 
   /** Analiza el rol Excel, limitado exclusivamente a la plaza seleccionada. */

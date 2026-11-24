@@ -101,6 +101,13 @@
           </svg>
           Añadir excepción
         </button>
+        <input #archivoRolExcel class="hidden" type="file" accept=".xlsx"
+          (change)="seleccionarRolExcel($event)" aria-label="Seleccionar rol mensual con hojas AGENTES y CONTROL" />
+        <button class="primary inline-flex items-center gap-2 whitespace-nowrap" type="button"
+          [disabled]="!plazaId || cargando || guardando || cambios.size > 0 || leyendoRolExcel || confirmandoRolExcel"
+          (click)="archivoRolExcel.click()">
+          {{ leyendoRolExcel ? 'Analizando rol...' : 'Importar rol P4/P5' }}
+        </button>
         <input #archivoTurnosExcel class="hidden" type="file" accept=".xlsx" (change)="seleccionarExcelTurnos($event)" aria-label="Seleccionar Excel de turnos" />
         <button class="primary inline-flex items-center gap-2 whitespace-nowrap" type="button"
           [disabled]="!plazaId || cargando || guardando || guardandoOrden || generador.procesando || agentesProcesando.size > 0 || importandoExcelTurnos || cambios.size > 0"
@@ -134,6 +141,132 @@
     @if (cambios.size > 0) {
       <div class="border-t border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-900" role="status">
         Tienes <strong>{{ cambios.size }} cambio(s) pendientes</strong>. Guárdalos o descártalos antes de importar otro archivo.
+      </div>
+    }
+    @if (vistaRolExcel; as rol) {
+      <div class="m-4 rounded-xl border border-indigo-200 bg-indigo-50/60 p-4 sm:m-5"
+           aria-label="Vista previa inteligente del rol de la plaza">
+        <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-700">ROL ANALIZADO · {{ rol.plazaCodigo }}</span>
+            <h3 class="mt-1 text-base font-bold text-slate-900">Turnos, secuencias y controladores</h3>
+            <p class="mt-1 text-sm text-slate-600">{{ archivoRolExcel?.name }}</p>
+            <p class="mt-1 text-xs text-slate-600">
+              Se han ignorado {{ rol.hojasIgnoradas }} hojas auxiliares o de otras plazas.
+              Los turnos se guardarán solo al confirmar.
+            </p>
+          </div>
+          <button type="button" class="secondary" (click)="descartarRolExcel()">Cerrar vista previa</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+          <div class="rounded-lg bg-white p-3"><strong class="block text-xl text-slate-900">{{ rol.celdasLeidas }}</strong>Celdas leídas</div>
+          <div class="rounded-lg bg-white p-3"><strong class="block text-xl text-emerald-700">{{ rol.coinciden }}</strong>Ya coinciden</div>
+          <div class="rounded-lg bg-white p-3"><strong class="block text-xl text-blue-700">{{ rol.cambios.length }}</strong>Turnos por guardar</div>
+          <div class="rounded-lg bg-white p-3"><strong class="block text-xl text-amber-700">{{ rol.personal.length }}</strong>Personal analizado</div>
+        </div>
+        <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
+          <strong>Importante:</strong> este archivo contiene turnos y códigos de responsables, pero no especifica casetas.
+          No se asignarán casetas. Los trabajadores que no estén registrados, sean de otra plaza
+          o tengan un grupo ambiguo se señalarán para revisión.
+        </div>
+        @if (rol.semanasPartTime.length) {
+          <div class="mt-3 rounded-lg bg-white p-3 text-xs text-slate-700">
+            <strong class="block text-sm text-slate-900">Semanas part-time identificadas por bordes</strong>
+            <div class="mt-2 flex flex-wrap gap-2">
+              @for (semana of rol.semanasPartTime; track semana.desde) {
+                <span class="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-1 font-medium">
+                  {{ semana.desde }} al {{ semana.hasta }}
+                </span>
+              }
+            </div>
+            <p class="mt-2">Las divisiones semanales se reconocen en el Excel. En SIGO, el grupo se registra como PART_TIME.</p>
+          </div>
+        }
+        <div class="mt-3 max-h-80 overflow-auto rounded-lg border border-slate-200 bg-white">
+          <table class="w-full min-w-[680px] text-left text-xs">
+            <thead class="sticky top-0 bg-slate-100 text-slate-700">
+              <tr>
+                <th class="p-2">Código / Nombre</th>
+                <th class="p-2">Tipo</th>
+                <th class="p-2">Secuencia</th>
+                <th class="p-2">Responsable</th>
+                <th class="p-2">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (persona of rol.personal; track persona.tipo + '-' + persona.codigo) {
+                <tr class="border-t border-slate-100" [class.bg-amber-50]="persona.estado !== 'LISTO'">
+                  <td class="p-2 font-medium text-slate-900">{{ persona.codigo }} · {{ persona.nombre }}</td>
+                  <td class="p-2">{{ persona.tipo === 'CONTROLADOR' ? 'Controlador' : 'Agente' }}</td>
+                  <td class="p-2">{{ persona.grupo || 'Por revisar' }}</td>
+                  <td class="p-2">{{ persona.controladorCodigo || '—' }}</td>
+                  <td class="p-2">
+                    <span [class.text-amber-800]="persona.estado !== 'LISTO'"
+                          [class.text-emerald-700]="persona.estado === 'LISTO'" class="font-semibold">
+                      {{ persona.estado === 'LISTO' ? 'Listo' : 'Revisar' }}
+                    </span>
+                    @if (persona.motivo) { <p class="mt-1 max-w-xs font-normal">{{ persona.motivo }}</p> }
+                  </td>
+                </tr>
+                @if (persona.tipo === 'AGENTE' && persona.motivo.startsWith('No figura en SIGO') && datosAltaExcel[persona.codigo]) {
+                  <tr class="bg-amber-50">
+                    <td colspan="5" class="p-3">
+                      <div class="flex flex-wrap items-end gap-3">
+                        <label class="block min-w-44 flex-1 font-semibold">
+                          Cargo para registrar
+                          <select class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal"
+                            [(ngModel)]="datosAltaExcel[persona.codigo].puestoId"
+                            [ngModelOptions]="{standalone:true}">
+                            <option [ngValue]="0">Elegir cargo</option>
+                            @for (puesto of puestosImportacionExcel; track puesto.id) {
+                              <option [ngValue]="puesto.id">{{ puesto.nombre }}</option>
+                            }
+                          </select>
+                        </label>
+                        <label class="block min-w-44 flex-1 font-semibold">
+                          Contraseña inicial
+                          <input type="password" class="mt-1 w-full rounded-lg border border-slate-300 p-2 font-normal"
+                            autocomplete="new-password" placeholder="Mínimo 5 caracteres"
+                            [(ngModel)]="datosAltaExcel[persona.codigo].passwordInicial"
+                            [ngModelOptions]="{standalone:true}">
+                        </label>
+                        <button type="button" class="secondary"
+                          [disabled]="registrandoCodigoExcel !== null || !puestosImportacionExcel.length"
+                          (click)="registrarPersonalDelRol(persona)">
+                          {{ registrandoCodigoExcel === persona.codigo ? 'Registrando...' : 'Registrar trabajador' }}
+                        </button>
+                      </div>
+                      <p class="mt-2 text-xs text-slate-500">
+                        El alta crea un usuario real. Después deberás importar nuevamente el mismo archivo.
+                      </p>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (rol.advertencias.length > 0) {
+          <details class="mt-3 rounded-lg border border-amber-200 bg-white p-3 text-xs">
+            <summary class="cursor-pointer font-semibold text-amber-900">
+              Advertencias y registros para revisar ({{ rol.advertencias.length }})
+            </summary>
+            <ul class="mt-2 max-h-48 list-disc space-y-1 overflow-auto pl-5 text-amber-900">
+              @for (advertencia of rol.advertencias; track $index) { <li>{{ advertencia }}</li> }
+            </ul>
+          </details>
+        }
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p class="max-w-lg text-xs text-slate-600">
+            Al confirmar se relee el Excel y se comprueban los datos actuales de SIGO.
+            Se aplican los turnos válidos, las secuencias reconocidas y, para meses no históricos,
+            los responsables vigentes de la plaza. Se omiten las personas no validadas.
+          </p>
+          <button type="button" class="primary" (click)="confirmarRolExcel()"
+            [disabled]="!mismoContextoRol() || confirmandoRolExcel || guardando || cargando || cambios.size > 0">
+            {{ confirmandoRolExcel ? 'Guardando importación...' : 'Confirmar importación de ' + rol.plazaCodigo }}
+          </button>
+        </div>
       </div>
     }
     @if (vistaExcelTurnos; as previa) {

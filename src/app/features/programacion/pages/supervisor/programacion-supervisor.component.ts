@@ -548,7 +548,9 @@ export class ProgramacionSupervisorComponent
       '¿Importar el rol de ' + previa.plazaCodigo + ' al mes seleccionado? ' +
       previa.cambios.length + ' cambios de turno y ' + previa.personal.length +
       ' personas analizadas. ' + revisar + ' personas requieren revisión. ' +
-      'Se guardarán inmediatamente turnos y secuencias válidos. ' +
+      (previa.advertencias.some(a => a.startsWith('Periodo histórico:'))
+        ? 'Al ser un mes histórico, solo se guardarán turnos; las secuencias y líderes vigentes no cambiarán. '
+        : 'Se guardarán inmediatamente turnos, secuencias y responsables válidos. ') +
       'Este Excel NO incluye casetas. ¿Confirmas?')) return;
     this.confirmandoRolExcel = true;
     this.error = '';

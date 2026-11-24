@@ -227,6 +227,51 @@ export interface CrearPersonalImportacionExcel {
   passwordInicial: string;
 }
 
+/** Vista previa por plaza del rol operativo multipestaña AGENTES P4/P5 + CONTROL. */
+export interface PersonaRolExcel {
+  codigo: number;
+  nombre: string;
+  trabajadorId: number | null;
+  grupo: 'SECUENCIA_1' | 'SECUENCIA_2' | 'SECUENCIA_3' | 'SECUENCIA_4' | 'PART_TIME' | null;
+  orden: number;
+  controladorCodigo: number | null;
+  controladorId: number | null;
+  tipo: 'AGENTE' | 'CONTROLADOR';
+  estado: 'LISTO' | 'REVISAR' | 'REVISAR_GRUPO';
+  motivo: string;
+}
+export interface TurnoRolExcel {
+  trabajadorId: number;
+  codigo: number;
+  fecha: string;
+  anterior: string | null;
+  nuevo: string;
+  origen: string;
+}
+export interface SemanaRolPartTime {
+  desde: string;
+  hasta: string;
+}
+export interface VistaPreviaRolExcel {
+  plazaCodigo: string;
+  anio: number;
+  mes: number;
+  hojasIgnoradas: number;
+  celdasLeidas: number;
+  coinciden: number;
+  personal: PersonaRolExcel[];
+  cambios: TurnoRolExcel[];
+  semanasPartTime: SemanaRolPartTime[];
+  advertencias: string[];
+}
+export interface ResultadoRolExcel {
+  turnos: number;
+  secuencias: number;
+  lideres: number;
+  omitidos: number;
+  mensaje: string;
+}
+
 export interface VistaPreviaTurnosTextoExcel {
   leidos: number;
   coinciden: number;
@@ -320,6 +365,28 @@ export class ProgramacionApiService {
 
   crearPersonalImportacionExcel(datos: CrearPersonalImportacionExcel): Observable<unknown> {
     return this.http.post(`${this.api}/trabajadores/admin`, datos);
+  }
+
+  /** Analiza el rol Excel, limitado exclusivamente a la plaza seleccionada. */
+  previsualizarRolExcel(plazaId: number, anio: number, mes: number, archivo: File): Observable<VistaPreviaRolExcel> {
+    const datos = new FormData();
+    datos.append('plazaId', String(plazaId));
+    datos.append('anio', String(anio));
+    datos.append('mes', String(mes));
+    datos.append('archivo', archivo, archivo.name);
+    return this.http.post<VistaPreviaRolExcel>(
+      `${this.api}/programacion/turnos/importar-excel/rol/vista-previa`, datos);
+  }
+
+  /** Guarda el rol revisado, revalidando el archivo y la plaza en el servidor. */
+  confirmarRolExcel(plazaId: number, anio: number, mes: number, archivo: File): Observable<ResultadoRolExcel> {
+    const datos = new FormData();
+    datos.append('plazaId', String(plazaId));
+    datos.append('anio', String(anio));
+    datos.append('mes', String(mes));
+    datos.append('archivo', archivo, archivo.name);
+    return this.http.post<ResultadoRolExcel>(
+      `${this.api}/programacion/turnos/importar-excel/rol/confirmar`, datos);
   }
 
   guardarTurnos(request: GuardarProgramacionRequest): Observable<ProgramacionDia[]> {

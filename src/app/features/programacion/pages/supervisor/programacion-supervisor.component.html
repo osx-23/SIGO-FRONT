@@ -259,8 +259,9 @@
         <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
           <p class="max-w-lg text-xs text-slate-600">
             Al confirmar se relee el Excel y se comprueban los datos actuales de SIGO.
-            Se aplican los turnos válidos, las secuencias reconocidas y, para meses no históricos,
-            los responsables vigentes de la plaza. Se omiten las personas no validadas.
+            Para meses actuales o futuros se aplican los turnos, secuencias y líderes validados.
+            Si el mes es histórico, solo se guardan los turnos: las secuencias y líderes actuales
+            no se reemplazan. Las personas sin validar se omiten.
           </p>
           <button type="button" class="primary" (click)="confirmarRolExcel()"
             [disabled]="!mismoContextoRol() || confirmandoRolExcel || guardando || cargando || cambios.size > 0">

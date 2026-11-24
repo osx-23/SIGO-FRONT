@@ -547,6 +547,13 @@ export class ProgramacionSupervisorComponent
     });
   }
 
+  /** Invalida solicitudes pendientes sin alterar la programación guardada. */
+  cancelarImportacionExcel(): void {
+    this.cancelarExcelTurnos();
+    this.descartarRolExcel();
+    this.cdr.detectChanges();
+  }
+
   /** Vista previa especializada si el libro contiene hojas AGENTES por plaza. */
   private cargarRolExcel(archivo: File): void {
     if (!this.plazaId || this.cargando || this.guardando ||

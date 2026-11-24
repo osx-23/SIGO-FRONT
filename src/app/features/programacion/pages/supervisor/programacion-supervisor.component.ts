@@ -90,7 +90,9 @@ import {
   PersonalPendienteImportacionExcel,
   PuestoImportacionExcel,
   ProgramacionApiService,
-  VistaPreviaTurnosTextoExcel
+  VistaPreviaTurnosTextoExcel,
+  VistaPreviaRolExcel,
+  PersonaRolExcel
 } from '../../data-access/programacion-api.service';
 
 /** Agrupa las filas omitidas sin eliminar el mensaje técnico original del backend. */
@@ -263,6 +265,11 @@ export class ProgramacionSupervisorComponent
   importandoExcelTurnos = false;
   vistaExcelTurnos: VistaPreviaTurnosTextoExcel | null = null;
   archivoExcelTurnos = '';
+  archivoRolExcel: File | null = null;
+  vistaRolExcel: VistaPreviaRolExcel | null = null;
+  contextoRolExcel: { plazaId: number; anio: number; mes: number } | null = null;
+  leyendoRolExcel = false;
+  confirmandoRolExcel = false;
   omitidosExcelAgrupados: OmisionTurnoExcelAgrupada[] = [];
   puestosImportacionExcel: PuestoImportacionExcel[] = [];
   datosAltaExcel: Record<number, { puestoId: number; passwordInicial: string }> = {};
@@ -474,6 +481,128 @@ export class ProgramacionSupervisorComponent
    * INIT
    * ============================================================
    */
+
+  /** Se limita al mes y plaza actualmente elegidos, incluso si el archivo tiene P4 y P5. */
+  seleccionarRolExcel(evento: Event): void {
+    const entrada = evento.target as HTMLInputElement;
+    const archivo = entrada.files?.item(0);
+    entrada.value = '';
+    if (!archivo || !this.plazaId || this.cargando || this.guardando ||
+        this.leyendoRolExcel || this.confirmandoRolExcel) return;
+    if (this.cambios.size > 0) {
+      this.error = 'Guarda o descarta los turnos pendientes antes de importar otro Excel.';
+      return;
+    }
+    if (!archivo.name.toLowerCase().endsWith('.xlsx') || archivo.size > 2 * 1024 * 1024) {
+      this.error = 'Selecciona un Excel .xlsx de máximo 2 MB.';
+      return;
+    }
+    this.descartarRolExcel();
+    const plazaId = this.plazaId, anio = this.anio, mes = this.mes;
+    this.archivoRolExcel = archivo;
+    this.contextoRolExcel = { plazaId, anio, mes };
+    this.leyendoRolExcel = true;
+    this.error = '';
+    this.apiExcelTurnos.previsualizarRolExcel(plazaId, anio, mes, archivo).pipe(
+      finalize(() => { this.leyendoRolExcel = false; this.cdr.detectChanges(); })
+    ).subscribe({
+      next: previa => {
+        if (!this.contextoRolExcel || !this.mismoContextoRol()) return;
+        this.vistaRolExcel = previa;
+        const nuevos = previa.personal.filter(p => p.tipo === 'AGENTE' && p.motivo.startsWith('No figura en SIGO'));
+        if (nuevos.length) {
+          this.datosAltaExcel = {};
+          for (const p of nuevos) this.datosAltaExcel[p.codigo] = { puestoId: 0, passwordInicial: '' };
+          this.apiExcelTurnos.getPuestosImportacionExcel().subscribe({
+            next: puestos => { this.puestosImportacionExcel = puestos; this.cdr.detectChanges(); },
+            error: () => { this.error = 'No se pudo cargar el catálogo de cargos.'; this.cdr.detectChanges(); }
+          });
+        }
+        this.cdr.detectChanges();
+      },
+      error: e => {
+        this.error = this.mensajeError(e, 'No se pudo analizar el rol P4/P5.');
+        this.descartarRolExcel();
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  mismoContextoRol(): boolean {
+    return !!this.contextoRolExcel && this.contextoRolExcel.plazaId === this.plazaId &&
+      this.contextoRolExcel.anio === this.anio && this.contextoRolExcel.mes === this.mes;
+  }
+
+  descartarRolExcel(): void {
+    this.archivoRolExcel = null;
+    this.vistaRolExcel = null;
+    this.contextoRolExcel = null;
+  }
+
+  confirmarRolExcel(): void {
+    const previa = this.vistaRolExcel, archivo = this.archivoRolExcel;
+    if (!previa || !archivo || !this.mismoContextoRol() || !this.plazaId ||
+        this.confirmandoRolExcel || this.guardando || this.cambios.size > 0) return;
+    const revisar = previa.personal.filter(p => p.estado !== 'LISTO').length;
+    if (!window.confirm(
+      '¿Importar el rol de ' + previa.plazaCodigo + ' al mes seleccionado? ' +
+      previa.cambios.length + ' cambios de turno y ' + previa.personal.length +
+      ' personas analizadas. ' + revisar + ' personas requieren revisión. ' +
+      'Se guardarán inmediatamente turnos y secuencias válidos. ' +
+      'Este Excel NO incluye casetas. ¿Confirmas?')) return;
+    this.confirmandoRolExcel = true;
+    this.error = '';
+    this.apiExcelTurnos.confirmarRolExcel(this.plazaId, this.anio, this.mes, archivo).pipe(
+      finalize(() => { this.confirmandoRolExcel = false; this.cdr.detectChanges(); })
+    ).subscribe({
+      next: resultado => {
+        const texto = 'Importación de ' + previa.plazaCodigo + ': ' + resultado.turnos +
+          ' turnos, ' + resultado.secuencias + ' secuencias y ' + resultado.lideres +
+          ' líderes actualizados; ' + resultado.omitidos + ' personas pendientes. Casetas sin modificar.';
+        this.descartarRolExcel();
+        this.cargar();
+        this.mensaje = texto;
+        this.cdr.detectChanges();
+      },
+      error: e => {
+        this.error = this.mensajeError(e, 'No se pudo confirmar. El archivo sigue disponible para revisar.');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  registrarPersonalDelRol(persona: PersonaRolExcel): void {
+    const alta = this.datosAltaExcel[persona.codigo];
+    if (!this.mismoContextoRol() || this.registrandoCodigoExcel !== null ||
+        !this.plazaId || !alta || !alta.puestoId ||
+        !alta.passwordInicial || alta.passwordInicial.trim().length < 5 ||
+        !persona.motivo.startsWith('No figura en SIGO')) {
+      this.error = 'Selecciona el cargo y una contraseña inicial de al menos 5 caracteres.';
+      this.cdr.detectChanges();
+      return;
+    }
+    if (!window.confirm('¿Registrar en SIGO a ' + persona.nombre + ' (código ' + persona.codigo + ')?')) return;
+    this.registrandoCodigoExcel = persona.codigo;
+    this.apiExcelTurnos.crearPersonalImportacionExcel({
+      codigo: persona.codigo, nombreCompleto: persona.nombre,
+      puestoId: Number(alta.puestoId), plazaId: this.plazaId,
+      passwordInicial: alta.passwordInicial
+    }).pipe(finalize(() => {
+      this.registrandoCodigoExcel = null;
+      this.cdr.detectChanges();
+    })).subscribe({
+      next: () => {
+        this.descartarRolExcel();
+        this.cargar();
+        this.mensaje = 'Trabajador registrado. Vuelve a importar el mismo rol para incluir sus turnos y secuencias.';
+        this.cdr.detectChanges();
+      },
+      error: e => {
+        this.error = this.mensajeError(e, 'No se pudo registrar al trabajador.');
+        this.cdr.detectChanges();
+      }
+    });
+  }
 
   /** Vista previa de turnos: solo lee el Excel. No realiza guardados en PostgreSQL. */
   seleccionarExcelTurnos(evento: Event): void {
@@ -1017,8 +1146,9 @@ export class ProgramacionSupervisorComponent
       return;
     }
 
-    // Nunca conservar la vista previa si recargamos los datos de una plaza/mes.
+    // Descartar vistas previas al cambiar de plaza o mes.
     this.cancelarExcelTurnos();
+    this.descartarRolExcel();
 
     this.cargando =
       true;

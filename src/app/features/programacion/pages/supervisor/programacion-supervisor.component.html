@@ -76,7 +76,7 @@
           <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Herramientas de programación</span>
           <h2 class="mt-1 text-base font-bold text-slate-900">Importar turnos desde Excel</h2>
           <p class="mt-1 max-w-xl text-sm leading-5 text-slate-500">
-            Carga un archivo .xlsx, revisa los cambios y aplícalos al borrador antes de guardar.
+            Selecciona un Excel de cualquier plaza. SIGO reconoce el formato y muestra una vista previa de los datos correspondientes a la plaza seleccionada.
           </p>
         </div>
       </div>
@@ -101,28 +101,22 @@
           </svg>
           Añadir excepción
         </button>
-        <input #archivoRolExcel class="hidden" type="file" accept=".xlsx"
-          (change)="seleccionarRolExcel($event)" aria-label="Seleccionar rol mensual con hojas AGENTES y CONTROL" />
+        <input #archivoTurnosExcel class="hidden" type="file" accept=".xlsx"
+          (change)="seleccionarExcelUnificado($event)" aria-label="Seleccionar Excel de programación" />
         <button class="primary inline-flex items-center gap-2 whitespace-nowrap" type="button"
-          [disabled]="!plazaId || cargando || guardando || cambios.size > 0 || leyendoRolExcel || confirmandoRolExcel"
-          (click)="archivoRolExcel.click()">
-          {{ leyendoRolExcel ? 'Analizando rol...' : 'Importar rol P4/P5' }}
-        </button>
-        <input #archivoTurnosExcel class="hidden" type="file" accept=".xlsx" (change)="seleccionarExcelTurnos($event)" aria-label="Seleccionar Excel de turnos" />
-        <button class="primary inline-flex items-center gap-2 whitespace-nowrap" type="button"
-          [disabled]="!plazaId || cargando || guardando || guardandoOrden || generador.procesando || agentesProcesando.size > 0 || importandoExcelTurnos || cambios.size > 0"
+          [disabled]="!plazaId || cargando || guardando || guardandoOrden || generador.procesando || agentesProcesando.size > 0 || importandoExcelTurnos || detectandoFormatoExcel || leyendoRolExcel || confirmandoRolExcel || cambios.size > 0"
           (click)="archivoTurnosExcel.click()">
-          <svg class="h-4 w-4" [class.animate-spin]="importandoExcelTurnos" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            @if (importandoExcelTurnos) {
+          <svg class="h-4 w-4" [class.animate-spin]="importandoExcelTurnos || detectandoFormatoExcel || leyendoRolExcel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            @if (importandoExcelTurnos || detectandoFormatoExcel || leyendoRolExcel) {
               <path d="M21 12a9 9 0 1 1-9-9"/>
             } @else {
               <path d="M12 16V4M7 9l5-5 5 5M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
             }
           </svg>
-          {{ importandoExcelTurnos ? 'Leyendo archivo...' : 'Importar Excel' }}
+          {{ detectandoFormatoExcel ? 'Reconociendo formato...' : (importandoExcelTurnos || leyendoRolExcel) ? 'Analizando Excel...' : 'Importar Excel' }}
         </button>
-        @if (importandoExcelTurnos) {
-          <button class="secondary" type="button" (click)="cancelarExcelTurnos()">Cancelar lectura</button>
+        @if (importandoExcelTurnos || detectandoFormatoExcel || leyendoRolExcel) {
+          <button class="secondary" type="button" (click)="cancelarImportacionExcel()">Cancelar lectura</button>
         }
       </div>
     </div>
@@ -130,12 +124,12 @@
     <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-600 sm:px-5">
       <span><strong class="text-slate-800">Formato:</strong> .xlsx · máximo 2 MB</span>
       <span><strong class="text-slate-800">Turnos:</strong> A, B, C, D, V, COM, DM, LIC y -</span>
-      <span>Las celdas vacías no modifican turnos; los colores no se interpretan.</span>
+      <span>SIGO detecta el formato compatible y usa los bordes para grupos cuando corresponda. No se infieren casetas ausentes.</span>
     </div>
-    @if (importandoExcelTurnos) {
+    @if (importandoExcelTurnos || detectandoFormatoExcel || leyendoRolExcel) {
       <div class="flex items-center gap-2 border-t border-blue-100 bg-blue-50 px-5 py-3 text-sm text-blue-800" role="status" aria-live="polite">
         <span class="h-2 w-2 animate-pulse rounded-full bg-blue-600"></span>
-        Revisando {{ archivoExcelTurnos }} y validando los turnos...
+        {{ detectandoFormatoExcel ? 'Identificando la estructura del Excel...' : (leyendoRolExcel ? 'Revisando turnos, secuencias y responsables...' : 'Revisando ' + archivoExcelTurnos + ' y validando los turnos...') }}
       </div>
     }
     @if (cambios.size > 0) {

@@ -270,6 +270,8 @@ export class ProgramacionSupervisorComponent
   contextoRolExcel: { plazaId: number; anio: number; mes: number } | null = null;
   leyendoRolExcel = false;
   confirmandoRolExcel = false;
+  detectandoFormatoExcel = false;
+  private secuenciaDeteccionExcel = 0;
   omitidosExcelAgrupados: OmisionTurnoExcelAgrupada[] = [];
   puestosImportacionExcel: PuestoImportacionExcel[] = [];
   datosAltaExcel: Record<number, { puestoId: number; passwordInicial: string }> = {};
@@ -482,12 +484,72 @@ export class ProgramacionSupervisorComponent
    * ============================================================
    */
 
-  /** Se limita al mes y plaza actualmente elegidos, incluso si el archivo tiene P4 y P5. */
-  seleccionarRolExcel(evento: Event): void {
-    const entrada = evento.target as HTMLInputElement;
-    const archivo = entrada.files?.item(0);
-    entrada.value = '';
-    if (!archivo || !this.plazaId || this.cargando || this.guardando ||
+  /**
+   * Punto único para cualquier supervisor y plaza.
+   * El servidor detecta el formato sin escribir datos y después se abre la
+   * vista previa correspondiente, siempre filtrada por plaza/mes.
+   */
+  seleccionarExcelUnificado(evento: Event): void {
+    const input = evento.target as HTMLInputElement;
+    const archivo = input.files?.item(0);
+    input.value = '';
+    if (!archivo) return;
+    if (!this.plazaId) {
+      this.error = 'Selecciona una plaza antes de importar el Excel.';
+      return;
+    }
+    if (this.cargando || this.guardando || this.confirmandoRolExcel ||
+        this.importandoExcelTurnos || this.leyendoRolExcel || this.detectandoFormatoExcel) return;
+    if (this.cambios.size > 0) {
+      this.error = 'Guarda o descarta los cambios pendientes antes de importar otro Excel.';
+      return;
+    }
+    if (!archivo.name.toLowerCase().endsWith('.xlsx') || !archivo.size ||
+        archivo.size > 2 * 1024 * 1024) {
+      this.error = 'Selecciona un Excel .xlsx de máximo 2 MB.';
+      return;
+    }
+    // No permitir vistas previas simultáneas de archivos distintos.
+    this.cancelarExcelTurnos();
+    this.descartarRolExcel();
+    const solicitud = ++this.secuenciaDeteccionExcel;
+    const contexto = { plazaId: this.plazaId, anio: this.anio, mes: this.mes };
+    this.detectandoFormatoExcel = true;
+    this.error = '';
+    this.mensaje = '';
+    this.apiExcelTurnos.detectarFormatoExcel(archivo).pipe(
+      finalize(() => {
+        if (solicitud === this.secuenciaDeteccionExcel) {
+          this.detectandoFormatoExcel = false;
+          this.cdr.detectChanges();
+        }
+      })
+    ).subscribe({
+      next: resultado => {
+        if (solicitud !== this.secuenciaDeteccionExcel ||
+            contexto.plazaId !== this.plazaId ||
+            contexto.anio !== this.anio || contexto.mes !== this.mes) return;
+        this.detectandoFormatoExcel = false;
+        if (resultado.formato === 'ROL_OPERATIVO') {
+          this.cargarRolExcel(archivo);
+        } else if (resultado.formato === 'TURNOS') {
+          this.cargarExcelTurnos(archivo);
+        } else {
+          this.error = 'No se pudo identificar el formato del archivo Excel.';
+        }
+        this.cdr.detectChanges();
+      },
+      error: e => {
+        if (solicitud !== this.secuenciaDeteccionExcel) return;
+        this.error = this.mensajeError(e, 'No se pudo reconocer el formato del Excel.');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /** Vista previa especializada si el libro contiene hojas AGENTES por plaza. */
+  private cargarRolExcel(archivo: File): void {
+    if (!this.plazaId || this.cargando || this.guardando ||
         this.leyendoRolExcel || this.confirmandoRolExcel) return;
     if (this.cambios.size > 0) {
       this.error = 'Guarda o descarta los turnos pendientes antes de importar otro Excel.';
@@ -521,7 +583,7 @@ export class ProgramacionSupervisorComponent
         this.cdr.detectChanges();
       },
       error: e => {
-        this.error = this.mensajeError(e, 'No se pudo analizar el rol P4/P5.');
+        this.error = this.mensajeError(e, 'No se pudo analizar el rol mensual de la plaza seleccionada.');
         this.descartarRolExcel();
         this.cdr.detectChanges();
       }
@@ -534,6 +596,8 @@ export class ProgramacionSupervisorComponent
   }
 
   descartarRolExcel(): void {
+    this.secuenciaDeteccionExcel++;
+    this.detectandoFormatoExcel = false;
     this.archivoRolExcel = null;
     this.vistaRolExcel = null;
     this.contextoRolExcel = null;
@@ -606,12 +670,8 @@ export class ProgramacionSupervisorComponent
     });
   }
 
-  /** Vista previa de turnos: solo lee el Excel. No realiza guardados en PostgreSQL. */
-  seleccionarExcelTurnos(evento: Event): void {
-    const input = evento.target as HTMLInputElement;
-    const archivo = input.files?.item(0);
-    input.value = ''; // Permite volver a elegir el mismo archivo.
-    if (!archivo) return;
+  /** Vista previa de formato estándar: solo carga el borrador, sin guardado inmediato. */
+  private cargarExcelTurnos(archivo: File): void {
     if (!this.plazaId) {
       this.error = 'Selecciona una plaza antes de importar un Excel.';
       this.cdr.detectChanges();
